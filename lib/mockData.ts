@@ -4,44 +4,44 @@ import type { Recents } from "@/types/recents";
 import type { TabItem } from "@/types/tabitem";
 import type { Team } from "@/types/team";
 
-export const mockRecentProjects: Recents[] = [
+// Mock projects for use in mockIssues
+const mockProjects: Project[] = [
   {
-    id: "1",
+    _id: "1",
     title: "Website Redesign",
-    type: "project",
-    icon: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
-    lastAccessed: new Date("2025-11-14T10:30:00"),
+    code: "WBST",
+    img: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
+    description: "A redesign of the website to improve the user experience",
+    admin: ["user-1"],
+    createdAt: "2025-11-14T10:30:00",
+    updatedAt: "2025-11-14T10:30:00",
   },
   {
-    id: "2",
+    _id: "2",
     title: "Marketing Campaign Q4",
-    type: "project",
-    icon: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
-    lastAccessed: new Date("2025-11-14T09:15:00"),
+    code: "MCQ4",
+    img: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
+    description: "A marketing campaign for the fourth quarter of the year",
+    admin: ["user-1"],
+    createdAt: "2025-11-14T09:15:00",
+    updatedAt: "2025-11-14T09:15:00",
   }
 ];
 
-export const mockRecentIssues: Recents[] = [
+export const mockRecentProjects: Recents[] = [
   {
-    id: "issue-1",
-    title: "Fix login page responsive layout",
-    type: "issue",
-    icon: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
-    lastAccessed: new Date("2025-11-14T11:00:00"),
+    resourceId: "1",
+    title: "Website Redesign",
+    type: "project",
+    img: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
+    lastAccessed: new Date("2025-11-14T10:30:00"),
   },
   {
-    id: "issue-2",
-    title: "Add dark mode support",
-    type: "issue",
-    icon: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
-    lastAccessed: new Date("2025-11-14T09:30:00"),
-  },
-  {
-    id: "issue-3",
-    title: "Optimize database queries",
-    type: "issue",
-    icon: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
-    lastAccessed: new Date("2025-11-13T17:20:00"),
+    resourceId: "2",
+    title: "Marketing Campaign Q4",
+    type: "project",
+    img: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
+    lastAccessed: new Date("2025-11-14T09:15:00"),
   }
 ];
 
@@ -51,28 +51,24 @@ export const mockWorkedOnItems: TabItem[] = [
     id: "work-1",
     title: "Fix authentication bug",
     project: "Website Redesign",
-    status: "in-progress",
     priority: "high",
   },
   {
     id: "work-2",
     title: "Update user profile UI",
     project: "Mobile App Development",
-    status: "in-progress",
     priority: "medium",
   },
   {
     id: "work-3",
     title: "Implement responsive layout",
     project: "Website Redesign",
-    status: "in-progress",
     priority: "medium",
   },
   {
     id: "work-4",
     title: "Add loading states",
     project: "Marketing Campaign Q4",
-    status: "in-progress",
     priority: "low",
   },
 ];
@@ -83,28 +79,24 @@ export const mockAssignedItems: TabItem[] = [
     id: "assigned-1",
     title: "Implement payment gateway",
     project: "E-commerce Platform",
-    status: "open",
     priority: "high",
   },
   {
     id: "assigned-2",
     title: "Fix email notifications",
     project: "Marketing Campaign Q4",
-    status: "open",
     priority: "high",
   },
   {
     id: "assigned-3",
     title: "Add search functionality",
     project: "Website Redesign",
-    status: "open",
     priority: "medium",
   },
   {
     id: "assigned-4",
     title: "Update documentation",
     project: "API Documentation",
-    status: "open",
     priority: "low",
   },
 ];
@@ -115,101 +107,75 @@ export const mockStarredItems: TabItem[] = [
     id: "starred-1",
     title: "Improve performance metrics",
     project: "Mobile App Development",
-    status: "open",
     priority: "high",
   },
   {
     id: "starred-2",
     title: "Setup CI/CD pipeline",
     project: "DevOps Infrastructure",
-    status: "in-progress",
     priority: "high",
   },
   {
     id: "starred-3",
     title: "Refactor API endpoints",
     project: "API Documentation",
-    status: "open",
     priority: "medium",
   },
   {
     id: "starred-4",
     title: "Add unit tests",
     project: "Website Redesign",
-    status: "open",
     priority: "medium",
   },
 ];
 
-export const mockProjects:Project[]=[
+export const mockTeams: Team[] = [
   {
-    id: "1",
-    title: "Website Redesign",
-    img: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
-    description: "A redesign of the website to improve the user experience",
-    createdAt: new Date("2025-11-14T10:30:00"),
-    updatedAt: new Date("2025-11-14T10:30:00"),
-  },
-  {
-    id: "2",
-    title: "Marketing Campaign Q4",
-    img: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
-    description: "A marketing campaign for the fourth quarter of the year",
-    createdAt: new Date("2025-11-14T09:15:00"),
-    updatedAt: new Date("2025-11-14T09:15:00"),
-  }
-]
-
-export const mockTeams:Team[]=[
-  {
-    id: "1",
+    _id: "1",
     name: "Team 1",
+    admin: ["1"],
     members: [
       {
         id: "1",
         name: "John Doe",
         email: "john.doe@example.com",
-        pic: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
+        avatar: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
       },
       {
         id: "2",
         name: "Jane Doe",
         email: "jane.doe@example.com",
-        pic: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
+        avatar: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
       },
     ],
     description: "Team 1 description",
-    createdBy: {
-      id: "1",
-    },
     createdAt: new Date("2025-11-14T10:30:00"),
     updatedAt: new Date(),
   },
   {
-    id: "2",
+    _id: "2",
     name: "Team 2",
+    admin: ["1"],
     members: [
       {
         id: "1",
         name: "John Doe",
         email: "john.doe@example.com",
-        pic: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
+        avatar: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
       },
       {
         id: "2",
         name: "Jane Doe",
         email: "jane.doe@example.com",
-        pic: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
+        avatar: "https://images.squarespace-cdn.com/content/v1/5e10bdc20efb8f0d169f85f9/09943d85-b8c7-4d64-af31-1a27d1b76698/arrow.png",
       },
     ],
     description: "Team 2 description",
-    createdBy: {
-      id: "1",
-    },
     createdAt: new Date(),
     updatedAt: new Date(),
   }
-]
+];
+
 // Mock issues for projects
 export const mockIssues: Issue[] = [
   {
