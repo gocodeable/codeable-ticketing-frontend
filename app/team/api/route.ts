@@ -1,0 +1,55 @@
+import { NextRequest, NextResponse } from "next/server";
+
+export const GET = async (req: NextRequest) => {
+  try {
+    const searchParams = new URL(req.url).searchParams;
+    const id = searchParams.get("id");
+    
+    if (!id || id === "null" || id === "undefined") {
+      return NextResponse.json(
+        { success: false, error: "Team ID is required" },
+        { status: 400 }
+      );
+    }
+    
+    const idToken = req.headers.get("Authorization")?.split(" ")[1];
+    if (!idToken) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/teams/${id}`;
+    const response = await fetch(backendUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: data.message || "Failed to fetch team",
+        },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json({ success: true, team: data.data });
+  } catch (error) {
+    console.error("Error fetching team:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
+};
+
