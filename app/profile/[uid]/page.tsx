@@ -157,11 +157,11 @@ export default function ProfilePage({
 
   return (
     <div className="min-h-screen w-full bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background grid grid-cols-1 md:grid-cols-3">
-      <div className="container mx-auto py-8 px-4 max-w-4xl md:max-w-6xl col-span-1 md:col-span-2">
+      <div className="container mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-4xl md:max-w-6xl col-span-1 md:col-span-2">
         <Button
           variant="ghost"
           onClick={() => router.back()}
-          className="mb-6 hover:bg-muted/50 cursor-pointer"
+          className="mb-6 hover:bg-muted/50 cursor-pointer transition-colors"
         >
           <ArrowLeft className="mr-2 size-4" />
           Back
@@ -169,12 +169,12 @@ export default function ProfilePage({
 
         {/* Profile Header Card */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
           {isLoading ? (
-            <Card className="mb-6 border-2 shadow-xs pt-1">
+            <Card className="mb-6 border-border/50 shadow-sm pt-1">
               <CardContent className="py-6">
                 {user?.uid === uid && (
                   <div className="flex items-center justify-end mb-4">
@@ -200,7 +200,7 @@ export default function ProfilePage({
               </CardContent>
             </Card>
           ) : userData ? (
-            <Card className="mb-6 border-2 shadow-xs pt-1">
+            <Card className="mb-6 border-border/50 shadow-sm pt-1">
               <CardContent className={user?.uid === uid ? "" : "pt-6"}>
                 {user?.uid === uid && (
                   <div className="flex items-center justify-end">
@@ -217,7 +217,7 @@ export default function ProfilePage({
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
                   {/* Avatar */}
                   <div className="relative mb-4">
-                    <div className="h-24 w-24 rounded-full bg-linear-to-br from-primary/80 to-primary flex items-center justify-center text-4xl font-bold text-primary-foreground shadow-xs ring-4 ring-background overflow-hidden">
+                    <div className="h-24 w-24 rounded-full bg-linear-to-br from-primary/80 to-primary flex items-center justify-center text-4xl font-bold text-primary-foreground shadow-md ring-4 ring-background overflow-hidden">
                       <Image
                         src={userData?.avatar || DEFAULT_AVATAR}
                         alt="Profile"
@@ -230,7 +230,7 @@ export default function ProfilePage({
 
                   {/* User Info */}
                   <div className="flex-1 text-center md:text-left">
-                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight mb-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
                       {userData.name || "User"}
                     </h1>
                     <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground mb-3">
@@ -265,7 +265,7 @@ export default function ProfilePage({
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="space-y-8"
           >
             <UserInProjects uid={uid} />
@@ -273,11 +273,11 @@ export default function ProfilePage({
           </motion.div>
         )}
       </div>
-      <div className="container mx-auto w-full flex items-center justify-center">
+      <div className="container mx-auto w-full flex items-center justify-center py-6 sm:py-8">
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
         >
           {isLoading ? (
             <Card className="w-80 h-96">
@@ -303,9 +303,9 @@ export default function ProfilePage({
       {/* Edit Profile Side Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="overflow-y-auto p-2 sm:p-4">
-          <SheetHeader>
-            <SheetTitle>Edit Profile</SheetTitle>
-            <SheetDescription>
+          <SheetHeader className="space-y-2">
+            <SheetTitle className="text-2xl">Edit Profile</SheetTitle>
+            <SheetDescription className="text-base">
               Update your profile information. Changes will be saved to your
               account.
             </SheetDescription>
@@ -352,15 +352,20 @@ export default function ProfilePage({
             </div>
           </div>
 
-          <SheetFooter>
+          <SheetFooter className="gap-3 sm:gap-2">
             <Button
               variant="outline"
               onClick={() => setIsSheetOpen(false)}
               disabled={isSaving}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
-            <Button onClick={handleUpdateProfile} disabled={isSaving}>
+            <Button
+              onClick={handleUpdateProfile}
+              disabled={isSaving}
+              className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
+            >
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>

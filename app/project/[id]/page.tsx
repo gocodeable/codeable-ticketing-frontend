@@ -6,10 +6,6 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
-  CalendarDays,
-  CheckCircle2,
-  Circle,
-  Clock,
   AlertCircle,
   Star,
   Info,
@@ -17,6 +13,7 @@ import {
   LayoutDashboard,
   Users,
   Settings,
+  Crown,
 } from "lucide-react";
 import { Project } from "@/types/project";
 import { Button } from "@/components/ui/button";
@@ -24,6 +21,9 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { ProjectPageSkeleton } from "@/components/ProjectPageSkeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiGet } from "@/lib/api/apiClient";
+import { Members } from "@/components/Members";
+import ProjectInfo from "@/components/ProjectInfo";
+import ProjectBoard from "@/components/ProjectBoard";
 
 export default function ProjectPage({
   params,
@@ -100,10 +100,11 @@ export default function ProjectPage({
     );
   }
 
+  const isAdmin = user && project.admin.includes(user.uid);
+
   return (
     <div className="w-full min-w-0 bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background min-h-screen">
       <main className="w-full mx-auto flex flex-col items-start justify-start gap-y-3 sm:gap-y-4 py-4 sm:py-8 md:py-12 lg:py-16 px-3 sm:px-4 md:px-8 lg:px-12">
-
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -129,19 +130,41 @@ export default function ProjectPage({
         >
           <div className="rounded-sm p-3 sm:p-4 md:p-6 w-full flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-5 min-w-0 flex-1">
-              <Image 
-                src={project.img} 
-                alt={project.title} 
+              <Image
+                src={project.img}
+                alt={project.title}
                 width={100}
-                height={100} 
-                className="w-8 h-8 sm:w-12 sm:h-12 md:w-28 md:h-28 object-cover rounded-md shrink-0" 
+                height={100}
+                className="w-8 h-8 sm:w-12 sm:h-12 md:w-28 md:h-28 object-contain rounded-md shrink-0"
               />
-              <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-foreground truncate">
-                {project.title}
-              </h1>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-foreground truncate">
+                  {project.title}
+                </h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs sm:text-sm font-mono font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                    {project.code}
+                  </span>
+                  {isAdmin && (
+                    <>
+                      <span className="text-muted-foreground">•</span>
+                      <div className="flex items-center gap-1">
+                        <Crown className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
+                        <span className="text-xs sm:text-sm text-muted-foreground">
+                          Admin
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              <Button variant="ghost" size="sm" className="cursor-pointer h-8 w-8 sm:h-9 sm:w-9 p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="cursor-pointer h-8 w-8 sm:h-9 sm:w-9 p-0"
+              >
                 <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </Button>
             </div>
@@ -155,54 +178,103 @@ export default function ProjectPage({
           transition={{ duration: 0.5 }}
         >
           <div className="w-full">
-            <Tabs defaultValue="info" className="w-full">
+            <Tabs defaultValue="board" className="w-full">
               <TabsList className="w-full sm:w-fit justify-start overflow-x-auto gap-1 sm:gap-2 h-auto p-1">
                 <TabsTrigger value="info" className="shrink-0 px-2 py-1">
                   <Info className="w-4 h-4" />
-                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">Info</p>
+                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
+                    Info
+                  </p>
                 </TabsTrigger>
                 <TabsTrigger value="issues" className="shrink-0 px-2 py-1">
                   <List className="w-4 h-4" />
-                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">Issues</p>
+                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
+                    Issues{" "}
+                    {project.issueCount !== undefined &&
+                      `(${project.issueCount})`}
+                  </p>
                 </TabsTrigger>
                 <TabsTrigger value="board" className="shrink-0 px-2 py-1">
                   <LayoutDashboard className="w-4 h-4" />
-                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">Board</p>
+                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
+                    Board
+                  </p>
                 </TabsTrigger>
                 <TabsTrigger value="members" className="shrink-0 px-2 py-1">
                   <Users className="w-4 h-4" />
-                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">Members</p>
+                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
+                    Members{" "}
+                    {Array.isArray(project.members) &&
+                      `(${project.members.length})`}
+                  </p>
                 </TabsTrigger>
-                <TabsTrigger value="settings" className="shrink-0 px-2 py-1">
-                  <Settings className="w-4 h-4" />
-                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">Settings</p>
-                </TabsTrigger>
+                {isAdmin && (
+                  <TabsTrigger value="settings" className="shrink-0 px-2 py-1">
+                    <Settings className="w-4 h-4" />
+                    <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
+                      Settings
+                    </p>
+                  </TabsTrigger>
+                )}
               </TabsList>
               <TabsContent value="info" className="w-full mt-3 sm:mt-4">
-                <div className="w-full">
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">Info</h2>
-                </div>
+                <ProjectInfo project={project} />
               </TabsContent>
               <TabsContent value="issues" className="mt-3 sm:mt-4">
                 <div className="w-full">
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">Issues</h2>
+                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">
+                    Issues
+                  </h2>
                 </div>
               </TabsContent>
               <TabsContent value="board" className="mt-3 sm:mt-4">
-                <div className="w-full">
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">Board</h2>
+                <ProjectBoard />
+              </TabsContent>
+              <TabsContent
+                value="members"
+                className="flex-1 mt-3 sm:mt-4 overflow-visible flex flex-col"
+              >
+                <div className="w-full h-full bg-card rounded-lg border shadow-sm p-4 sm:p-6 overflow-visible flex flex-col">
+                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
+                    Project Members
+                  </h2>
+                  <div className="flex-1 min-h-0">
+                    {Array.isArray(project.members) &&
+                    project.members.length > 0 ? (
+                      <Members
+                        members={project.members.map((m: any) => ({
+                          id: m.uid,
+                          name: m.name,
+                          email: m.email,
+                          avatar: m.avatar,
+                        }))}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <Users className="w-16 h-16 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold text-foreground mb-2">
+                          No Members Yet
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Add members to this project to get started.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </TabsContent>
-              <TabsContent value="members" className="mt-3 sm:mt-4">
-                <div className="w-full">
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">Members</h2>
-                </div>
-              </TabsContent>
-              <TabsContent value="settings" className="mt-3 sm:mt-4">
-                <div className="w-full">
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">Settings</h2>
-                </div>
-              </TabsContent>
+              {isAdmin && (
+                <TabsContent value="settings" className="mt-3 sm:mt-4">
+                  <div className="w-full bg-card rounded-lg border shadow-sm p-4 sm:p-6">
+                    <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
+                      Project Settings
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Settings coming soon...
+                    </p>
+                  </div>
+                </TabsContent>
+              )}
             </Tabs>
           </div>
         </motion.div>

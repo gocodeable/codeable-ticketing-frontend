@@ -44,11 +44,6 @@ export function TabItem({ item }: TabItemProps) {
                 <ItemHeader>
                     <ItemTitle>{item.title}</ItemTitle>
                     <div className="flex items-center gap-2">
-                        {item.status && (
-                            <Badge className={statusConfig[item.status].className}>
-                                {statusConfig[item.status].label}
-                            </Badge>
-                        )}
                         {item.priority && (
                             <Badge className={priorityConfig[item.priority].className}>
                                 {priorityConfig[item.priority].label}

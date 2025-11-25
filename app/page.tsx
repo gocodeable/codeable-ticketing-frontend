@@ -8,12 +8,12 @@ import { motion } from "framer-motion";
 export default function Home() {
   return (
     <div className="w-full min-h-screen min-w-0 bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background">
-      <main className="w-full mx-auto flex flex-col items-start justify-start gap-y-8 py-8 sm:py-12 md:py-16 lg:py-20 px-4 sm:px-6 md:px-8 lg:px-12">
+      <main className="w-full max-w-7xl mx-auto flex flex-col items-start justify-start gap-y-6 sm:gap-y-8 lg:gap-y-10 py-6 sm:py-8 md:py-10 lg:py-12 px-4 sm:px-6 lg:px-8">
         <motion.div
           className="w-full"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
           <GreetUser />
         </motion.div>
@@ -21,13 +21,18 @@ export default function Home() {
           className="w-full max-w-full overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
         >
           <Recents />
         </motion.div>
-        <div className="w-full max-w-full">
+        <motion.div
+          className="w-full max-w-full"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        >
           <ForYouTabs />
-        </div>
+        </motion.div>
       </main>
     </div>
   );

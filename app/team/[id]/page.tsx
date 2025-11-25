@@ -13,14 +13,21 @@ import {
   Settings,
   FolderKanban,
   Crown,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { Team } from "@/types/team";
+import { Project } from "@/types/project";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { TeamPageSkeleton } from "@/components/TeamPageSkeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiGet } from "@/lib/api/apiClient";
+import { apiGet, apiDelete } from "@/lib/api/apiClient";
 import { Members } from "@/components/Members";
+import ProjectCard from "@/components/ProjectCard";
+import { ProjectCardSkeleton } from "@/components/ProjectCardSkeleton";
+import { UpdateTeamSheet } from "@/components/UpdateTeamSheet";
+import { toast } from "sonner";
 
 export default function TeamPage({
   params,
@@ -28,8 +35,13 @@ export default function TeamPage({
   params: Promise<{ id: string }>;
 }) {
   const [team, setTeam] = useState<Team | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdateSheetOpen, setIsUpdateSheetOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
   const { id } = use(params);
@@ -73,9 +85,78 @@ export default function TeamPage({
     }
   };
 
+  const fetchTeamProjects = async () => {
+    try {
+      setIsLoadingProjects(true);
+
+      if (!id || id === "null" || id === "undefined" || !user) {
+        return;
+      }
+
+      const idToken = await user.getIdToken();
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/teams/${id}/projects`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Failed to fetch team projects");
+        return;
+      }
+
+      const data = await response.json();
+      setProjects(data.data || []);
+    } catch (err) {
+      console.error("Error fetching team projects:", err);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+
   useEffect(() => {
     fetchTeam();
+    fetchTeamProjects();
   }, [id, user]);
+
+  const handleDeleteTeam = async () => {
+    if (!user || !team) return;
+
+    setIsDeleting(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await apiDelete(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/teams/${team._id}`,
+        idToken
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete team");
+      }
+
+      toast.success("Team deleted successfully");
+      router.push("/teams");
+    } catch (err) {
+      console.error("Error deleting team:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete team"
+      );
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleUpdateSuccess = () => {
+    toast.success("Team updated successfully");
+    fetchTeam(); // Refresh team data
+  };
 
   if (isLoading) {
     return <TeamPageSkeleton />;
@@ -171,7 +252,7 @@ export default function TeamPage({
           transition={{ duration: 0.5 }}
         >
           <div className="w-full h-full flex flex-col overflow-visible">
-            <Tabs defaultValue="info" className="w-full h-full flex flex-col overflow-visible">
+            <Tabs defaultValue="members" className="w-full h-full flex flex-col overflow-visible">
               <TabsList className="w-full sm:w-fit justify-start overflow-x-auto gap-1 sm:gap-2 h-auto p-1">
                 <TabsTrigger value="info" className="shrink-0 px-2 py-1">
                   <Info className="w-4 h-4" />
@@ -185,7 +266,9 @@ export default function TeamPage({
                 </TabsTrigger>
                 <TabsTrigger value="projects" className="shrink-0 px-2 py-1">
                   <FolderKanban className="w-4 h-4" />
-                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">Projects</p>
+                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
+                    Projects {!isLoadingProjects && `(${projects.length})`}
+                  </p>
                 </TabsTrigger>
                 {isAdmin && (
                   <TabsTrigger value="settings" className="shrink-0 px-2 py-1">
@@ -239,21 +322,116 @@ export default function TeamPage({
                   <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
                     Projects
                   </h2>
-                  <p className="text-sm text-muted-foreground">
-                    No projects yet. Add team members to Projects to get started!
-                  </p>
+                  {isLoadingProjects ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {[1, 2, 3].map((i) => (
+                        <ProjectCardSkeleton key={i} />
+                      ))}
+                    </div>
+                  ) : projects.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {projects.map((project, index) => (
+                        <ProjectCard key={project._id} project={project} i={index} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <FolderKanban className="w-16 h-16 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold text-foreground mb-2">
+                        No Projects Yet
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Projects assigned to this team will appear here.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
               {isAdmin && (
                 <TabsContent value="settings" className="flex-1 mt-3 sm:mt-4 overflow-y-auto">
                   <div className="w-full h-full bg-card rounded-lg border shadow-sm p-4 sm:p-6">
-                    <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
+                    <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-6">
                       Team Settings
                     </h2>
-                    <p className="text-sm text-muted-foreground">
-                      Settings coming soon...
-                    </p>
+                    
+                    <div className="space-y-6">
+                      {/* Update Team Section */}
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="text-sm font-semibold text-foreground mb-1">
+                            Update Team
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Update your team's image, name, and description
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => setIsUpdateSheetOpen(true)}
+                          variant="outline"
+                          className="gap-2"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Update Team
+                        </Button>
+                      </div>
+
+                      {/* Danger Zone */}
+                      <div className="border border-destructive/20 rounded-lg p-4 bg-destructive/5">
+                        <h3 className="text-sm font-semibold text-destructive mb-3">
+                          Danger Zone
+                        </h3>
+                        
+                        {!showDeleteConfirm ? (
+                          <div className="space-y-3">
+                            <p className="text-sm text-muted-foreground">
+                              Permanently delete this team and all associated data. This action cannot be undone.
+                            </p>
+                            <Button
+                              onClick={() => setShowDeleteConfirm(true)}
+                              variant="destructive"
+                              className="gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete Team
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <p className="text-sm font-semibold text-destructive">
+                              Are you sure you want to delete this team?
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              This will permanently delete "{team.name}" and all associated data. This action cannot be undone.
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={handleDeleteTeam}
+                                variant="destructive"
+                                disabled={isDeleting}
+                                className="gap-2"
+                              >
+                                {isDeleting ? (
+                                  "Deleting..."
+                                ) : (
+                                  <>
+                                    <Trash2 className="w-4 h-4" />
+                                    Yes, Delete Team
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                variant="outline"
+                                disabled={isDeleting}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
               )}
@@ -261,6 +439,16 @@ export default function TeamPage({
           </div>
         </motion.div>
       </main>
+
+      {/* Update Team Sheet */}
+      {team && (
+        <UpdateTeamSheet
+          open={isUpdateSheetOpen}
+          onOpenChange={setIsUpdateSheetOpen}
+          team={team}
+          onSuccess={handleUpdateSuccess}
+        />
+      )}
     </div>
   );
 }

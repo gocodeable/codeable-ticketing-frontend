@@ -58,31 +58,39 @@ export default function TeamsPage() {
 
   return (
     <div className="w-full min-h-screen min-w-0 bg-background font-sans bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background">
-      <main className="w-full mx-auto flex flex-col items-start justify-start gap-y-8 py-8 sm:py-12 md:py-16 lg:py-20 px-4 sm:px-6 md:px-8 lg:px-12">
-        {hasTeams && <div className="w-full flex items-center justify-between">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Teams</h1>
-          <Link href="/teams/create">
-            <Button
-              size="default"
-              className="gap-2 cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Create Team</span>
-            </Button>
-          </Link>
-        </div>}
+      <main className="w-full max-w-7xl mx-auto flex flex-col items-start justify-start gap-y-6 sm:gap-y-8 py-6 sm:py-8 md:py-10 lg:py-12 px-4 sm:px-6 lg:px-8">
+        {hasTeams && (
+          <div className="w-full flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">Teams</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Collaborate with your team members on projects
+              </p>
+            </div>
+            <Link href="/teams/create">
+              <Button
+                size="default"
+                className="gap-2 cursor-pointer shadow-sm hover:shadow-md transition-shadow"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Create Team</span>
+                <span className="sm:hidden">New</span>
+              </Button>
+            </Link>
+          </div>
+        )}
         {loading ? (
           <div className="w-full flex flex-col gap-y-8">
             <TeamsSkeleton count={3} />
             <TeamsSkeleton count={3} />
           </div>
         ) : hasTeams ? (
-          <div className="w-full flex flex-col gap-y-8">
+          <div className="w-full flex flex-col gap-y-10">
             <Teams type="workingIn" teams={teams.workingIn} />
             <Teams type="myTeams" teams={teams.myTeams} />
           </div>
         ) : (
-          <div className="w-full overflow-hidden flex items-center justify-center">
+          <div className="w-full overflow-hidden flex items-center justify-center min-h-[60vh]">
             <EmptyComponent type="team" />
           </div>
         )}

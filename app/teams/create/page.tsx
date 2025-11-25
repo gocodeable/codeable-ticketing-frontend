@@ -134,33 +134,37 @@ export default function CreateTeamPage() {
         </div>
       )}
 
-      <main className="w-full mx-auto flex flex-col items-start justify-start gap-y-8 py-8 sm:py-12 md:py-16 lg:py-20 px-4 sm:px-6 md:px-8 lg:px-12 pb-16 sm:pb-20 md:pb-24">
+      <main className="w-full max-w-4xl mx-auto flex flex-col items-start justify-start gap-y-6 sm:gap-y-8 py-6 sm:py-8 md:py-10 lg:py-12 px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20 md:pb-24">
+        {/* Page Header */}
         <motion.div
           className="w-full"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="mx-auto max-w-2xl">
-            {/* Page Header */}
-            <div className="mb-6 md:mb-8">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
-                Create New Team
-              </h1>
-              <p className="text-muted-foreground text-sm md:text-base">
-                Start a new team and collaborate with others
-              </p>
-            </div>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+            Create New Team
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Start a new team and collaborate with others
+          </p>
+        </motion.div>
 
-            {/* Form Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Team Details</CardTitle>
-                <CardDescription>
-                  Fill in the information below to create your team
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+        {/* Form Card */}
+        <motion.div
+          className="w-full"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="space-y-1 pb-6">
+              <CardTitle className="text-2xl">Team Details</CardTitle>
+              <CardDescription className="text-base">
+                Fill in the information below to create your team
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
                 <Form {...form}>
                   <form
                     onSubmit={form.handleSubmit(onSubmit)}
@@ -265,7 +269,7 @@ export default function CreateTeamPage() {
                     )}
 
                     {/* Form Actions */}
-                    <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+                    <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-border/50 mt-8">
                       <Button
                         type="button"
                         variant="outline"
@@ -277,7 +281,7 @@ export default function CreateTeamPage() {
                       </Button>
                       <Button
                         type="submit"
-                        className="w-full sm:w-auto sm:ml-auto"
+                        className="w-full sm:w-auto sm:ml-auto shadow-sm hover:shadow-md transition-shadow"
                         disabled={loading}
                       >
                         {loading ? "Creating..." : "Create Team"}
@@ -287,7 +291,6 @@ export default function CreateTeamPage() {
                 </Form>
               </CardContent>
             </Card>
-          </div>
         </motion.div>
       </main>
     </div>

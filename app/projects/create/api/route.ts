@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { title, description, img, members } = await request.json();
+    const { title, description, img, members, teamId } = await request.json();
     const idToken = request.headers.get("Authorization")?.split(" ")[1];
 
     if (!idToken) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${idToken}`,
       },
-      body: JSON.stringify({ title, description, img, members }),
+      body: JSON.stringify({ title, description, img, members, teamId }),
     });
 
     const data = await res.json();
@@ -41,7 +41,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Backend already returns { success: true, message: '...', data: {...} }
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error("Error creating project:", error);

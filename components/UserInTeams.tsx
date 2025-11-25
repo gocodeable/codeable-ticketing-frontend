@@ -61,6 +61,6 @@ export function UserInTeams({ uid }: UserInTeamsProps) {
   }
   
   return teams && teams.length > 0 ? (
-    <Teams teams={teams} type="myTeams" />
+    <Teams teams={teams} type="userInTeams" />
   ) : null;
 }

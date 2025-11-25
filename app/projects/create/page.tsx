@@ -34,6 +34,7 @@ import { apiPost } from "@/lib/api/apiClient";
 import { UserSelector, UserSuggestion } from "@/components/UserSelector";
 import { TeamSelector, TeamSuggestion } from "@/components/TeamSelector";
 import { Users, UserPlus } from "lucide-react";
+import { generateProjectCode } from "@/utils/generateProjectCode";
 
 const projectSchema = z.object({
   id: z.string().optional(),
@@ -41,6 +42,11 @@ const projectSchema = z.object({
     .string()
     .min(1, "Title is required")
     .max(255, "Title must be less than 255 characters"),
+  code: z
+    .string()
+    .min(2, "Code must be at least 2 characters")
+    .max(10, "Code must be at most 10 characters")
+    .regex(/^[A-Z][A-Z0-9]*$/, "Code must start with a letter and contain only uppercase letters and numbers"),
   description: z
     .string()
     .min(10, "Description must be at least 10 characters")
@@ -58,6 +64,7 @@ export default function CreateProjectPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedUsers, setSelectedUsers] = useState<UserSuggestion[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<TeamSuggestion[]>([]);
+  const [linkedTeam, setLinkedTeam] = useState<TeamSuggestion | null>(null);
 
   const imageSelection = useImageSelection({
     maxSizeMB: 5,
@@ -68,18 +75,22 @@ export default function CreateProjectPage() {
     resolver: zodResolver(projectSchema),
     defaultValues: {
       title: "",
+      code: "",
       description: "",
       img: "",
     },
   });
 
-  // Handle team selection - add all team members to selected users
+  // Handle team selection - add all team members to selected users and link project to team
   const handleTeamSelected = (team: TeamSuggestion) => {
     // Get unique members by combining existing and new team members
     const newMembers = team.members.filter(
       (member) => !selectedUsers.some((u) => u.uid === member.uid)
     );
     setSelectedUsers([...selectedUsers, ...newMembers]);
+    
+    // Set this team as the linked team for the project
+    setLinkedTeam(team);
   };
 
   const onSubmit = async (data: ProjectFormData) => {
@@ -100,16 +111,18 @@ export default function CreateProjectPage() {
         throw new Error("Unauthorized");
       }
 
-      // Convert selected users to comma-separated emails
-      const memberEmails = selectedUsers.map((u) => u.email).join(",");
+      // Send member UIDs directly (much faster than email lookup)
+      const memberUids = selectedUsers.map((u) => u.uid);
 
       const response = await apiPost(
         "/projects/create/api",
         {
           title: form.getValues("title"),
+          code: form.getValues("code"),
           description: form.getValues("description"),
           img: imageSelection.imagePreview || "",
-          members: memberEmails,
+          members: memberUids,
+          teamId: linkedTeam?._id || undefined,
         },
         idToken
       );
@@ -128,6 +141,7 @@ export default function CreateProjectPage() {
       imageSelection.removeImage();
       setSelectedUsers([]);
       setSelectedTeams([]);
+      setLinkedTeam(null);
 
       // Redirect to projects page after success
       setTimeout(() => {
@@ -148,33 +162,37 @@ export default function CreateProjectPage() {
         </div>
       )}
 
-      <main className="w-full mx-auto flex flex-col items-start justify-start gap-y-8 py-8 sm:py-12 md:py-16 lg:py-20 px-4 sm:px-6 md:px-8 lg:px-12 pb-16 sm:pb-20 md:pb-24">
+      <main className="w-full max-w-4xl mx-auto flex flex-col items-start justify-start gap-y-6 sm:gap-y-8 py-6 sm:py-8 md:py-10 lg:py-12 px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20 md:pb-24">
+        {/* Page Header */}
         <motion.div
           className="w-full"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="mx-auto max-w-2xl">
-            {/* Page Header */}
-            <div className="mb-6 md:mb-8">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
-                Create New Project
-              </h1>
-              <p className="text-muted-foreground text-sm md:text-base">
-                Start a new project and collaborate with your team
-              </p>
-            </div>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+            Create New Project
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Start a new project and collaborate with your team
+          </p>
+        </motion.div>
 
-            {/* Form Card */}
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle>Project Details</CardTitle>
-                <CardDescription>
-                  Fill in the information below to create your project
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+        {/* Form Card */}
+        <motion.div
+          className="w-full"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="space-y-1 pb-6">
+              <CardTitle className="text-2xl">Project Details</CardTitle>
+              <CardDescription className="text-base">
+                Fill in the information below to create your project
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
                 <Form {...form}>
                   <form
                     onSubmit={form.handleSubmit(onSubmit)}
@@ -211,8 +229,43 @@ export default function CreateProjectPage() {
                               type="text"
                               placeholder="Enter project title"
                               {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                // Auto-generate code from title
+                                const generatedCode = generateProjectCode(e.target.value);
+                                form.setValue("code", generatedCode);
+                              }}
                             />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Project Code Field */}
+                    <FormField
+                      control={form.control}
+                      name="code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Project Code *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder="PROJ"
+                              {...field}
+                              onChange={(e) => {
+                                // Force uppercase
+                                const upperValue = e.target.value.toUpperCase();
+                                field.onChange(upperValue);
+                              }}
+                              maxLength={10}
+                              className="font-mono font-semibold"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Auto-generated from title. You can edit it if needed (2-10 characters, uppercase letters/numbers).
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -277,10 +330,18 @@ export default function CreateProjectPage() {
                             placeholder="Search teams to add all members..."
                           />
                           <FormDescription>
-                            Select a team to automatically add all its members to the project
+                            Select a team to automatically add all its members and link the project to that team
                           </FormDescription>
                         </TabsContent>
                       </Tabs>
+                      
+                      {linkedTeam && (
+                        <div className="rounded-lg bg-primary/10 border border-primary/20 p-3">
+                          <p className="text-sm font-medium text-primary">
+                            This project will be linked to team: <strong>{linkedTeam.name}</strong>
+                          </p>
+                        </div>
+                      )}
                       
                       {selectedUsers.length === 0 && error && (
                         <p className="text-sm font-medium text-destructive">
@@ -314,7 +375,7 @@ export default function CreateProjectPage() {
                     )}
 
                     {/* Form Actions */}
-                    <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+                    <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-border/50 mt-8">
                       <Button
                         type="button"
                         variant="outline"
@@ -326,7 +387,7 @@ export default function CreateProjectPage() {
                       </Button>
                       <Button
                         type="submit"
-                        className="w-full sm:w-auto sm:ml-auto"
+                        className="w-full sm:w-auto sm:ml-auto shadow-sm hover:shadow-md transition-shadow"
                         disabled={loading}
                       >
                         {loading ? "Creating..." : "Create Project"}
@@ -336,7 +397,6 @@ export default function CreateProjectPage() {
                 </Form>
               </CardContent>
             </Card>
-          </div>
         </motion.div>
       </main>
     </div>

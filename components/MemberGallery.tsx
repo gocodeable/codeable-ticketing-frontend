@@ -42,7 +42,8 @@ export default function MemberGallery({ members }: MemberGalleryProps) {
 
   const handleScroll = () => {
     if (scrollContainerRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      const { scrollLeft, scrollWidth, clientWidth } =
+        scrollContainerRef.current;
       setShowLeftArrow(scrollLeft > 10);
       setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
     }
@@ -99,15 +100,15 @@ export default function MemberGallery({ members }: MemberGalleryProps) {
                   ? "scale-95 opacity-70"
                   : "scale-100"
               }`}
-              style={{ width: "300px" }}
+              style={{ width: "250px" }}
               onClick={() => handleMemberClick(member.id)}
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
               {/* Card */}
-                <div className="relative bg-card rounded-2xl overflow-hidden shadow-lg border border-border hover:border-primary transition-all duration-300">
-                  {/* Avatar Container */}
-                  <div className="relative w-full aspect-square bg-linear-to-br from-primary/20 to-purple-500/20 flex items-center justify-center overflow-hidden">
+              <div className="relative bg-card rounded-2xl overflow-hidden shadow-lg border border-border hover:border-primary transition-all duration-300">
+                {/* Avatar Container */}
+                <div className="relative w-full aspect-square bg-linear-to-br from-primary/20 to-purple-500/20 flex items-center justify-center overflow-hidden">
                   {member.avatar ? (
                     <Image
                       src={member.avatar}
@@ -126,7 +127,7 @@ export default function MemberGallery({ members }: MemberGalleryProps) {
                       <User className="w-1/2 h-1/2 text-primary/40" />
                     </div>
                   )}
-                  
+
                   {/* Hover Overlay */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
                 </div>
@@ -189,4 +190,3 @@ export default function MemberGallery({ members }: MemberGalleryProps) {
     </div>
   );
 }
-

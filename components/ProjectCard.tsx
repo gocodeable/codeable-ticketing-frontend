@@ -55,9 +55,14 @@ export default function ProjectCard({ project, i }: ProjectCardProps) {
                             height={100} 
                             className="w-10 h-10 rounded-sm object-cover" 
                         />
-                        <CardTitle className="text-base sm:text-md group-hover:text-primary transition-colors">
-                            {project.title}
-                        </CardTitle>
+                        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                            <CardTitle className="text-base sm:text-md group-hover:text-primary transition-colors truncate">
+                                {project.title}
+                            </CardTitle>
+                            <span className="text-xs font-mono font-semibold text-primary/80">
+                                {project.code}
+                            </span>
+                        </div>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-2 py-0 mt-0">
                         <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">

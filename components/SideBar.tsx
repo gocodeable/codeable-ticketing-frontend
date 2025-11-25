@@ -19,6 +19,7 @@ import { useEffect, useState } from "react"
 import { Recents as RecentsType } from "@/types/recents"
 import { motion } from "framer-motion"
 import { apiGet } from "@/lib/api/apiClient"
+import Image from "next/image"
 // Menu items.
 const items = [
   {
@@ -103,7 +104,8 @@ export function SideBar() {
                   recentProjects.map((project,i) => (
                     <motion.div key={project.resourceId} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: 0.1 * i }}>
                       <SidebarMenuButton asChild key={project.resourceId} isActive={`/project/${project.resourceId}` == pathname}>
-                        <Link href={`/project/${project.resourceId}`} key={project.resourceId} className="flex items-center gap-2">
+                        <Link href={`/project/${project.resourceId}`} key={project.resourceId} className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground rounded-md p-2">
+                          <Image src={project.img || ""} alt={project.title} width={20} height={20} className="w-4 h-4 sm:w-5 sm:h-5 rounded-sm object-cover" />
                           <span className="truncate text-xs sm:text-sm">{project.title}</span>
                         </Link>
                       </SidebarMenuButton>

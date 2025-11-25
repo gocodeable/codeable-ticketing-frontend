@@ -46,10 +46,10 @@ export default function AuthPage() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <h1 className="text-primary text-3xl font-bold tracking-tight">
-            Codeable Tasks
+            Codeable Tickets
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Manage your tasks and projects efficiently
+            Manage your tickets and projects efficiently
           </p>
         </div>
 
