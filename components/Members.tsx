@@ -6,6 +6,7 @@ interface MembersProps {
 }
 
 export function Members({ members }: MembersProps) {
+  console.log(members);
   return (
     <div className="w-full h-full overflow-visible flex flex-col">
       <MemberGallery members={members} />

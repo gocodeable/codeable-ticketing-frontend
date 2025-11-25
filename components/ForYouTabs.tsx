@@ -73,26 +73,40 @@ export function ForYouTabs() {
     return (
         <div className="w-full">
             <Tabs defaultValue="worked-on" className="w-full">
-                <TabsList className="w-full sm:w-auto">
-                    <TabsTrigger value="worked-on" className="flex items-center gap-2 ">
-                        <Clock className="w-4 h-4" />
-                        <span>Worked on</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="assigned" className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        <span>Assigned to me</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="starred" className="flex items-center gap-2">
-                        <Star className="w-4 h-4" />
-                        <span>Starred</span>
-                    </TabsTrigger>
-                </TabsList>
+                <div className="border-b border-border/50">
+                    <TabsList className="w-full sm:w-auto bg-transparent h-auto p-0 space-x-1">
+                        <TabsTrigger
+                            value="worked-on"
+                            className="flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-4"
+                        >
+                            <Clock className="w-4 h-4" />
+                            <span className="font-medium">Worked on</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="assigned"
+                            className="flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-4"
+                        >
+                            <User className="w-4 h-4" />
+                            <span className="font-medium">Assigned to me</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="starred"
+                            className="flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-4"
+                        >
+                            <Star className="w-4 h-4" />
+                            <span className="font-medium">Starred</span>
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
 
                 <TabsContent value="worked-on" className="mt-6">
                     {tabsData.workedOn.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                            <p>No items you've worked on recently</p>
+                        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                                <Clock className="w-8 h-8 text-muted-foreground/50" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2">No recent work</h3>
+                            <p className="text-sm text-muted-foreground max-w-sm">Items you've worked on recently will appear here</p>
                         </div>
                     ) : (
                         <ItemGroup className="gap-2">
@@ -108,9 +122,12 @@ export function ForYouTabs() {
 
                 <TabsContent value="assigned" className="mt-6">
                     {tabsData.assigned.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <User className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                            <p>No items assigned to you</p>
+                        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                                <User className="w-8 h-8 text-muted-foreground/50" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2">No assignments</h3>
+                            <p className="text-sm text-muted-foreground max-w-sm">Tasks assigned to you will appear here</p>
                         </div>
                     ) : (
                         <ItemGroup className="gap-2">
@@ -126,9 +143,12 @@ export function ForYouTabs() {
 
                 <TabsContent value="starred" className="mt-6">
                     {tabsData.starred.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <Star className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                            <p>No starred items</p>
+                        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                                <Star className="w-8 h-8 text-muted-foreground/50" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2">No starred items</h3>
+                            <p className="text-sm text-muted-foreground max-w-sm">Star your favorite projects and tasks to find them easily</p>
                         </div>
                     ) : (
                         <ItemGroup className="gap-2">

@@ -7,13 +7,23 @@ export interface ProjectMember {
   avatar?: string;
 }
 
+export interface ProjectTeam {
+  _id: string;
+  name: string;
+  img?: string;
+}
+
 export interface Project {
   _id: string;
   title: string;
+  code: string;
   img: string;
   description: string;
+  admin: string[];
   members?: (string | ProjectMember)[];
   issues?: Issue[];
-  createdAt?: String;
-  updatedAt?: String;
+  team?: ProjectTeam | null;
+  issueCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
