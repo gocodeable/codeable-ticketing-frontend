@@ -1,10 +1,11 @@
-import { Project } from "./project";
+import { Project, MemberRole } from "./project";
 
 export interface TeamMember {
   id: string;
   name: string;
   email?: string;
   avatar?: string;
+  role?: MemberRole;
 }
 
 export interface Team {

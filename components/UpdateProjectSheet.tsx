@@ -26,35 +26,42 @@ import { ImageSelector } from "@/components/ImageSelector";
 import { useImageSelection } from "@/hooks/useImageSelection";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import Loader from "@/components/Loader";
-import { Team } from "@/types/team";
+import { Project } from "@/types/project";
 
-const updateTeamSchema = z.object({
-  name: z
+const updateProjectSchema = z.object({
+  title: z
     .string()
-    .min(1, "Name is required")
-    .max(255, "Name must be less than 255 characters"),
+    .min(1, "Title is required")
+    .max(255, "Title must be less than 255 characters"),
+  code: z
+    .string()
+    .min(2, "Code must be at least 2 characters")
+    .max(10, "Code must be less than 10 characters")
+    .regex(/^[A-Z][A-Z0-9]*$/, "Code must start with a letter and contain only uppercase letters and numbers"),
   description: z
     .string()
     .min(10, "Description must be at least 10 characters")
     .max(1000, "Description must be less than 1000 characters"),
   img: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  figmaLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  swaggerLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
 });
 
-type UpdateTeamFormData = z.infer<typeof updateTeamSchema>;
+type UpdateProjectFormData = z.infer<typeof updateProjectSchema>;
 
-interface UpdateTeamSheetProps {
+interface UpdateProjectSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  team: Team;
+  project: Project;
   onSuccess: () => void;
 }
 
-export function UpdateTeamSheet({
+export function UpdateProjectSheet({
   open,
   onOpenChange,
-  team,
+  project,
   onSuccess,
-}: UpdateTeamSheetProps) {
+}: UpdateProjectSheetProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,39 +71,45 @@ export function UpdateTeamSheet({
     onError: (error) => setError(error),
   });
 
-  const form = useForm<UpdateTeamFormData>({
-    resolver: zodResolver(updateTeamSchema),
+  const form = useForm<UpdateProjectFormData>({
+    resolver: zodResolver(updateProjectSchema),
     defaultValues: {
-      name: team.name,
-      description: team.description,
-      img: team.img || "",
+      title: project.title,
+      code: project.code,
+      description: project.description,
+      img: project.img || "",
+      figmaLink: project.figmaLink || "",
+      swaggerLink: project.swaggerLink || "",
     },
   });
 
-  // Update form when team changes
+  // Update form when project changes
   useEffect(() => {
-    if (team) {
+    if (project) {
       form.reset({
-        name: team.name,
-        description: team.description,
-        img: team.img || "",
+        title: project.title,
+        code: project.code,
+        description: project.description,
+        img: project.img || "",
+        figmaLink: project.figmaLink || "",
+        swaggerLink: project.swaggerLink || "",
       });
-      // Set the image preview if team has an image
-      if (team.img) {
-        imageSelection.setImagePreview(team.img);
+      // Set the image preview if project has an image
+      if (project.img) {
+        imageSelection.setImagePreview(project.img);
       } else {
         imageSelection.setImagePreview(null);
       }
     }
-  }, [team]);
+  }, [project]);
 
-  const onSubmit = async (data: UpdateTeamFormData) => {
+  const onSubmit = async (data: UpdateProjectFormData) => {
     setLoading(true);
     setError(null);
 
     try {
       if (!user) {
-        throw new Error("You must be logged in to update a team");
+        throw new Error("You must be logged in to update a project");
       }
 
       const idToken = await user.getIdToken();
@@ -105,8 +118,11 @@ export function UpdateTeamSheet({
       }
 
       const updateData: any = {
-        name: data.name,
+        title: data.title,
+        code: data.code.toUpperCase(),
         description: data.description,
+        figmaLink: data.figmaLink || undefined,
+        swaggerLink: data.swaggerLink || undefined,
       };
 
       // Use the image preview (base64 or URL) if available
@@ -116,7 +132,7 @@ export function UpdateTeamSheet({
         updateData.img = "";
       }
 
-      const response = await fetch(`/team/api?id=${team._id}`, {
+      const response = await fetch(`/project/api?id=${project._id}`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${idToken}`,
@@ -127,13 +143,13 @@ export function UpdateTeamSheet({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update team");
+        throw new Error(errorData.error || "Failed to update project");
       }
 
       onSuccess();
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update team");
+      setError(err instanceof Error ? err.message : "Failed to update project");
     } finally {
       setLoading(false);
     }
@@ -149,9 +165,9 @@ export function UpdateTeamSheet({
         )}
         
         <SheetHeader>
-          <SheetTitle>Update Team</SheetTitle>
+          <SheetTitle>Update Project</SheetTitle>
           <SheetDescription>
-            Update your team's image, name, and description
+            Update your project's details, image, and external links
           </SheetDescription>
         </SheetHeader>
 
@@ -160,7 +176,7 @@ export function UpdateTeamSheet({
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-6 mt-6"
           >
-            {/* Team Image Section */}
+            {/* Project Image Section */}
             <FormField
               control={form.control}
               name="img"
@@ -171,7 +187,7 @@ export function UpdateTeamSheet({
                   shape="square"
                   size="md"
                   layout="horizontal"
-                  label="Team Icon"
+                  label="Project Icon"
                   description="Upload a square image (max 5MB)"
                   showUrlInput={true}
                   disabled={loading}
@@ -179,19 +195,40 @@ export function UpdateTeamSheet({
               )}
             />
 
-            {/* Name Field */}
+            {/* Title Field */}
             <FormField
               control={form.control}
-              name="name"
+              name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Team Name *</FormLabel>
+                  <FormLabel>Project Title *</FormLabel>
                   <FormControl>
                     <Input
                       type="text"
-                      placeholder="Enter team name"
+                      placeholder="Enter project title"
                       disabled={loading}
                       {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Code Field */}
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Code *</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      placeholder="e.g., PROJ"
+                      disabled={loading}
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                     />
                   </FormControl>
                   <FormMessage />
@@ -208,8 +245,48 @@ export function UpdateTeamSheet({
                   <FormLabel>Description *</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Describe your team..."
+                      placeholder="Describe your project..."
                       className="min-h-[120px] resize-y"
+                      disabled={loading}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Figma Link Field */}
+            <FormField
+              control={form.control}
+              name="figmaLink"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Figma Link (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="url"
+                      placeholder="https://figma.com/..."
+                      disabled={loading}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Swagger Link Field */}
+            <FormField
+              control={form.control}
+              name="swaggerLink"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>API Documentation Link (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="url"
+                      placeholder="https://..."
                       disabled={loading}
                       {...field}
                     />
@@ -242,7 +319,7 @@ export function UpdateTeamSheet({
                 className="w-full sm:w-auto sm:ml-auto"
                 disabled={loading}
               >
-                {loading ? "Updating..." : "Update Team"}
+                {loading ? "Updating..." : "Update Project"}
               </Button>
             </div>
           </form>

@@ -80,9 +80,9 @@ export default function TeamsPage() {
           </div>
         )}
         {loading ? (
-          <div className="w-full flex flex-col gap-y-8">
-            <TeamsSkeleton count={3} />
-            <TeamsSkeleton count={3} />
+          <div className="w-full flex flex-col gap-y-10">
+            <TeamsSkeleton count={3} type="workingIn" />
+            <TeamsSkeleton count={3} type="myTeams" />
           </div>
         ) : hasTeams ? (
           <div className="w-full flex flex-col gap-y-10">

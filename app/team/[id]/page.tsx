@@ -28,6 +28,15 @@ import ProjectCard from "@/components/ProjectCard";
 import { ProjectCardSkeleton } from "@/components/ProjectCardSkeleton";
 import { UpdateTeamSheet } from "@/components/UpdateTeamSheet";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export default function TeamPage({
   params,
@@ -41,7 +50,8 @@ export default function TeamPage({
   const [error, setError] = useState<string | null>(null);
   const [isUpdateSheetOpen, setIsUpdateSheetOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const router = useRouter();
   const { user } = useAuth();
   const { id } = use(params);
@@ -127,6 +137,12 @@ export default function TeamPage({
   const handleDeleteTeam = async () => {
     if (!user || !team) return;
 
+    // Verify team name matches
+    if (deleteConfirmName !== team.name) {
+      toast.error("Team name does not match");
+      return;
+    }
+
     setIsDeleting(true);
     try {
       const idToken = await user.getIdToken();
@@ -149,8 +165,14 @@ export default function TeamPage({
       );
     } finally {
       setIsDeleting(false);
-      setShowDeleteConfirm(false);
+      setShowDeleteDialog(false);
+      setDeleteConfirmName("");
     }
+  };
+
+  const handleDeleteDialogClose = () => {
+    setShowDeleteDialog(false);
+    setDeleteConfirmName("");
   };
 
   const handleUpdateSuccess = () => {
@@ -312,7 +334,11 @@ export default function TeamPage({
                     Team Members
                   </h2>
                   <div className="flex-1 min-h-0">
-                    <Members members={team.members} />
+                    <Members 
+                      members={team.members} 
+                      adminList={team.admin}
+                      showOnlyAdminBadge={true}
+                    />
                   </div>
                 </div>
               </TabsContent>
@@ -382,54 +408,19 @@ export default function TeamPage({
                           Danger Zone
                         </h3>
                         
-                        {!showDeleteConfirm ? (
-                          <div className="space-y-3">
-                            <p className="text-sm text-muted-foreground">
-                              Permanently delete this team and all associated data. This action cannot be undone.
-                            </p>
-                            <Button
-                              onClick={() => setShowDeleteConfirm(true)}
-                              variant="destructive"
-                              className="gap-2"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Delete Team
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            <p className="text-sm font-semibold text-destructive">
-                              Are you sure you want to delete this team?
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              This will permanently delete "{team.name}" and all associated data. This action cannot be undone.
-                            </p>
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={handleDeleteTeam}
-                                variant="destructive"
-                                disabled={isDeleting}
-                                className="gap-2"
-                              >
-                                {isDeleting ? (
-                                  "Deleting..."
-                                ) : (
-                                  <>
-                                    <Trash2 className="w-4 h-4" />
-                                    Yes, Delete Team
-                                  </>
-                                )}
-                              </Button>
-                              <Button
-                                onClick={() => setShowDeleteConfirm(false)}
-                                variant="outline"
-                                disabled={isDeleting}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        )}
+                        <div className="space-y-3">
+                          <p className="text-sm">
+                            Permanently delete this team and all associated Projects and Issues. This action cannot be undone.
+                          </p>
+                          <Button
+                            onClick={() => setShowDeleteDialog(true)}
+                            variant="destructive"
+                            className="gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete Team
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -449,6 +440,57 @@ export default function TeamPage({
           onSuccess={handleUpdateSuccess}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={handleDeleteDialogClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Delete Team</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the team
+              and remove all associated data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">
+                Please type <span className="font-bold text-foreground">{team?.name}</span> to confirm:
+              </p>
+              <Input
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder="Enter team name"
+                disabled={isDeleting}
+                className="w-full"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleDeleteDialogClose}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTeam}
+              disabled={isDeleting || deleteConfirmName !== team?.name}
+              className="gap-2"
+            >
+              {isDeleting ? (
+                "Deleting..."
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Delete Team
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

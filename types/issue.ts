@@ -1,11 +1,20 @@
 import { Project } from "./project";
+import { WorkflowStatus } from "./workflowStatus";
+
 export interface Issue {
-  id: string;
+  _id: string;
   title: string;
   description: string;
-  status: "open" | "in-progress" | "closed";
-  priority: "low" | "medium" | "high";
-  project: Project;
-  createdAt: Date;
-  updatedAt: Date;
+  workflowStatus: WorkflowStatus | string;
+  type: "task" | "bug" | "story" | "epic";
+  priority: "highest" | "high" | "medium" | "low" | "lowest";
+  assignees?: string[];
+  reporter: string[];
+  project: Project | string;
+  img?: string;
+  estimate?: number;
+  attachments?: string[];
+  comments?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
