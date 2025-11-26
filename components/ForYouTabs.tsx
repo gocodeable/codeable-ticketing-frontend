@@ -77,21 +77,21 @@ export function ForYouTabs() {
                     <TabsList className="w-full sm:w-auto bg-transparent h-auto p-0 space-x-1">
                         <TabsTrigger
                             value="worked-on"
-                            className="flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-4"
+                            className="flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                         >
                             <Clock className="w-4 h-4" />
                             <span className="font-medium">Worked on</span>
                         </TabsTrigger>
                         <TabsTrigger
                             value="assigned"
-                            className="flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-4"
+                            className="flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                         >
                             <User className="w-4 h-4" />
                             <span className="font-medium">Assigned to me</span>
                         </TabsTrigger>
                         <TabsTrigger
                             value="starred"
-                            className="flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-4"
+                            className="flex items-center gap-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                         >
                             <Star className="w-4 h-4" />
                             <span className="font-medium">Starred</span>

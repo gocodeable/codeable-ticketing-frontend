@@ -52,6 +52,8 @@ const projectSchema = z.object({
     .min(10, "Description must be at least 10 characters")
     .max(1000, "Description must be less than 1000 characters"),
   img: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  figmaLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  swaggerLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
 });
 
 type ProjectFormData = z.infer<typeof projectSchema>;
@@ -78,6 +80,8 @@ export default function CreateProjectPage() {
       code: "",
       description: "",
       img: "",
+      figmaLink: "",
+      swaggerLink: "",
     },
   });
 
@@ -121,6 +125,8 @@ export default function CreateProjectPage() {
           code: form.getValues("code"),
           description: form.getValues("description"),
           img: imageSelection.imagePreview || "",
+          figmaLink: form.getValues("figmaLink") || "",
+          swaggerLink: form.getValues("swaggerLink") || "",
           members: memberUids,
           teamId: linkedTeam?._id || undefined,
         },
@@ -288,6 +294,50 @@ export default function CreateProjectPage() {
                           <FormDescription>
                             Provide a clear description of your project goals
                             and objectives
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Figma Link Field */}
+                    <FormField
+                      control={form.control}
+                      name="figmaLink"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Figma Link (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="url"
+                              placeholder="https://figma.com/..."
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Link to your project's Figma design files
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Swagger Link Field */}
+                    <FormField
+                      control={form.control}
+                      name="swaggerLink"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Swagger/API Documentation Link (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="url"
+                              placeholder="https://..."
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Link to your project's API documentation or Swagger spec
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

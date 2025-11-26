@@ -1,144 +1,293 @@
 import { Project } from "@/types/project";
-import { FileText } from "lucide-react";
+import { FileText, Edit } from "lucide-react";
 import { CalendarDays } from "lucide-react";
 import { Briefcase } from "lucide-react";
-import { Link } from "lucide-react";
-import Image from "next/image";
 import { Users } from "lucide-react";
 import { List } from "lucide-react";
 import { Crown } from "lucide-react";
 import { Code } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
-export default function ProjectInfo({ project }: { project: Project }) {
+interface ProjectInfoProps {
+  project: Project;
+  isAdmin?: boolean;
+  onEdit?: () => void;
+}
+
+export default function ProjectInfo({ project, isAdmin, onEdit }: ProjectInfoProps) {
+  // Get admin members from the members array
+  const adminMembers = Array.isArray(project.members)
+    ? project.members.filter((member: any) => {
+        if (typeof member === 'string') {
+          return project.admin?.includes(member);
+        }
+        return project.admin?.includes(member.uid);
+      })
+    : [];
+
+  const getInitials = (name: string) => 
+    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
   return (
-    <div className="w-full bg-card rounded-lg border shadow-sm p-4 sm:p-6">
-      <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-6">
-        Project Information
-      </h2>
+    <div className="w-full bg-card rounded-xl border border-border/50 shadow-sm p-5 sm:p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20">
+            <FileText className="w-5 h-5 text-primary" />
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            Project Information
+          </h2>
+        </div>
+        {isAdmin && onEdit && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onEdit}
+            className="gap-2"
+          >
+            <Edit className="w-4 h-4" />
+            <span className="hidden sm:inline">Edit</span>
+          </Button>
+        )}
+      </div>
 
-      <div className="space-y-6">
-        <div>
+      <div className="space-y-5">
+        <div className="rounded-lg bg-muted/30 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Code className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium text-muted-foreground">
+            <Code className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">
               Project Code
             </h3>
           </div>
-          <p className="text-sm sm:text-base font-mono font-semibold text-primary pl-6">
+          <p className="text-lg font-mono font-bold text-primary pl-6">
             {project.code}
           </p>
         </div>
 
-        <div>
+        <div className="rounded-lg bg-muted/30 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <FileText className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium text-muted-foreground">
+            <FileText className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">
               Description
             </h3>
           </div>
-          <p className="text-sm sm:text-base text-foreground pl-6">
+          <p className="text-sm sm:text-base text-muted-foreground pl-6 leading-relaxed">
             {project.description || "No description provided"}
           </p>
         </div>
 
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <CalendarDays className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Created
-            </h3>
+        {/* External Links Section */}
+        {(project.figmaLink || project.swaggerLink) && (
+          <div className="rounded-lg bg-muted/30 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ExternalLink className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">
+                External Links
+              </h3>
+            </div>
+            <div className="space-y-2 pl-6">
+              {project.figmaLink && (
+                <a
+                  href={project.figmaLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 hover:bg-accent rounded-lg p-2.5 -ml-2 transition-all w-fit group"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-sm border">
+                    <Image
+                      src="/figma.png"
+                      alt="Figma"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm sm:text-base text-foreground font-medium group-hover:text-primary transition-colors">
+                      Figma Design
+                    </span>
+                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </a>
+              )}
+              {project.swaggerLink && (
+                <a
+                  href={project.swaggerLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 hover:bg-accent rounded-lg p-2.5 -ml-2 transition-all w-fit group"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-sm border">
+                    <Image
+                      src="/swagger.png"
+                      alt="Swagger"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm sm:text-base text-foreground font-medium group-hover:text-primary transition-colors">
+                      API Documentation
+                    </span>
+                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </a>
+              )}
+            </div>
           </div>
-          <p className="text-sm sm:text-base text-foreground pl-6">
-            {project.createdAt
-              ? new Date(project.createdAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
-              : "Unknown"}
-          </p>
+        )}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg bg-muted/30 p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <CalendarDays className="w-4 h-4 text-primary" />
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Created
+              </h3>
+            </div>
+            <p className="text-sm font-medium text-foreground pl-6">
+              {project.createdAt
+                ? new Date(project.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "Unknown"}
+            </p>
+          </div>
+
+          <div className="rounded-lg bg-muted/30 p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <List className="w-4 h-4 text-primary" />
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Issues
+              </h3>
+            </div>
+            <p className="text-sm font-medium text-foreground pl-6">
+              {project.issueCount !== undefined
+                ? `${project.issueCount} issue${
+                    project.issueCount !== 1 ? "s" : ""
+                  }`
+                : "0 issues"}
+            </p>
+          </div>
+
+          <div className="rounded-lg bg-muted/30 p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="w-4 h-4 text-primary" />
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Members
+              </h3>
+            </div>
+            <p className="text-sm font-medium text-foreground pl-6">
+              {Array.isArray(project.members)
+                ? `${project.members.length} member${
+                    project.members.length !== 1 ? "s" : ""
+                  }`
+                : "0 members"}
+            </p>
+          </div>
+
+          <div className="rounded-lg bg-muted/30 p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Briefcase className="w-4 h-4 text-primary" />
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Team
+              </h3>
+            </div>
+            {project.team ? (
+              <Link
+                href={`/team/${project.team._id}`}
+                className="flex items-center gap-2 pl-6 hover:text-primary transition-colors w-fit group"
+              >
+                {project.team.img ? (
+                  <Image
+                    src={project.team.img}
+                    alt={project.team.name}
+                    width={20}
+                    height={20}
+                    className="w-5 h-5 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="w-3 h-3 text-primary" />
+                  </div>
+                )}
+                <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate max-w-[100px]">
+                  {project.team.name}
+                </span>
+              </Link>
+            ) : (
+              <p className="text-sm text-muted-foreground pl-6">
+                No team
+              </p>
+            )}
+          </div>
         </div>
 
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Briefcase className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium text-muted-foreground">Team</h3>
-          </div>
-          {project.team ? (
-            <Link
-              href={`/team/${project.team._id}`}
-              className="flex items-center gap-3 pl-6 hover:bg-accent rounded-md p-2 -ml-2 transition-colors w-fit"
-            >
-              {project.team.img ? (
-                <Image
-                  src={project.team.img}
-                  alt={project.team.name}
-                  width={32}
-                  height={32}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Users className="w-4 h-4 text-primary" />
-                </div>
-              )}
-              <span className="text-sm sm:text-base text-foreground font-medium hover:text-primary transition-colors">
-                {project.team.name}
+        {/* Project Admins Section */}
+        <div className="rounded-lg bg-muted/30 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Crown className="w-4 h-4 text-yellow-500" />
+              <h3 className="text-sm font-semibold text-foreground">
+                Project Admins
+              </h3>
+            </div>
+            {adminMembers.length > 0 && (
+              <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+                {adminMembers.length} admin{adminMembers.length !== 1 ? "s" : ""}
               </span>
-            </Link>
+            )}
+          </div>
+          {adminMembers.length > 0 ? (
+            <div className="space-y-2">
+              {adminMembers.map((member: any, index: number) => (
+                <Link
+                  key={typeof member === 'string' ? member : member.uid || index}
+                  href={`/profile/${typeof member === 'string' ? member : member.uid}`}
+                  className="flex items-center gap-3 hover:bg-accent rounded-lg p-2.5 -ml-1 transition-all w-full group"
+                >
+                  <Avatar className="w-10 h-10 ring-2 ring-yellow-500/30 shadow-sm">
+                    <AvatarImage
+                      src={typeof member === 'string' ? '' : member.avatar || ''}
+                      alt={typeof member === 'string' ? 'Admin' : member.name}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 font-medium">
+                      {typeof member === 'string' ? (
+                        <Crown className="w-4 h-4" />
+                      ) : (
+                        getInitials(member.name)
+                      )}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                      {typeof member === 'string' ? 'Admin User' : member.name}
+                    </span>
+                    {typeof member !== 'string' && member.email && (
+                      <span className="text-xs text-muted-foreground truncate">
+                        {member.email}
+                      </span>
+                    )}
+                  </div>
+                  <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
+                </Link>
+              ))}
+            </div>
           ) : (
-            <p className="text-sm sm:text-base text-muted-foreground pl-6">
-              No team assigned
+            <p className="text-sm text-muted-foreground">
+              No admins assigned
             </p>
           )}
-        </div>
-
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <List className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Issues
-            </h3>
-          </div>
-          <p className="text-sm sm:text-base text-foreground pl-6">
-            {project.issueCount !== undefined
-              ? `${project.issueCount} issue${
-                  project.issueCount !== 1 ? "s" : ""
-                }`
-              : "0 issues"}
-          </p>
-        </div>
-
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Users className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Team Members
-            </h3>
-          </div>
-          <p className="text-sm sm:text-base text-foreground pl-6">
-            {Array.isArray(project.members)
-              ? `${project.members.length} member${
-                  project.members.length !== 1 ? "s" : ""
-                }`
-              : "0 members"}
-          </p>
-        </div>
-
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Crown className="w-4 h-4 text-yellow-500" />
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Project Admins
-            </h3>
-          </div>
-          <p className="text-sm sm:text-base text-foreground pl-6">
-            {project.admin && project.admin.length > 0
-              ? `${project.admin.length} admin${
-                  project.admin.length !== 1 ? "s" : ""
-                }`
-              : "No admins"}
-          </p>
         </div>
       </div>
     </div>

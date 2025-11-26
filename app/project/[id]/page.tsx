@@ -24,6 +24,9 @@ import { apiGet } from "@/lib/api/apiClient";
 import { Members } from "@/components/Members";
 import ProjectInfo from "@/components/ProjectInfo";
 import ProjectBoard from "@/components/ProjectBoard";
+import ProjectSettings from "@/components/ProjectSettings";
+import { UpdateProjectSheet } from "@/components/UpdateProjectSheet";
+import { toast } from "sonner";
 
 export default function ProjectPage({
   params,
@@ -33,6 +36,7 @@ export default function ProjectPage({
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdateSheetOpen, setIsUpdateSheetOpen] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
   const { id } = use(params);
@@ -77,6 +81,11 @@ export default function ProjectPage({
   useEffect(() => {
     fetchProject();
   }, [id, user]);
+
+  const handleUpdateSuccess = () => {
+    toast.success("Project updated successfully");
+    fetchProject();
+  };
 
   if (isLoading) {
     return <ProjectPageSkeleton />;
@@ -218,7 +227,11 @@ export default function ProjectPage({
                 )}
               </TabsList>
               <TabsContent value="info" className="w-full mt-3 sm:mt-4">
-                <ProjectInfo project={project} />
+                <ProjectInfo 
+                  project={project} 
+                  isAdmin={!!isAdmin}
+                  onEdit={() => setIsUpdateSheetOpen(true)}
+                />
               </TabsContent>
               <TabsContent value="issues" className="mt-3 sm:mt-4">
                 <div className="w-full">
@@ -228,7 +241,7 @@ export default function ProjectPage({
                 </div>
               </TabsContent>
               <TabsContent value="board" className="mt-3 sm:mt-4">
-                <ProjectBoard />
+                <ProjectBoard projectId={id} isAdmin={!!isAdmin} />
               </TabsContent>
               <TabsContent
                 value="members"
@@ -247,6 +260,7 @@ export default function ProjectPage({
                           name: m.name,
                           email: m.email,
                           avatar: m.avatar,
+                          role: m.role,
                         }))}
                       />
                     ) : (
@@ -265,20 +279,23 @@ export default function ProjectPage({
               </TabsContent>
               {isAdmin && (
                 <TabsContent value="settings" className="mt-3 sm:mt-4">
-                  <div className="w-full bg-card rounded-lg border shadow-sm p-4 sm:p-6">
-                    <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
-                      Project Settings
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      Settings coming soon...
-                    </p>
-                  </div>
+                  <ProjectSettings project={project} />
                 </TabsContent>
               )}
             </Tabs>
           </div>
         </motion.div>
       </main>
+
+      {/* Update Project Sheet */}
+      {project && (
+        <UpdateProjectSheet
+          open={isUpdateSheetOpen}
+          onOpenChange={setIsUpdateSheetOpen}
+          project={project}
+          onSuccess={handleUpdateSuccess}
+        />
+      )}
     </div>
   );
 }
