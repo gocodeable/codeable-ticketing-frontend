@@ -15,6 +15,9 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+  useDndMonitor,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -24,22 +27,29 @@ import {
 } from "@dnd-kit/sortable";
 import { toast } from "sonner";
 import SortableStatusColumn from "./SortableStatusColumn";
+import AddWorkflowStatus from "./AddWorkflowStatus";
+import IssueCard from "./IssueCard";
+
+import { ProjectMember } from "@/types/project";
 
 interface ProjectBoardProps {
   projectId: string;
   isAdmin: boolean;
+  userRole?: "admin" | "developer" | "qa";
+  projectMembers: ProjectMember[];
 }
 
 // Sortable Status Column Component
 
 
-export default function ProjectBoard({ projectId, isAdmin }: ProjectBoardProps) {
+export default function ProjectBoard({ projectId, isAdmin, userRole, projectMembers }: ProjectBoardProps) {
   const { user } = useAuth();
   const [statuses, setStatuses] = useState<WorkflowStatus[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -73,7 +83,7 @@ export default function ProjectBoard({ projectId, isAdmin }: ProjectBoardProps) 
 
         // Fetch issues
         const issuesRes = await apiGet(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/issues/project/${projectId}`,
+          `/api/issues?projectId=${projectId}`,
           idToken
         );
         const issuesData = await issuesRes.json();
@@ -93,13 +103,15 @@ export default function ProjectBoard({ projectId, isAdmin }: ProjectBoardProps) 
   }, [projectId, user]);
 
   const getIssuesByStatus = (statusId: string) => {
-    return issues.filter((issue) => {
-      const workflowStatusId =
-        typeof issue.workflowStatus === "string"
-          ? issue.workflowStatus
-          : issue.workflowStatus?._id;
-      return workflowStatusId === statusId;
-    });
+    return issues
+      .filter((issue) => {
+        const workflowStatusId =
+          typeof issue.workflowStatus === "string"
+            ? issue.workflowStatus
+            : issue.workflowStatus?._id;
+        return workflowStatusId === statusId;
+      })
+      .sort((a, b) => (a.position || 0) - (b.position || 0));
   };
 
   const getPriorityColor = (priority: string) => {
@@ -134,15 +146,189 @@ export default function ProjectBoard({ projectId, isAdmin }: ProjectBoardProps) 
     }
   };
 
+  // Check if user can move an issue between statuses
+  const canMoveIssue = (issue: Issue): boolean => {
+    if (!user) return false;
+    if (isAdmin || userRole === "qa") return true;
+    // Check if user is assignee or reporter
+    const isAssignee = typeof issue.assignee === "string" 
+      ? issue.assignee === user.uid 
+      : issue.assignee?.uid === user.uid;
+    const isReporter = issue.reporter === user.uid;
+    return isAssignee || isReporter;
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    
+    // Always clear the active issue overlay
+    setActiveIssue(null);
 
+    // If no valid drop target or dropped on itself, do nothing (issue stays in place)
     if (!over || active.id === over.id) {
       return;
     }
 
+    // Check if dragging an issue (issue IDs are in the issues array)
+    const draggedIssue = issues.find((issue) => issue._id === active.id);
+    
+    if (draggedIssue) {
+      // This is an issue being dragged
+      const targetStatusId = over.id as string;
+      
+      // Verify that the target is a valid status (not another issue)
+      const isValidStatus = statuses.some((status) => status._id === targetStatusId);
+      if (!isValidStatus) {
+        // Dropped on something that's not a status - do nothing, issue stays in place
+        return;
+      }
+      
+      // Check if user can move this issue
+      if (!canMoveIssue(draggedIssue)) {
+        toast.error("You don't have permission to move this issue");
+        return;
+      }
+
+      // Check if moving to a different status
+      const currentStatusId = typeof draggedIssue.workflowStatus === "string"
+        ? draggedIssue.workflowStatus
+        : draggedIssue.workflowStatus?._id;
+      
+      if (currentStatusId === targetStatusId) {
+        // Same status - handle reordering within the column
+        const statusIssues = getIssuesByStatus(currentStatusId);
+        const oldIndex = statusIssues.findIndex((issue) => issue._id === active.id);
+        const newIndex = statusIssues.findIndex((issue) => issue._id === over.id);
+        
+        if (oldIndex === -1 || newIndex === -1) return;
+        
+        const reorderedIssues = arrayMove(statusIssues, oldIndex, newIndex);
+        
+        // Optimistically update UI
+        setIssues((prevIssues) => {
+          const otherIssues = prevIssues.filter((issue) => {
+            const workflowStatusId =
+              typeof issue.workflowStatus === "string"
+                ? issue.workflowStatus
+                : issue.workflowStatus?._id;
+            return workflowStatusId !== currentStatusId;
+          });
+          return [...otherIssues, ...reorderedIssues.map((issue, index) => ({
+            ...issue,
+            position: index,
+          }))];
+        });
+
+        // Update backend
+        setIsSaving(true);
+        try {
+          const idToken = await user?.getIdToken();
+          if (!idToken) throw new Error("Unauthorized");
+
+          const issueIds = reorderedIssues.map((issue) => issue._id);
+
+          const response = await apiPatch(
+            `/api/issues/positions/${currentStatusId}`,
+            { issueIds },
+            idToken
+          );
+
+          const data = await response.json();
+
+          if (!data.success) {
+            throw new Error(data.error || "Failed to update issue positions");
+          }
+
+          toast.success("Issue order updated successfully");
+        } catch (err) {
+          console.error("Error updating issue positions:", err);
+          toast.error(
+            err instanceof Error ? err.message : "Failed to update issue positions"
+          );
+          // Revert on error - refetch issues
+          const idToken = await user?.getIdToken();
+          if (idToken) {
+            const issuesRes = await apiGet(`/api/issues?projectId=${projectId}`, idToken);
+            const issuesData = await issuesRes.json();
+            if (issuesData.success) {
+              setIssues(issuesData.data);
+            }
+          }
+        } finally {
+          setIsSaving(false);
+        }
+        return;
+      }
+
+      // Moving to a different status
+      setIsSaving(true);
+      try {
+        const idToken = await user?.getIdToken();
+        if (!idToken) throw new Error("Unauthorized");
+
+        // Find target position (index in the target status)
+        const targetStatusIssues = getIssuesByStatus(targetStatusId);
+        const targetPosition = targetStatusIssues.length;
+
+        // Optimistically update UI
+        const updatedIssue = {
+          ...draggedIssue,
+          workflowStatus: targetStatusId,
+          position: targetPosition,
+        };
+        setIssues((prevIssues) => {
+          const otherIssues = prevIssues.filter((issue) => issue._id !== draggedIssue._id);
+          return [...otherIssues, updatedIssue];
+        });
+
+        const response = await apiPatch(
+          `/api/issues/${draggedIssue._id}/move`,
+          { workflowStatusId: targetStatusId, position: targetPosition },
+          idToken
+        );
+
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || "Failed to move issue");
+        }
+
+        // Update with server response
+        if (data.data) {
+          setIssues((prevIssues) => {
+            const otherIssues = prevIssues.filter((issue) => issue._id !== draggedIssue._id);
+            return [...otherIssues, data.data];
+          });
+        }
+
+        toast.success("Issue moved successfully");
+      } catch (err) {
+        console.error("Error moving issue:", err);
+        toast.error(
+          err instanceof Error ? err.message : "Failed to move issue"
+        );
+        // Revert on error - refetch issues
+        const idToken = await user?.getIdToken();
+        if (idToken) {
+          const issuesRes = await apiGet(`/api/issues?projectId=${projectId}`, idToken);
+          const issuesData = await issuesRes.json();
+          if (issuesData.success) {
+            setIssues(issuesData.data);
+          }
+        }
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    // Otherwise, it's a status being dragged
     const oldIndex = statuses.findIndex((status) => status._id === active.id);
     const newIndex = statuses.findIndex((status) => status._id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
 
     const newStatuses = arrayMove(statuses, oldIndex, newIndex);
     
@@ -243,15 +429,71 @@ export default function ProjectBoard({ projectId, isAdmin }: ProjectBoardProps) 
                     status={status}
                     statusIssues={statusIssues}
                     isAdmin={isAdmin}
+                    userRole={userRole}
+                    projectId={projectId}
+                    projectMembers={projectMembers}
                     getTypeIcon={getTypeIcon}
                     getPriorityColor={getPriorityColor}
+                    onStatusUpdate={(updatedStatus) => {
+                      setStatuses(statuses.map(s => 
+                        s._id === updatedStatus._id ? updatedStatus : s
+                      ));
+                    }}
+                    onStatusDelete={(statusId) => {
+                      // Remove the deleted status from the list
+                      setStatuses(statuses.filter(s => s._id !== statusId));
+                      // Remove issues that were in that status
+                      setIssues(issues.filter(issue => {
+                        const workflowStatusId =
+                          typeof issue.workflowStatus === "string"
+                            ? issue.workflowStatus
+                            : issue.workflowStatus?._id;
+                        return workflowStatusId !== statusId;
+                      }));
+                    }}
+                    onIssueCreated={(newIssue) => {
+                      // Add the new issue to the issues list
+                      setIssues([...issues, newIssue]);
+                    }}
+                    onIssuesReordered={(statusId, reorderedIssues) => {
+                      // Update issues with new positions
+                      setIssues((prevIssues) => {
+                        const otherIssues = prevIssues.filter((issue) => {
+                          const workflowStatusId =
+                            typeof issue.workflowStatus === "string"
+                              ? issue.workflowStatus
+                              : issue.workflowStatus?._id;
+                          return workflowStatusId !== statusId;
+                        });
+                        return [...otherIssues, ...reorderedIssues];
+                      });
+                    }}
                   />
                 );
               })}
+              
+              {/* Add Workflow Status Component */}
+              <AddWorkflowStatus
+                projectId={projectId}
+                canEdit={isAdmin || userRole === "qa"}
+                onStatusCreated={(newStatus) => {
+                  setStatuses([...statuses, newStatus]);
+                }}
+              />
             </div>
           </SortableContext>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
+        <DragOverlay>
+          {activeIssue ? (
+            <div className="rotate-3 opacity-90" style={{ width: '280px' }}>
+              <IssueCard 
+                issue={activeIssue} 
+                getPriorityColor={getPriorityColor}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
