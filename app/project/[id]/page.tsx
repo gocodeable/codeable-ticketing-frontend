@@ -110,6 +110,29 @@ export default function ProjectPage({
   }
 
   const isAdmin = user && project.admin.includes(user.uid);
+  
+  // Get user's role from project memberRoles or members array
+  const getUserRole = (): "admin" | "developer" | "qa" | undefined => {
+    if (!user) return undefined;
+    
+    // Check if user is admin first
+    if (isAdmin) return "admin";
+    
+    // Check memberRoles array for role
+    if (Array.isArray(project.members)) {
+      const member = project.members.find((m: any) => 
+        typeof m === 'string' ? m === user.uid : m.uid === user.uid
+      );
+      
+      if (member && typeof member !== 'string' && member.role) {
+        return member.role as "admin" | "developer" | "qa";
+      }
+    }
+    
+    return "developer"; // default role
+  };
+  
+  const userRole = getUserRole();
 
   return (
     <div className="w-full min-w-0 bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background min-h-screen">
@@ -167,15 +190,6 @@ export default function ProjectPage({
                   )}
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="cursor-pointer h-8 w-8 sm:h-9 sm:w-9 p-0"
-              >
-                <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </Button>
             </div>
           </div>
         </motion.div>
@@ -241,7 +255,18 @@ export default function ProjectPage({
                 </div>
               </TabsContent>
               <TabsContent value="board" className="mt-3 sm:mt-4">
-                <ProjectBoard projectId={id} isAdmin={!!isAdmin} />
+                <ProjectBoard 
+                  projectId={id} 
+                  isAdmin={!!isAdmin} 
+                  userRole={userRole}
+                  projectMembers={Array.isArray(project.members) ? project.members.map((m: any) => ({
+                    uid: m.uid,
+                    name: m.name,
+                    email: m.email,
+                    avatar: m.avatar,
+                    role: m.role,
+                  })) : []}
+                />
               </TabsContent>
               <TabsContent
                 value="members"

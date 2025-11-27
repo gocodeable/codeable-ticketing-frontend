@@ -187,6 +187,7 @@ export async function apiDelete(
     ...options,
     method: 'DELETE',
     headers,
+    body: options?.body,
   });
 }
 
