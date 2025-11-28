@@ -522,7 +522,9 @@ export function AddIssueDialog({
 
             {/* Assign to User */}
             <div className="space-y-2">
-              <Label className="text-sm font-semibold">Assign To</Label>
+              <Label className="text-sm font-semibold">
+                Assign To <span className="text-destructive">*</span>
+              </Label>
               {selectedAssignee ? (
                 <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg h-11">
                   <div className="relative h-6 w-6 rounded-full overflow-hidden ring-2 ring-background">
@@ -717,7 +719,12 @@ export function AddIssueDialog({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || isUploadingAttachments}
+              disabled={
+                isSubmitting ||
+                isUploadingAttachments ||
+                !title.trim() ||
+                !selectedAssignee
+              }
               className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
             >
               Create Issue

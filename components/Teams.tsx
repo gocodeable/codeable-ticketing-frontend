@@ -5,9 +5,10 @@ import { Users, Briefcase } from "lucide-react"
 interface TeamsProps{
     teams: TeamType[]
     type: "workingIn" | "myTeams" | "userInTeams"
+    isCurrentUser?: boolean
 }
 
-export function Teams({teams, type}: TeamsProps) {
+export function Teams({teams, type, isCurrentUser = true}: TeamsProps) {
     // Don't render if there are no teams
     if (!teams || teams.length === 0) {
         return null;
@@ -42,7 +43,7 @@ export function Teams({teams, type}: TeamsProps) {
             case "workingIn":
                 return "Teams you're a member of";
             default:
-                return "Teams you're part of";
+                return isCurrentUser ? "Teams you're part of" : "Teams they're part of";
         }
     };
 

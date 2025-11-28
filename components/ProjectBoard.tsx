@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   DndContext,
-  closestCenter,
+  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -17,7 +17,6 @@ import {
   DragEndEvent,
   DragStartEvent,
   DragOverlay,
-  useDndMonitor,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -54,7 +53,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -158,6 +157,15 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
     return isAssignee || isReporter;
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    // Set the active issue for drag overlay
+    const draggedIssue = issues.find((issue) => issue._id === active.id);
+    if (draggedIssue) {
+      setActiveIssue(draggedIssue);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
@@ -173,102 +181,120 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
     const draggedIssue = issues.find((issue) => issue._id === active.id);
     
     if (draggedIssue) {
-      // This is an issue being dragged
-      const targetStatusId = over.id as string;
-      
-      // Verify that the target is a valid status (not another issue)
-      const isValidStatus = statuses.some((status) => status._id === targetStatusId);
-      if (!isValidStatus) {
-        // Dropped on something that's not a status - do nothing, issue stays in place
-        return;
-      }
-      
       // Check if user can move this issue
       if (!canMoveIssue(draggedIssue)) {
         toast.error("You don't have permission to move this issue");
         return;
       }
 
-      // Check if moving to a different status
       const currentStatusId = typeof draggedIssue.workflowStatus === "string"
         ? draggedIssue.workflowStatus
         : draggedIssue.workflowStatus?._id;
+
+      // Check if over.id is a status ID or an issue ID
+      const isValidStatus = statuses.some((status) => status._id === over.id);
+      const targetIssue = issues.find((issue) => issue._id === over.id);
       
-      if (currentStatusId === targetStatusId) {
-        // Same status - handle reordering within the column
-        const statusIssues = getIssuesByStatus(currentStatusId);
-        const oldIndex = statusIssues.findIndex((issue) => issue._id === active.id);
-        const newIndex = statusIssues.findIndex((issue) => issue._id === over.id);
+      let targetStatusId: string;
+      let targetPosition: number;
+
+      if (isValidStatus) {
+        // Dropped directly on a status column
+        targetStatusId = over.id as string;
+        const targetStatusIssues = getIssuesByStatus(targetStatusId);
+        targetPosition = targetStatusIssues.length;
+      } else if (targetIssue) {
+        // Dropped on another issue - determine if it's same column or different
+        const targetIssueStatusId = typeof targetIssue.workflowStatus === "string"
+          ? targetIssue.workflowStatus
+          : targetIssue.workflowStatus?._id;
         
-        if (oldIndex === -1 || newIndex === -1) return;
-        
-        const reorderedIssues = arrayMove(statusIssues, oldIndex, newIndex);
-        
-        // Optimistically update UI
-        setIssues((prevIssues) => {
-          const otherIssues = prevIssues.filter((issue) => {
-            const workflowStatusId =
-              typeof issue.workflowStatus === "string"
-                ? issue.workflowStatus
-                : issue.workflowStatus?._id;
-            return workflowStatusId !== currentStatusId;
+        if (currentStatusId === targetIssueStatusId) {
+          // Same column - reorder within the column
+          const statusIssues = getIssuesByStatus(currentStatusId);
+          const oldIndex = statusIssues.findIndex((issue) => issue._id === active.id);
+          const newIndex = statusIssues.findIndex((issue) => issue._id === over.id);
+          
+          if (oldIndex === -1 || newIndex === -1) return;
+          
+          const reorderedIssues = arrayMove(statusIssues, oldIndex, newIndex);
+          
+          // Optimistically update UI
+          setIssues((prevIssues) => {
+            const otherIssues = prevIssues.filter((issue) => {
+              const workflowStatusId =
+                typeof issue.workflowStatus === "string"
+                  ? issue.workflowStatus
+                  : issue.workflowStatus?._id;
+              return workflowStatusId !== currentStatusId;
+            });
+            return [...otherIssues, ...reorderedIssues.map((issue, index) => ({
+              ...issue,
+              position: index,
+            }))];
           });
-          return [...otherIssues, ...reorderedIssues.map((issue, index) => ({
-            ...issue,
-            position: index,
-          }))];
-        });
 
-        // Update backend
-        setIsSaving(true);
-        try {
-          const idToken = await user?.getIdToken();
-          if (!idToken) throw new Error("Unauthorized");
+          // Update backend
+          setIsSaving(true);
+          try {
+            const idToken = await user?.getIdToken();
+            if (!idToken) throw new Error("Unauthorized");
 
-          const issueIds = reorderedIssues.map((issue) => issue._id);
+            const issueIds = reorderedIssues.map((issue) => issue._id);
 
-          const response = await apiPatch(
-            `/api/issues/positions/${currentStatusId}`,
-            { issueIds },
-            idToken
-          );
+            const response = await apiPatch(
+              `/api/issues/positions/${currentStatusId}`,
+              { issueIds },
+              idToken
+            );
 
-          const data = await response.json();
+            const data = await response.json();
 
-          if (!data.success) {
-            throw new Error(data.error || "Failed to update issue positions");
-          }
-
-          toast.success("Issue order updated successfully");
-        } catch (err) {
-          console.error("Error updating issue positions:", err);
-          toast.error(
-            err instanceof Error ? err.message : "Failed to update issue positions"
-          );
-          // Revert on error - refetch issues
-          const idToken = await user?.getIdToken();
-          if (idToken) {
-            const issuesRes = await apiGet(`/api/issues?projectId=${projectId}`, idToken);
-            const issuesData = await issuesRes.json();
-            if (issuesData.success) {
-              setIssues(issuesData.data);
+            if (!data.success) {
+              throw new Error(data.error || "Failed to update issue positions");
             }
+
+            toast.success("Issue order updated successfully");
+          } catch (err) {
+            console.error("Error updating issue positions:", err);
+            toast.error(
+              err instanceof Error ? err.message : "Failed to update issue positions"
+            );
+            // Revert on error - refetch issues
+            const idToken = await user?.getIdToken();
+            if (idToken) {
+              const issuesRes = await apiGet(`/api/issues?projectId=${projectId}`, idToken);
+              const issuesData = await issuesRes.json();
+              if (issuesData.success) {
+                setIssues(issuesData.data);
+              }
+            }
+          } finally {
+            setIsSaving(false);
           }
-        } finally {
-          setIsSaving(false);
+          return;
+        } else {
+          // Different column - move to that column at the position of the target issue
+          targetStatusId = targetIssueStatusId;
+          const targetStatusIssues = getIssuesByStatus(targetStatusId);
+          const targetIndex = targetStatusIssues.findIndex((issue) => issue._id === over.id);
+          targetPosition = targetIndex >= 0 ? targetIndex : targetStatusIssues.length;
         }
+      } else {
+        // Dropped on something invalid - do nothing
         return;
       }
 
       // Moving to a different status
+      if (currentStatusId === targetStatusId) {
+        // Already handled above for same-column reordering
+        return;
+      }
+
       setIsSaving(true);
       try {
         const idToken = await user?.getIdToken();
         if (!idToken) throw new Error("Unauthorized");
-
-        // Find target position (index in the target status)
-        const targetStatusIssues = getIssuesByStatus(targetStatusId);
-        const targetPosition = targetStatusIssues.length;
 
         // Optimistically update UI
         const updatedIssue = {
@@ -278,7 +304,35 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         };
         setIssues((prevIssues) => {
           const otherIssues = prevIssues.filter((issue) => issue._id !== draggedIssue._id);
-          return [...otherIssues, updatedIssue];
+          const targetStatusIssues = otherIssues
+            .filter((issue) => {
+              const workflowStatusId =
+                typeof issue.workflowStatus === "string"
+                  ? issue.workflowStatus
+                  : issue.workflowStatus?._id;
+              return workflowStatusId === targetStatusId;
+            })
+            .sort((a, b) => (a.position || 0) - (b.position || 0));
+          
+          // Insert at the correct position
+          const beforeIssues = targetStatusIssues.slice(0, targetPosition);
+          const afterIssues = targetStatusIssues.slice(targetPosition);
+          
+          return [
+            ...otherIssues.filter((issue) => {
+              const workflowStatusId =
+                typeof issue.workflowStatus === "string"
+                  ? issue.workflowStatus
+                  : issue.workflowStatus?._id;
+              return workflowStatusId !== targetStatusId;
+            }),
+            ...beforeIssues,
+            updatedIssue,
+            ...afterIssues.map((issue, idx) => ({
+              ...issue,
+              position: targetPosition + 1 + idx,
+            })),
+          ];
         });
 
         const response = await apiPatch(
@@ -412,7 +466,8 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
         <ScrollArea className="w-full">

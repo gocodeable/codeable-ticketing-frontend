@@ -6,11 +6,9 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   SortableContext,
   verticalListSortingStrategy,
-  arrayMove,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import {
-  DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -70,7 +68,6 @@ export default function SortableStatusColumn({
   onStatusUpdate,
   onStatusDelete,
   onIssueCreated,
-  onIssuesReordered,
 }: {
   status: WorkflowStatus;
   statusIssues: Issue[];
@@ -116,70 +113,6 @@ export default function SortableStatusColumn({
     })
   );
 
-  const handleIssueDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = localIssues.findIndex((issue) => issue._id === active.id);
-    const newIndex = localIssues.findIndex((issue) => issue._id === over.id);
-
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    // Check if user can reorder the dragged issue
-    const draggedIssue = localIssues[oldIndex];
-    if (!canReorderIssue(draggedIssue)) {
-      toast.error("You can only reorder issues you reported");
-      return;
-    }
-
-    const reorderedIssues = arrayMove(localIssues, oldIndex, newIndex);
-    
-    // Optimistically update UI
-    setLocalIssues(reorderedIssues);
-
-    // Update backend
-    setIsReordering(true);
-    try {
-      if (!user) throw new Error("Unauthorized");
-      const idToken = await user.getIdToken();
-
-      const issueIds = reorderedIssues.map((issue) => issue._id);
-
-      const response = await apiPatch(
-        `/api/issues/positions/${status._id}`,
-        { issueIds },
-        idToken
-      );
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "Failed to update issue positions");
-      }
-
-      // Update issues with new positions
-      const updatedIssues = reorderedIssues.map((issue, index) => ({
-        ...issue,
-        position: index,
-      }));
-
-      if (onIssuesReordered) {
-        onIssuesReordered(status._id, updatedIssues);
-      }
-
-      toast.success("Issue order updated successfully");
-    } catch (err) {
-      console.error("Error updating issue positions:", err);
-      toast.error(
-        err instanceof Error ? err.message : "Failed to update issue positions"
-      );
-      // Revert on error
-      setLocalIssues(statusIssues);
-    } finally {
-      setIsReordering(false);
-    }
-  };
 
   const {
     attributes,
@@ -203,8 +136,12 @@ export default function SortableStatusColumn({
     if (isAdmin || userRole === "qa") {
       return true;
     }
-    // Reporters can only reorder their own issues
-    return user?.uid === issue.reporter;
+    // Check if user is assignee or reporter
+    const isAssignee = typeof issue.assignee === "string" 
+      ? issue.assignee === user?.uid 
+      : issue.assignee?.uid === user?.uid;
+    const isReporter = user?.uid === issue.reporter;
+    return isAssignee || isReporter;
   };
 
   const handleEdit = () => {

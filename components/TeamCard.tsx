@@ -47,7 +47,13 @@ export default function TeamCard({ team, i }: TeamCardProps) {
             <Link href={`/team/${team._id}`} className="block h-full">
                 <Card className="h-full rounded-xs flex flex-col hover:shadow-lg transition-shadow duration-200 cursor-pointer group py-2 px-2 gap-0">
                     <CardHeader className="py-0 mb-1 flex justify-start items-center gap-2">
-                        <Image src={team.img || ""} alt={team.name} width={100} height={100} className="w-10 h-10 rounded-sm object-cover" />
+                        {team.img ? (
+                            <Image src={team.img} alt={team.name} width={100} height={100} className="w-10 h-10 rounded-sm object-cover" />
+                        ) : (
+                            <div className="w-10 h-10 bg-primary/10 rounded-sm flex items-center justify-center">
+                                <span className="text-primary font-bold text-xs">{team.name.slice(0, 2).toUpperCase()}</span>
+                            </div>
+                        )}
                         <CardTitle className="text-base sm:text-md group-hover:text-primary transition-colors">
                             {team.name}
                         </CardTitle>
