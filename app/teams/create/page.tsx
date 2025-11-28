@@ -127,22 +127,22 @@ export default function CreateTeamPage() {
   };
 
   return (
-    <div className="w-full min-h-screen min-w-0 bg-background font-sans bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background relative">
+    <div className="w-full min-h-screen min-w-0 bg-background relative">
       {loading && (
-        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <Loader size="lg" hue={300} />
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center">
+          <Loader size="lg" hue={265} />
         </div>
       )}
 
-      <main className="w-full max-w-4xl mx-auto flex flex-col items-start justify-start gap-y-6 sm:gap-y-8 py-6 sm:py-8 md:py-10 lg:py-12 px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20 md:pb-24">
+      <main className="w-full max-w-3xl mx-auto flex flex-col items-start justify-start gap-y-8 py-8 sm:py-10 md:py-12 px-4 sm:px-6 lg:px-8">
         {/* Page Header */}
         <motion.div
-          className="w-full"
-          initial={{ opacity: 0, y: 20 }}
+          className="w-full space-y-1.5"
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.4 }}
         >
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
             Create New Team
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
@@ -155,22 +155,23 @@ export default function CreateTeamPage() {
           className="w-full"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.4, delay: 0.1 }}
         >
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="space-y-1 pb-6">
-              <CardTitle className="text-2xl">Team Details</CardTitle>
-              <CardDescription className="text-base">
-                Fill in the information below to create your team
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(onSubmit)}
-                    className="space-y-6"
-                  >
-                    {/* Team Image Section */}
+          <Card className="border-border/40 dark:border-border rounded-xl overflow-hidden shadow-sm">
+            <CardContent className="p-6 sm:p-8">
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-8"
+                >
+                  {/* Team Image Section */}
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <h3 className="text-base font-semibold text-foreground">Team Icon</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Choose an icon to represent your team
+                      </p>
+                    </div>
                     <FormField
                       control={form.control}
                       name="img"
@@ -181,13 +182,25 @@ export default function CreateTeamPage() {
                           shape="square"
                           size="md"
                           layout="horizontal"
-                          label="Team Icon"
+                          label=""
                           description="Upload a square image (max 5MB)"
-                          showUrlInput={true}
+                          showUrlInput={false}
                           disabled={loading}
                         />
                       )}
                     />
+                  </div>
+
+                  <div className="border-t border-border/40 dark:border-border/60" />
+
+                  {/* Basic Information */}
+                  <div className="space-y-5">
+                    <div className="space-y-1">
+                      <h3 className="text-base font-semibold text-foreground">Basic Information</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Give your team a name and description
+                      </p>
+                    </div>
 
                     {/* Name Field */}
                     <FormField
@@ -195,11 +208,15 @@ export default function CreateTeamPage() {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Team Name *</FormLabel>
+                          <FormLabel className="text-sm font-medium text-foreground">
+                            Team Name <span className="text-destructive">*</span>
+                          </FormLabel>
                           <FormControl>
                             <Input
                               type="text"
-                              placeholder="Enter team name"
+                              placeholder="e.g. Engineering Team"
+                              className="h-10 rounded-lg"
+                              disabled={loading}
                               {...field}
                             />
                           </FormControl>
@@ -214,83 +231,103 @@ export default function CreateTeamPage() {
                       name="description"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Description</FormLabel>
+                          <FormLabel className="text-sm font-medium text-foreground">
+                            Description <span className="text-destructive">*</span>
+                          </FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="Describe your team..."
-                              className="min-h-[120px] resize-y"
+                              placeholder="Describe what this team does and its main objectives..."
+                              className="min-h-[100px] resize-none rounded-lg"
+                              disabled={loading}
                               {...field}
                             />
                           </FormControl>
-                          <FormDescription>
-                            Provide a clear description of your team's purpose
-                            and goals
+                          <FormDescription className="text-xs text-muted-foreground">
+                            At least 10 characters
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                  </div>
 
-                    {/* Members Field */}
-                    <div className="space-y-2">
-                      <FormLabel>Add Members *</FormLabel>
-                      <UserSelector
-                        selectedUsers={selectedUsers}
-                        onUsersChange={setSelectedUsers}
-                        disabled={loading}
-                        placeholder="Search users by name or email..."
-                      />
-                      <FormDescription>
-                        Search and select team members. At least one member is required.
-                      </FormDescription>
-                      {selectedUsers.length === 0 && error && (
-                        <p className="text-sm font-medium text-destructive">
-                          At least one member is required
-                        </p>
-                      )}
+                  <div className="border-t border-border/40 dark:border-border/60" />
+
+                  {/* Members Section */}
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <h3 className="text-base font-semibold text-foreground">
+                        Team Members <span className="text-destructive">*</span>
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Add people to your team
+                      </p>
                     </div>
-
-                    {/* Error Message */}
-                    {error && (
-                      <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4">
-                        <p className="text-sm font-medium text-destructive">
-                          {error}
-                        </p>
-                      </div>
+                    <UserSelector
+                      selectedUsers={selectedUsers}
+                      onUsersChange={setSelectedUsers}
+                      disabled={loading}
+                      placeholder="Search by name or email..."
+                    />
+                    <FormDescription className="text-xs text-muted-foreground">
+                      At least one member is required
+                    </FormDescription>
+                    {selectedUsers.length === 0 && error && (
+                      <p className="text-sm font-medium text-destructive">
+                        Please add at least one team member
+                      </p>
                     )}
+                  </div>
 
-                    {/* Success Message */}
-                    {success && (
-                      <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-4">
-                        <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                          Team created successfully! Redirecting...
-                        </p>
-                      </div>
-                    )}
+                  {/* Error Message */}
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-xl bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 dark:border-destructive/40 p-3.5"
+                    >
+                      <p className="text-sm font-medium text-destructive dark:text-destructive">
+                        {error}
+                      </p>
+                    </motion.div>
+                  )}
 
-                    {/* Form Actions */}
-                    <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-border/50 mt-8">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full sm:w-auto"
-                        onClick={() => router.push("/teams")}
-                        disabled={loading}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        className="w-full sm:w-auto sm:ml-auto shadow-sm hover:shadow-md transition-shadow"
-                        disabled={loading}
-                      >
-                        {loading ? "Creating..." : "Create Team"}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
+                  {/* Success Message */}
+                  {success && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-xl bg-green-500/10 dark:bg-green-500/20 border border-green-500/30 dark:border-green-500/40 p-3.5"
+                    >
+                      <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                        Team created successfully! Redirecting...
+                      </p>
+                    </motion.div>
+                  )}
+
+                  {/* Form Actions */}
+                  <div className="flex flex-col-reverse sm:flex-row gap-3 pt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full sm:w-auto rounded-lg hover:bg-muted/50 dark:hover:bg-muted/50 transition-all duration-200"
+                      onClick={() => router.push("/teams")}
+                      disabled={loading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="w-full sm:w-auto sm:ml-auto rounded-lg bg-primary hover:bg-primary/90 dark:hover:bg-primary/90 hover:shadow-md transition-all duration-200"
+                      disabled={loading}
+                    >
+                      {loading ? "Creating..." : "Create Team"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
         </motion.div>
       </main>
     </div>

@@ -1,4 +1,4 @@
-import { User, Folder, Users, MoreHorizontal } from "lucide-react"
+import { User, Folder, Users, MoreHorizontal, Clock } from "lucide-react"
 
 import {
   Sidebar,
@@ -20,7 +20,8 @@ import { Recents as RecentsType } from "@/types/recents"
 import { motion } from "framer-motion"
 import { apiGet } from "@/lib/api/apiClient"
 import Image from "next/image"
-// Menu items.
+
+// Menu items
 const items = [
   {
     title: "For You",
@@ -66,68 +67,133 @@ export function SideBar() {
   useEffect(() => {
     fetchRecentProjects().then((data) => setRecentProjects(data))
   }, [user])
+
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b h-14 flex items-center">
-        <div
-          className={`flex items-center gap-2 transition-all duration-300 ease-in-out ${state === "collapsed" ? "opacity-0 scale-90" : "opacity-100 scale-100"
-            }`}
+    <Sidebar className="border-r border-border/40 dark:bg-card/30 dark:backdrop-blur-xl">
+      <SidebarHeader className="border-b border-border/40 h-16 flex items-center px-4">
+        <motion.div
+          className={`flex items-center gap-3 transition-all duration-300 ease-in-out ${
+            state === "collapsed" ? "opacity-0 scale-90" : "opacity-100 scale-100"
+          }`}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4 }}
         >
-          <div className="flex items-center justify-center size-8 rounded-md bg-primary text-primary-foreground font-bold text-sm">
+          <div className="flex items-center justify-center size-9 rounded-xl bg-linear-to-br from-primary/90 to-primary text-primary-foreground font-bold text-sm shadow-lg dark:shadow-primary/20">
             CT
           </div>
-          <span className="font-semibold text-lg">
-            Codeable Tickets
-          </span>
-        </div>
+          <div className="flex flex-col">
+            <span className="font-bold text-base tracking-tight">
+              Codeable Tickets
+            </span>
+            <span className="text-[10px] text-muted-foreground font-medium">
+              Task Management
+            </span>
+          </div>
+        </motion.div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-3 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sm sm:text-base font-medium text-muted-foreground dark:text-primary-foreground my-2">Quick Access</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">
+            Navigation
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}>
-              <SidebarMenu className="gap-2">
-                {/* Quick Access */}
-                {items.map((item) => (
-                  <SidebarMenuItem key={item.title} >
-                    <SidebarMenuButton asChild isActive={item.url == pathname}>
-                      <Link href={item.url}>
-                        <item.icon />
-                        <span className="truncate text-xs sm:text-sm">{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+            >
+              <SidebarMenu className="gap-1">
+                {items.map((item, index) => (
+                  <motion.div
+                    key={item.title}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                  >
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={item.url === pathname}
+                        className="h-10 px-3 rounded-lg font-medium hover:bg-primary/10 dark:hover:bg-primary/10 hover:text-primary transition-all duration-200 data-[active=true]:bg-primary/10 dark:data-[active=true]:bg-primary/20 data-[active=true]:text-primary dark:data-[active=true]:text-primary data-[active=true]:shadow-sm"
+                      >
+                        <Link href={item.url} className="flex items-center gap-3">
+                          <item.icon className="w-[18px] h-[18px]" />
+                          <span className="text-sm">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </motion.div>
                 ))}
-                {/* Recents */}
-                {recentProjects && recentProjects.length > 0 &&
-                  recentProjects.map((project,i) => (
-                    <motion.div key={project.resourceId} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: 0.1 * i }}>
-                      <SidebarMenuButton asChild key={project.resourceId} isActive={`/project/${project.resourceId}` == pathname}>
-                        <Link href={`/project/${project.resourceId}`} key={project.resourceId} className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground rounded-md p-2">
+              </SidebarMenu>
+            </motion.div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {recentProjects && recentProjects.length > 0 && (
+          <SidebarGroup className="mt-6">
+            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2 flex items-center gap-2">
+              <Clock className="w-3 h-3" />
+              Recent Projects
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {recentProjects.map((project, i) => (
+                  <motion.div
+                    key={project.resourceId}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 + i * 0.05 }}
+                  >
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={`/project/${project.resourceId}` === pathname}
+                        className="h-10 px-3 rounded-lg font-medium hover:bg-primary/10 dark:hover:bg-primary/10 hover:text-primary transition-all duration-200 data-[active=true]:bg-primary/10 dark:data-[active=true]:bg-primary/20 data-[active=true]:text-primary dark:data-[active=true]:text-primary data-[active=true]:shadow-sm"
+                      >
+                        <Link href={`/project/${project.resourceId}`} className="flex items-center gap-3">
                           {project.img ? (
-                            <Image src={project.img} alt={project.title} width={20} height={20} className="w-4 h-4 sm:w-5 sm:h-5 rounded-sm object-cover" />
+                            <Image
+                              src={project.img}
+                              alt={project.title}
+                              width={18}
+                              height={18}
+                              className="w-[18px] h-[18px] rounded-md object-cover ring-1 ring-border/20"
+                            />
                           ) : (
-                            <div className="w-4 h-4 sm:w-5 sm:h-5 bg-primary/10 rounded-sm flex items-center justify-center">
-                              <span className="text-primary font-bold text-[8px] sm:text-[10px]">
+                            <div className="w-[18px] h-[18px] bg-linear-to-br from-primary/20 to-primary/10 rounded-md flex items-center justify-center ring-1 ring-primary/20">
+                              <span className="text-primary font-bold text-[9px]">
                                 {(project as any).code?.slice(0, 2) || (project.title ? project.title.slice(0, 2).toUpperCase() : "PR")}
                               </span>
                             </div>
                           )}
-                          <span className="truncate text-xs sm:text-sm">{project.title}</span>
+                          <span className="truncate text-sm">{project.title}</span>
                         </Link>
                       </SidebarMenuButton>
-                    </motion.div>
-                  ))}
-                {/* More */}
-                <SidebarMenuButton asChild>
-                  <Link href="/more">
-                    <MoreHorizontal />
-                    <span>More</span>
+                    </SidebarMenuItem>
+                  </motion.div>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className="h-10 px-3 rounded-lg font-medium hover:bg-primary/10 dark:hover:bg-primary/10 hover:text-primary transition-all duration-200"
+                >
+                  <Link href="/more" className="flex items-center gap-3">
+                    <MoreHorizontal className="w-[18px] h-[18px]" />
+                    <span className="text-sm">More</span>
                   </Link>
                 </SidebarMenuButton>
-              </SidebarMenu>
-            </motion.div>
+              </SidebarMenuItem>
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
