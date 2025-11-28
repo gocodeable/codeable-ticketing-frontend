@@ -5,8 +5,9 @@ import { FolderKanban } from "lucide-react"
 interface ProjectsProps{
     projects:ProjectType[]
     showTitle?: boolean
+    isCurrentUser?: boolean
 }
-export function Projects({projects, showTitle = true}:ProjectsProps) {
+export function Projects({projects, showTitle = true, isCurrentUser = true}:ProjectsProps) {
     return (
         <div className="w-full max-w-full overflow-hidden">
             {showTitle && (
@@ -16,7 +17,9 @@ export function Projects({projects, showTitle = true}:ProjectsProps) {
                     </div>
                     <div>
                         <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Projects</h2>
-                        <p className="text-sm text-muted-foreground mt-1">Your active projects</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            {isCurrentUser ? "Your active projects" : "Active projects"}
+                        </p>
                     </div>
                 </div>
             )}

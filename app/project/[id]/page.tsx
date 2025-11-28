@@ -14,6 +14,8 @@ import {
   Users,
   Settings,
   Crown,
+  Plus,
+  Edit,
 } from "lucide-react";
 import { Project } from "@/types/project";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,7 @@ import ProjectInfo from "@/components/ProjectInfo";
 import ProjectBoard from "@/components/ProjectBoard";
 import ProjectSettings from "@/components/ProjectSettings";
 import { UpdateProjectSheet } from "@/components/UpdateProjectSheet";
+import { ProjectMembersModal } from "@/components/ProjectMembersModal";
 import { toast } from "sonner";
 
 export default function ProjectPage({
@@ -37,6 +40,7 @@ export default function ProjectPage({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdateSheetOpen, setIsUpdateSheetOpen] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
   const { id } = use(params);
@@ -129,7 +133,7 @@ export default function ProjectPage({
       }
     }
     
-    return "developer"; // default role
+    return "developer";
   };
   
   const userRole = getUserRole();
@@ -162,13 +166,21 @@ export default function ProjectPage({
         >
           <div className="rounded-sm p-3 sm:p-4 md:p-6 w-full flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-5 min-w-0 flex-1">
-              <Image
-                src={project.img}
-                alt={project.title}
-                width={100}
-                height={100}
-                className="w-8 h-8 sm:w-12 sm:h-12 md:w-28 md:h-28 object-contain rounded-md shrink-0"
-              />
+              {project.img ? (
+                <Image
+                  src={project.img}
+                  alt={project.title}
+                  width={100}
+                  height={100}
+                  className="w-8 h-8 sm:w-12 sm:h-12 md:w-28 md:h-28 object-contain rounded-md shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-28 md:h-28 bg-primary/10 rounded-md shrink-0 flex items-center justify-center">
+                  <span className="text-primary font-bold text-xs sm:text-sm md:text-lg">
+                    {project.code?.slice(0, 2) || "PR"}
+                  </span>
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-foreground truncate">
                   {project.title}
@@ -273,9 +285,29 @@ export default function ProjectPage({
                 className="flex-1 mt-3 sm:mt-4 overflow-visible flex flex-col"
               >
                 <div className="w-full h-full bg-card rounded-lg border shadow-sm p-4 sm:p-6 overflow-visible flex flex-col">
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
-                    Project Members
-                  </h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">
+                      Project Members
+                    </h2>
+                    {isAdmin && project && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (project) {
+                            setIsMembersModalOpen(true);
+                          }
+                        }}
+                        className="shrink-0 z-10 relative"
+                        type="button"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Members
+                      </Button>
+                    )}
+                  </div>
                   <div className="flex-1 min-h-0">
                     {Array.isArray(project.members) &&
                     project.members.length > 0 ? (
@@ -317,6 +349,18 @@ export default function ProjectPage({
         <UpdateProjectSheet
           open={isUpdateSheetOpen}
           onOpenChange={setIsUpdateSheetOpen}
+          project={project}
+          onSuccess={handleUpdateSuccess}
+        />
+      )}
+
+      {/* Project Members Modal */}
+      {project && (
+        <ProjectMembersModal
+          open={isMembersModalOpen}
+          onOpenChange={(open) => {
+            setIsMembersModalOpen(open);
+          }}
           project={project}
           onSuccess={handleUpdateSuccess}
         />

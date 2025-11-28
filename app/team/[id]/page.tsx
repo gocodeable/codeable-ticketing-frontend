@@ -27,6 +27,7 @@ import { Members } from "@/components/Members";
 import ProjectCard from "@/components/ProjectCard";
 import { ProjectCardSkeleton } from "@/components/ProjectCardSkeleton";
 import { UpdateTeamSheet } from "@/components/UpdateTeamSheet";
+import { TeamMembersModal } from "@/components/TeamMembersModal";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -49,6 +50,7 @@ export default function TeamPage({
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdateSheetOpen, setIsUpdateSheetOpen] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
@@ -330,9 +332,27 @@ export default function TeamPage({
 
               <TabsContent value="members" className="flex-1 mt-3 sm:mt-4 overflow-visible flex flex-col">
                 <div className="w-full h-full bg-card rounded-lg border shadow-sm p-4 sm:p-6 overflow-visible flex flex-col">
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
-                    Team Members
-                  </h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">
+                      Team Members
+                    </h2>
+                    {isAdmin && team && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsMembersModalOpen(true);
+                        }}
+                        className="shrink-0 z-10 relative"
+                        type="button"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Members
+                      </Button>
+                    )}
+                  </div>
                   <div className="flex-1 min-h-0">
                     <Members 
                       members={team.members} 
@@ -436,6 +456,18 @@ export default function TeamPage({
         <UpdateTeamSheet
           open={isUpdateSheetOpen}
           onOpenChange={setIsUpdateSheetOpen}
+          team={team}
+          onSuccess={handleUpdateSuccess}
+        />
+      )}
+
+      {/* Team Members Modal */}
+      {team && (
+        <TeamMembersModal
+          open={isMembersModalOpen}
+          onOpenChange={(open) => {
+            setIsMembersModalOpen(open);
+          }}
           team={team}
           onSuccess={handleUpdateSuccess}
         />

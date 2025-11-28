@@ -105,7 +105,15 @@ export function SideBar() {
                     <motion.div key={project.resourceId} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: 0.1 * i }}>
                       <SidebarMenuButton asChild key={project.resourceId} isActive={`/project/${project.resourceId}` == pathname}>
                         <Link href={`/project/${project.resourceId}`} key={project.resourceId} className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground rounded-md p-2">
-                          <Image src={project.img || ""} alt={project.title} width={20} height={20} className="w-4 h-4 sm:w-5 sm:h-5 rounded-sm object-cover" />
+                          {project.img ? (
+                            <Image src={project.img} alt={project.title} width={20} height={20} className="w-4 h-4 sm:w-5 sm:h-5 rounded-sm object-cover" />
+                          ) : (
+                            <div className="w-4 h-4 sm:w-5 sm:h-5 bg-primary/10 rounded-sm flex items-center justify-center">
+                              <span className="text-primary font-bold text-[8px] sm:text-[10px]">
+                                {(project as any).code?.slice(0, 2) || (project.title ? project.title.slice(0, 2).toUpperCase() : "PR")}
+                              </span>
+                            </div>
+                          )}
                           <span className="truncate text-xs sm:text-sm">{project.title}</span>
                         </Link>
                       </SidebarMenuButton>

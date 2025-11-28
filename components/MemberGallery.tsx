@@ -17,10 +17,10 @@ interface MemberGalleryProps {
   showOnlyAdminBadge?: boolean;
 }
 
-export default function MemberGallery({ 
-  members, 
-  adminList = [], 
-  showOnlyAdminBadge = false 
+export default function MemberGallery({
+  members,
+  adminList = [],
+  showOnlyAdminBadge = false
 }: MemberGalleryProps) {
   const router = useRouter();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);

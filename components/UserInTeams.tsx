@@ -60,7 +60,9 @@ export function UserInTeams({ uid }: UserInTeamsProps) {
     return null;
   }
   
+  const isCurrentUser = user?.uid === uid;
+  
   return teams && teams.length > 0 ? (
-    <Teams teams={teams} type="userInTeams" />
+    <Teams teams={teams} type="userInTeams" isCurrentUser={isCurrentUser} />
   ) : null;
 }

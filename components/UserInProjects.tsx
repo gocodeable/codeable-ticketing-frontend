@@ -59,7 +59,9 @@ export function UserInProjects({ uid }: UserInProjectsProps) {
     return null;
   }
   
+  const isCurrentUser = user?.uid === uid;
+  
   return projects && projects.length > 0 ? (
-    <Projects projects={projects} />
+    <Projects projects={projects} isCurrentUser={isCurrentUser} />
   ) : null;
 }

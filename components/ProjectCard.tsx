@@ -48,13 +48,21 @@ export default function ProjectCard({ project, i }: ProjectCardProps) {
             <Link href={`/project/${project._id}`} className="block h-full">
                 <Card className="h-full rounded-md flex flex-col hover:shadow-lg transition-shadow duration-200 cursor-pointer group py-2 px-2 gap-0">
                     <CardHeader className="py-0 mb-2 flex justify-start items-center gap-2">
-                        <Image 
-                            src={project.img || ""} 
-                            alt={project.title} 
-                            width={100} 
-                            height={100} 
-                            className="w-10 h-10 rounded-sm object-cover" 
-                        />
+                        {project.img ? (
+                            <Image 
+                                src={project.img} 
+                                alt={project.title} 
+                                width={100} 
+                                height={100} 
+                                className="w-10 h-10 rounded-sm object-cover" 
+                            />
+                        ) : (
+                            <div className="w-10 h-10 bg-primary/10 rounded-sm shrink-0 flex items-center justify-center">
+                                <span className="text-primary font-bold text-xs">
+                                    {project.code?.slice(0, 2) || "PR"}
+                                </span>
+                            </div>
+                        )}
                         <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                             <CardTitle className="text-base sm:text-md group-hover:text-primary transition-colors truncate">
                                 {project.title}
