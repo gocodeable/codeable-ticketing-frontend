@@ -21,25 +21,35 @@ export function GreetUser() {
   else if (hour < 18) greeting = "Good afternoon"
 
   return (
-    <div className="select-none w-full relative overflow-hidden bg-linear-to-r from-primary via-primary/90 to-primary/70 dark:from-primary/95 dark:via-primary/85 dark:to-primary/75 rounded-2xl p-6 sm:p-8 md:p-10 shadow-lg dark:shadow-xl border border-primary/20">
-      {/* Decorative gradient overlay */}
-      <div className="absolute inset-0 bg-linear-to-br from-white/10 via-transparent to-transparent pointer-events-none" />
+    <div className="relative w-full overflow-hidden bg-card dark:bg-card/50 rounded-2xl border border-border/40 shadow-lg dark:shadow-xl">
+      {/* Modern gradient overlay */}
+      <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-accent/5 dark:from-primary/10 dark:to-accent/10" />
 
-      {/* Decorative circles */}
-      <div className="absolute -top-12 -right-12 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-      <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-white/5 rounded-full blur-xl" />
+      {/* Ambient glow effects */}
+      <div className="absolute top-0 right-0 w-72 h-72 bg-primary/10 dark:bg-primary/20 rounded-full blur-3xl opacity-50" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 dark:bg-accent/20 rounded-full blur-3xl opacity-30" />
 
-      <div className="relative flex flex-col gap-y-2 sm:gap-y-3">
-        <div className="flex items-center gap-2 text-primary-foreground/80">
-          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
-          <p className="text-sm sm:text-base font-medium tracking-wide">{displayDate}</p>
+      <div className="relative p-8 md:p-10 lg:p-12">
+        <div className="flex flex-col gap-5">
+          {/* Date badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 w-fit backdrop-blur-sm">
+            <Sparkles className="w-4 h-4 text-primary dark:text-primary/90" />
+            <span className="text-sm font-semibold text-primary dark:text-primary/90 tracking-wide">{displayDate}</span>
+          </div>
+
+          {/* Greeting */}
+          <div className="space-y-3">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
+              {greeting},{" "}
+              <span className="bg-linear-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
+                {displayName}
+              </span>
+            </h1>
+            <p className="text-base sm:text-lg text-muted-foreground font-medium max-w-2xl">
+              Ready to tackle your tasks and make today productive?
+            </p>
+          </div>
         </div>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground">
-          {greeting}, <span className="bg-linear-to-r from-primary-foreground to-primary-foreground/80 bg-clip-text">{displayName}</span>
-        </h1>
-        <p className="text-sm sm:text-base text-primary-foreground/70 font-medium mt-1">
-          Ready to tackle your tasks today?
-        </p>
       </div>
     </div>
   )

@@ -112,11 +112,20 @@ export function ImageSelector({
           {label}
         </label>
       )}
-      <div className="flex items-start gap-4">
+
+      {/* Centered Upload Area */}
+      <div className="flex flex-col items-center justify-center gap-4 p-6 border-2 border-dashed border-border/40 dark:border-border/60 bg-muted/20 dark:bg-muted/10 rounded-xl hover:border-primary/40 dark:hover:border-primary/40 hover:bg-primary/5 dark:hover:bg-primary/5 transition-all duration-200">
         {/* Image Preview */}
         <div className="relative">
           <div
-            className={`${sizeClass} ${shapeClass} border-2 border-dashed border-muted-foreground/25 bg-muted/30 flex items-center justify-center overflow-hidden`}
+            onClick={() => !disabled && !imagePreview && fileInputRef.current?.click()}
+            className={`${sizeClass} ${shapeClass} border-2 ${
+              imagePreview
+                ? "border-border/40 dark:border-border"
+                : "border-dashed border-border/40 dark:border-border/60"
+            } bg-background dark:bg-background flex items-center justify-center overflow-hidden ${
+              !disabled && !imagePreview ? "cursor-pointer hover:border-primary/50 dark:hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/5" : ""
+            } transition-all duration-200`}
           >
             {imagePreview ? (
               <img
@@ -133,58 +142,59 @@ export function ImageSelector({
               type="button"
               variant="destructive"
               size="icon"
-              className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+              className="absolute -top-2 -right-2 h-7 w-7 rounded-full shadow-lg"
               onClick={() => {
                 removeImage();
                 urlField?.onChange("");
               }}
             >
-              <X className="h-3 w-3" />
+              <X className="h-3.5 w-3.5" />
             </Button>
           )}
         </div>
 
-        {/* Upload Controls */}
-        <div className="flex-1 space-y-3">
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageFileSelect}
-              className="hidden"
-              disabled={disabled}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={disabled}
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Image
-            </Button>
-            {description && (
-              <p className="text-xs text-muted-foreground mt-2">
-                {description}
-              </p>
-            )}
-          </div>
+        {/* Upload Button and Description */}
+        <div className="flex flex-col items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageFileSelect}
+            className="hidden"
+            disabled={disabled}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+            className="rounded-lg border-border/40 dark:border-border hover:bg-primary/10 dark:hover:bg-primary/10 hover:border-primary/50 dark:hover:border-primary/50 transition-all duration-200"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            {imagePreview ? "Change Image" : "Upload Image"}
+          </Button>
+          {description && (
+            <p className="text-xs text-muted-foreground text-center">
+              {description}
+            </p>
+          )}
+        </div>
 
-          {showUrlInput && (
-            <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Or
-                  </span>
-                </div>
+        {showUrlInput && (
+          <>
+            <div className="relative w-full max-w-xs">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border/40 dark:border-border/60" />
               </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-muted/20 dark:bg-muted/10 px-2 text-muted-foreground">
+                  Or
+                </span>
+              </div>
+            </div>
 
+            <div className="w-full max-w-xs">
               {urlField ? (
                 <FormItem>
                   <FormControl>
@@ -197,6 +207,7 @@ export function ImageSelector({
                         handleImageUrlChange(e.target.value);
                       }}
                       disabled={disabled || !!imageFile}
+                      className="rounded-lg border-border/40 dark:border-border text-center"
                     />
                   </FormControl>
                   <FormMessage />
@@ -207,11 +218,12 @@ export function ImageSelector({
                   placeholder="Enter image URL"
                   onChange={(e) => handleImageUrlChange(e.target.value)}
                   disabled={disabled || !!imageFile}
+                  className="rounded-lg border-border/40 dark:border-border text-center"
                 />
               )}
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

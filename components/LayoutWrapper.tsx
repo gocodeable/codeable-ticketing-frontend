@@ -16,7 +16,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="flex h-full w-full overflow-hidden bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background">
+      <div className="flex h-full w-full overflow-hidden bg-background">
         <SideBar />
         <SidebarInset className="flex-1 overflow-y-auto overflow-x-hidden">
         <Header />
