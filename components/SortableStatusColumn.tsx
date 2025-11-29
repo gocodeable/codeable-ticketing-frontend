@@ -70,6 +70,7 @@ export default function SortableStatusColumn({
   onStatusDelete,
   onIssueCreated,
   onIssueUpdated,
+  initialIssueId,
 }: {
   status: WorkflowStatus;
   statusIssues: Issue[];
@@ -84,6 +85,7 @@ export default function SortableStatusColumn({
   onIssueCreated?: (issue: Issue) => void;
   onIssueUpdated?: (issue: Issue) => void;
   onIssuesReordered?: (statusId: string, reorderedIssues: Issue[]) => void;
+  initialIssueId?: string;
 }) {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -146,6 +148,13 @@ export default function SortableStatusColumn({
     const isReporter = user?.uid === issue.reporter;
     return isAssignee || isReporter;
   };
+
+  // Open issue dialog if initialIssueId matches an issue in this column
+  useEffect(() => {
+    if (initialIssueId && statusIssues.some(issue => issue._id === initialIssueId)) {
+      setSelectedIssueId(initialIssueId);
+    }
+  }, [initialIssueId, statusIssues]);
 
   const handleEdit = () => {
     setEditName(status.name);

@@ -1,3 +1,5 @@
+"use client";
+
 import { Recents } from "@/types/recents";
 import { Carousel, CarouselContent, CarouselItem } from "./ui/carousel"
 import Autoplay from "embla-carousel-autoplay";
@@ -5,8 +7,23 @@ import Link from "next/link";
 import { FolderIcon, KanbanIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export function RecentsCarousel({ recents }: { recents: Recents[] }) {
+    const router = useRouter();
+
+    const handleIssueClick = (e: React.MouseEvent | React.KeyboardEvent, issueId: string, projectId?: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log("handleIssueClick called", { issueId, projectId, event: e });
+        
+        if (!projectId) {
+            console.error("Project ID not found for issue:", issueId, "Recent data:", { issueId, projectId });
+            return;
+        }
+        router.push(`/project/${projectId}?issueId=${issueId}`);
+    };
     if (!recents) return null;
     return (
         <Carousel
@@ -21,7 +38,65 @@ export function RecentsCarousel({ recents }: { recents: Recents[] }) {
         >
             <CarouselContent className="ml-0">
                 {recents.map((recent, index) => {
-                    const href = recent.type === "project" ? `/project/${recent.resourceId}` : `/issue/${recent.resourceId}`;
+                    if (recent.type === "issue") {
+                        return (
+                            <CarouselItem
+                                key={`${recent.type}-${recent.resourceId}-${index}`}
+                                className="pl-0 pr-3 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 cursor-pointer select-none"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        console.log("Issue clicked!", recent);
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleIssueClick(e, recent.resourceId, recent.projectId);
+                                    }}
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                    }}
+                                    className="h-full w-full block group cursor-pointer text-left"
+                                    style={{ background: 'none', border: 'none', padding: 0 }}
+                                >
+                                    <div className="h-full p-3 rounded-xl border border-border/40 bg-card dark:bg-card/30 hover:border-primary/40 dark:hover:border-primary/40 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-200">
+                                        <div className="flex items-start gap-3">
+                                            {recent.img ? (
+                                                <div className="shrink-0 rounded-md overflow-hidden w-8 h-8 ring-1 ring-border/20">
+                                                    <Image
+                                                        src={recent.img}
+                                                        alt={recent.title}
+                                                        width={32}
+                                                        height={32}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+                                                    <KanbanIcon className="w-4 h-4 text-primary dark:text-primary/90" />
+                                                </div>
+                                            )}
+                                            <div className="flex-1 min-w-0 space-y-1">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <h3 className="text-sm font-semibold line-clamp-1 group-hover:text-primary transition-colors">
+                                                        {recent.title}
+                                                    </h3>
+                                                    <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+                                                        {recent.lastAccessed
+                                                            ? formatDistanceToNow(new Date(recent.lastAccessed), { addSuffix: true })
+                                                            : "N/A"}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground capitalize">{recent.type}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </button>
+                            </CarouselItem>
+                        );
+                    }
+                    
+                    // Project type - use Link as before
+                    const href = `/project/${recent.resourceId}`;
                     return (
                         <CarouselItem
                             key={`${recent.type}-${recent.resourceId}-${index}`}
@@ -42,11 +117,7 @@ export function RecentsCarousel({ recents }: { recents: Recents[] }) {
                                             </div>
                                         ) : (
                                             <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
-                                                {recent.type === "project" ? (
-                                                    <FolderIcon className="w-4 h-4 text-primary dark:text-primary/90" />
-                                                ) : (
-                                                    <KanbanIcon className="w-4 h-4 text-primary dark:text-primary/90" />
-                                                )}
+                                                <FolderIcon className="w-4 h-4 text-primary dark:text-primary/90" />
                                             </div>
                                         )}
                                         <div className="flex-1 min-w-0 space-y-1">
