@@ -7,6 +7,11 @@ export interface IssueAssignee {
   avatar?: string;
 }
 
+export interface Attachment {
+  link: string;
+  fileName: string;
+}
+
 export interface Issue {
   _id: string;
   title: string;
@@ -18,7 +23,7 @@ export interface Issue {
   reporter?: string;
   project?: Project | string;
   estimatedCompletionDate?: string;
-  attachments?: string[];
+  attachments?: Attachment[];
   comments?: string[];
   commentCount?: number;
   issueCode?: string;

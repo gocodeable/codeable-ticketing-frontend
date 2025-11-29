@@ -40,6 +40,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AddIssueDialog } from "@/components/AddIssueDialog";
+import { IssueDetailDialog } from "@/components/IssueDetailDialog";
 
 // Droppable wrapper for status column to accept issues from other columns
 function StatusDroppable({ statusId, children }: { statusId: string; children: React.ReactNode }) {
@@ -68,6 +69,7 @@ export default function SortableStatusColumn({
   onStatusUpdate,
   onStatusDelete,
   onIssueCreated,
+  onIssueUpdated,
 }: {
   status: WorkflowStatus;
   statusIssues: Issue[];
@@ -80,6 +82,7 @@ export default function SortableStatusColumn({
   onStatusUpdate?: (status: WorkflowStatus) => void;
   onStatusDelete?: (statusId: string) => void;
   onIssueCreated?: (issue: Issue) => void;
+  onIssueUpdated?: (issue: Issue) => void;
   onIssuesReordered?: (statusId: string, reorderedIssues: Issue[]) => void;
 }) {
   const { user } = useAuth();
@@ -93,8 +96,8 @@ export default function SortableStatusColumn({
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAddIssueDialog, setShowAddIssueDialog] = useState(false);
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [localIssues, setLocalIssues] = useState<Issue[]>(statusIssues);
-  const [isReordering, setIsReordering] = useState(false);
 
   // Update local issues when statusIssues prop changes
   useEffect(() => {
@@ -355,6 +358,7 @@ export default function SortableStatusColumn({
                 issue={issue}
                 getPriorityColor={getPriorityColor}
                 disabled={!canReorderIssue(issue)}
+                onClick={() => setSelectedIssueId(issue._id)}
               />
             ))}
           </SortableContext>
@@ -381,6 +385,29 @@ export default function SortableStatusColumn({
         onIssueCreated={(newIssue) => {
           if (onIssueCreated) {
             onIssueCreated(newIssue);
+          }
+        }}
+      />
+
+      {/* Issue Detail Dialog */}
+      <IssueDetailDialog
+        open={selectedIssueId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedIssueId(null);
+        }}
+        issueId={selectedIssueId}
+        getPriorityColor={getPriorityColor}
+        isAdmin={isAdmin}
+        userRole={userRole}
+        projectMembers={projectMembers.map((member) => ({
+          uid: typeof member === "string" ? member : member.uid,
+          name: typeof member === "string" ? "" : member.name,
+          email: typeof member === "string" ? "" : member.email || "",
+          avatar: typeof member === "string" ? undefined : member.avatar,
+        }))}
+        onIssueUpdated={(updatedIssue) => {
+          if (onIssueUpdated) {
+            onIssueUpdated(updatedIssue);
           }
         }}
       />
