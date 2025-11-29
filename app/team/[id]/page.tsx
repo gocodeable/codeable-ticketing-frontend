@@ -188,14 +188,16 @@ export default function TeamPage({
 
   if (error || !team) {
     return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-destructive" />
-          <h2 className="text-2xl font-semibold mb-2">Error Loading Team</h2>
-          <p className="text-muted-foreground mb-6">
+      <div className="w-full min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center max-w-md px-4">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-destructive/10 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-destructive" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Error Loading Team</h2>
+          <p className="text-sm text-muted-foreground mb-6">
             {error || "Team not found"}
           </p>
-          <Button onClick={() => router.back()}>
+          <Button onClick={() => router.back()} className="rounded-lg">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Go Back
           </Button>
@@ -207,8 +209,8 @@ export default function TeamPage({
   const isAdmin = user && team.admin.includes(user.uid);
 
   return (
-    <div className="w-full min-w-0 bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background min-h-screen">
-      <main className="w-full h-full mx-auto flex flex-col items-start justify-start gap-y-3 sm:gap-y-4 py-4 sm:py-8 md:py-12 lg:py-16 px-3 sm:px-4 md:px-8 lg:px-12">
+    <div className="w-full min-w-0 bg-background min-h-screen">
+      <main className="w-full h-full max-w-7xl mx-auto flex flex-col items-start justify-start gap-y-4 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
 
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -219,11 +221,10 @@ export default function TeamPage({
           <Button
             variant="ghost"
             onClick={() => router.back()}
-            className="mb-2 sm:mb-4 cursor-pointer -ml-2 sm:ml-0"
-            size="sm"
+            className="mb-2 hover:bg-muted/50 cursor-pointer rounded-lg"
           >
-            <ArrowLeft className="mr-1 sm:mr-2 h-4 w-4" />
-            <span className="text-sm sm:text-base">Back</span>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
           </Button>
         </motion.div>
 
@@ -231,40 +232,37 @@ export default function TeamPage({
           className="w-full"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
         >
-          <div className="rounded-sm p-3 sm:p-4 md:p-6 w-full flex items-center justify-between gap-2 overflow-visible">
-            <div className="flex items-center gap-2 sm:gap-5 min-w-0 flex-1">
+          <div className="bg-card rounded-xl border border-border/40 dark:border-border/70 shadow-sm p-5 sm:p-6 w-full">
+            <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
               {team.img ? (
-                <div className="relative w-8 h-8 sm:w-12 sm:h-12 md:w-28 md:h-28 rounded-full overflow-hidden shrink-0 bg-primary/10">
-                  <Image 
-                    src={team.img} 
-                    alt={team.name} 
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 bg-muted/50 border border-border/40">
+                  <Image
+                    src={team.img}
+                    alt={team.name}
                     fill
-                    className="object-cover" 
+                    className="object-cover"
                   />
                 </div>
               ) : (
-                <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-28 md:h-28 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Users className="w-4 h-4 sm:w-6 sm:h-6 md:w-14 md:h-14 text-primary" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-primary/10 dark:bg-primary/15 flex items-center justify-center shrink-0 border border-border/40">
+                  <Users className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-foreground truncate">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
                   {team.name}
                 </h1>
                 {isAdmin && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Crown className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
-                    <span className="text-xs sm:text-sm text-muted-foreground">Admin</span>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-yellow-500/10 border border-yellow-500/20">
+                      <Crown className="w-3 h-3 text-yellow-600 dark:text-yellow-500" />
+                      <span className="text-xs font-medium text-yellow-700 dark:text-yellow-500">Admin</span>
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              <Button variant="ghost" size="sm" className="cursor-pointer h-8 w-8 sm:h-9 sm:w-9 p-0">
-                <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </Button>
             </div>
           </div>
         </motion.div>
@@ -273,56 +271,58 @@ export default function TeamPage({
           className="w-full flex-1 flex flex-col min-h-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
         >
           <div className="w-full h-full flex flex-col overflow-visible">
-            <Tabs defaultValue="members" className="w-full h-full flex flex-col overflow-visible">
-              <TabsList className="w-full sm:w-fit justify-start overflow-x-auto gap-1 sm:gap-2 h-auto p-1">
-                <TabsTrigger value="info" className="shrink-0 px-2 py-1">
-                  <Info className="w-4 h-4" />
-                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">Info</p>
+            <Tabs defaultValue="info" className="w-full h-full flex flex-col overflow-visible">
+              <TabsList className="w-full sm:w-fit justify-start overflow-x-auto h-10 bg-muted/60">
+                <TabsTrigger value="info" className="gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Info className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-sm">Info</span>
                 </TabsTrigger>
-                <TabsTrigger value="members" className="shrink-0 px-2 py-1">
-                  <Users className="w-4 h-4" />
-                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
-                    Members ({team.members.length})
-                  </p>
+                <TabsTrigger value="members" className="gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-sm">Members</span>
+                  <span className="text-xs text-muted-foreground">({team.members.length})</span>
                 </TabsTrigger>
-                <TabsTrigger value="projects" className="shrink-0 px-2 py-1">
-                  <FolderKanban className="w-4 h-4" />
-                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
-                    Projects {!isLoadingProjects && `(${projects.length})`}
-                  </p>
+                <TabsTrigger value="projects" className="gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <FolderKanban className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-sm">Projects</span>
+                  {!isLoadingProjects && <span className="text-xs text-muted-foreground">({projects.length})</span>}
                 </TabsTrigger>
                 {isAdmin && (
-                  <TabsTrigger value="settings" className="shrink-0 px-2 py-1">
-                    <Settings className="w-4 h-4" />
-                    <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">Settings</p>
+                  <TabsTrigger value="settings" className="gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                    <Settings className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline text-sm">Settings</span>
                   </TabsTrigger>
                 )}
               </TabsList>
 
-              <TabsContent value="info" className="w-full flex-1 mt-3 sm:mt-4 overflow-y-auto">
-                <div className="w-full h-full bg-card rounded-lg border shadow-sm p-4 sm:p-6">
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
+              <TabsContent value="info" className="w-full flex-1 mt-3.5 overflow-y-auto">
+                <div className="w-full h-full bg-card rounded-xl border border-border/40 dark:border-border/70 shadow-sm p-5 sm:p-6">
+                  <h2 className="text-lg font-semibold text-foreground mb-4">
                     Team Information
                   </h2>
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                         Description
                       </h3>
-                      <p className="text-sm sm:text-base text-foreground">
+                      <p className="text-sm text-foreground leading-relaxed">
                         {team.description || "No description provided"}
                       </p>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                    <div className="border-t border-border/40 dark:border-border/60 pt-4">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                         Created
                       </h3>
-                      <p className="text-sm sm:text-base text-foreground">
+                      <p className="text-sm text-foreground">
                         {team.createdAt
-                          ? new Date(team.createdAt).toLocaleDateString()
+                          ? new Date(team.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })
                           : "Unknown"}
                       </p>
                     </div>
@@ -330,32 +330,33 @@ export default function TeamPage({
                 </div>
               </TabsContent>
 
-              <TabsContent value="members" className="flex-1 mt-3 sm:mt-4 overflow-visible flex flex-col">
-                <div className="w-full h-full bg-card rounded-lg border shadow-sm p-4 sm:p-6 overflow-visible flex flex-col">
+              <TabsContent value="members" className="flex-1 mt-3.5 overflow-visible flex flex-col">
+                <div className="w-full h-full bg-card rounded-xl border border-border/40 dark:border-border/70 shadow-sm p-5 sm:p-6 overflow-visible flex flex-col">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">
+                    <h2 className="text-lg font-semibold text-foreground">
                       Team Members
                     </h2>
                     {isAdmin && team && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           setIsMembersModalOpen(true);
                         }}
-                        className="shrink-0 z-10 relative"
+                        className="shrink-0 z-10 relative rounded-lg gap-2"
                         type="button"
                       >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Members
+                        <Edit className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Edit Members</span>
+                        <span className="sm:hidden">Edit</span>
                       </Button>
                     )}
                   </div>
                   <div className="flex-1 min-h-0">
-                    <Members 
-                      members={team.members} 
+                    <Members
+                      members={team.members}
                       adminList={team.admin}
                       showOnlyAdminBadge={true}
                     />
@@ -363,27 +364,29 @@ export default function TeamPage({
                 </div>
               </TabsContent>
 
-              <TabsContent value="projects" className="flex-1 mt-3 sm:mt-4 overflow-y-auto">
-                <div className="w-full h-full bg-card rounded-lg border shadow-sm p-4 sm:p-6">
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
+              <TabsContent value="projects" className="flex-1 mt-3.5 overflow-y-auto">
+                <div className="w-full h-full bg-card rounded-xl border border-border/40 dark:border-border/70 shadow-sm p-5 sm:p-6">
+                  <h2 className="text-lg font-semibold text-foreground mb-4">
                     Projects
                   </h2>
                   {isLoadingProjects ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                       {[1, 2, 3].map((i) => (
                         <ProjectCardSkeleton key={i} />
                       ))}
                     </div>
                   ) : projects.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                       {projects.map((project, index) => (
                         <ProjectCard key={project._id} project={project} i={index} />
                       ))}
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <FolderKanban className="w-16 h-16 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold text-foreground mb-2">
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="w-16 h-16 rounded-xl bg-muted/50 flex items-center justify-center mb-4">
+                        <FolderKanban className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-base font-semibold text-foreground mb-1">
                         No Projects Yet
                       </h3>
                       <p className="text-sm text-muted-foreground">
@@ -395,49 +398,51 @@ export default function TeamPage({
               </TabsContent>
 
               {isAdmin && (
-                <TabsContent value="settings" className="flex-1 mt-3 sm:mt-4 overflow-y-auto">
-                  <div className="w-full h-full bg-card rounded-lg border shadow-sm p-4 sm:p-6">
-                    <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-6">
+                <TabsContent value="settings" className="flex-1 mt-3.5 overflow-y-auto">
+                  <div className="w-full h-full bg-card rounded-xl border border-border/40 dark:border-border/70 shadow-sm p-5 sm:p-6">
+                    <h2 className="text-lg font-semibold text-foreground mb-5">
                       Team Settings
                     </h2>
-                    
-                    <div className="space-y-6">
+
+                    <div className="space-y-5">
                       {/* Update Team Section */}
-                      <div className="space-y-3">
+                      <div className="space-y-3 pb-5 border-b border-border/40 dark:border-border/60">
                         <div>
                           <h3 className="text-sm font-semibold text-foreground mb-1">
                             Update Team
                           </h3>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             Update your team's image, name, and description
                           </p>
                         </div>
                         <Button
                           onClick={() => setIsUpdateSheetOpen(true)}
                           variant="outline"
-                          className="gap-2"
+                          className="gap-2 rounded-lg"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3.5 h-3.5" />
                           Update Team
                         </Button>
                       </div>
 
                       {/* Danger Zone */}
-                      <div className="border border-destructive/20 rounded-lg p-4 bg-destructive/5">
-                        <h3 className="text-sm font-semibold text-destructive mb-3">
+                      <div className="border border-destructive/30 rounded-lg p-4 bg-destructive/5">
+                        <h3 className="text-sm font-semibold text-destructive mb-3 flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
                           Danger Zone
                         </h3>
-                        
+
                         <div className="space-y-3">
-                          <p className="text-sm">
+                          <p className="text-xs text-foreground/80">
                             Permanently delete this team and all associated Projects and Issues. This action cannot be undone.
                           </p>
                           <Button
                             onClick={() => setShowDeleteDialog(true)}
                             variant="destructive"
-                            className="gap-2"
+                            size="sm"
+                            className="gap-2 rounded-lg"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                             Delete Team
                           </Button>
                         </div>

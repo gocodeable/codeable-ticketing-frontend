@@ -10,6 +10,7 @@ import { apiGet } from "@/lib/api/apiClient";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 type AllTeams = {
   workingIn: TeamType[];
@@ -57,12 +58,17 @@ export default function TeamsPage() {
   const hasTeams = teams.workingIn?.length > 0 || teams.myTeams?.length > 0;
 
   return (
-    <div className="w-full min-h-screen min-w-0 bg-background font-sans bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background">
-      <main className="w-full max-w-7xl mx-auto flex flex-col items-start justify-start gap-y-6 sm:gap-y-8 py-6 sm:py-8 md:py-10 lg:py-12 px-4 sm:px-6 lg:px-8">
+    <div className="w-full min-h-screen min-w-0 bg-background">
+      <main className="w-full max-w-7xl mx-auto flex flex-col items-start justify-start gap-y-8 lg:gap-y-10 py-8 sm:py-10 md:py-12 px-4 sm:px-6 lg:px-8">
         {hasTeams && (
-          <div className="w-full flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">Teams</h1>
+          <motion.div
+            className="w-full flex items-center justify-between"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <div className="space-y-1.5">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">Teams</h1>
               <p className="text-sm sm:text-base text-muted-foreground">
                 Collaborate with your team members on projects
               </p>
@@ -70,25 +76,30 @@ export default function TeamsPage() {
             <Link href="/teams/create">
               <Button
                 size="default"
-                className="gap-2 cursor-pointer shadow-sm hover:shadow-md transition-shadow"
+                className="gap-2 cursor-pointer rounded-lg bg-primary hover:bg-primary/90 dark:hover:bg-primary/90 hover:shadow-md transition-all duration-200"
               >
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Create Team</span>
                 <span className="sm:hidden">New</span>
               </Button>
             </Link>
-          </div>
+          </motion.div>
         )}
         {loading ? (
-          <div className="w-full flex flex-col gap-y-10">
+          <div className="w-full flex flex-col gap-y-12">
             <TeamsSkeleton count={3} type="workingIn" />
             <TeamsSkeleton count={3} type="myTeams" />
           </div>
         ) : hasTeams ? (
-          <div className="w-full flex flex-col gap-y-10">
+          <motion.div
+            className="w-full flex flex-col gap-y-12"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
             <Teams type="workingIn" teams={teams.workingIn} />
             <Teams type="myTeams" teams={teams.myTeams} />
-          </div>
+          </motion.div>
         ) : (
           <div className="w-full overflow-hidden flex items-center justify-center min-h-[60vh]">
             <EmptyComponent type="team" />

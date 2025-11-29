@@ -161,25 +161,25 @@ export default function CreateProjectPage() {
   };
 
   return (
-    <div className="w-full min-h-screen min-w-0 bg-background font-sans bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background relative">
+    <div className="w-full min-h-screen min-w-0 bg-background font-sans relative">
       {loading && (
-        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <Loader size="lg" hue={300} />
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <Loader size="lg" hue={265} />
         </div>
       )}
 
-      <main className="w-full max-w-4xl mx-auto flex flex-col items-start justify-start gap-y-6 sm:gap-y-8 py-6 sm:py-8 md:py-10 lg:py-12 px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20 md:pb-24">
+      <main className="w-full max-w-4xl mx-auto flex flex-col items-start justify-start gap-y-5 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 pb-16">
         {/* Page Header */}
         <motion.div
-          className="w-full"
-          initial={{ opacity: 0, y: 20 }}
+          className="w-full space-y-2"
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.3 }}
         >
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             Create New Project
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
+          <p className="text-sm text-muted-foreground">
             Start a new project and collaborate with your team
           </p>
         </motion.div>
@@ -187,191 +187,217 @@ export default function CreateProjectPage() {
         {/* Form Card */}
         <motion.div
           className="w-full"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="space-y-1 pb-6">
-              <CardTitle className="text-2xl">Project Details</CardTitle>
-              <CardDescription className="text-base">
-                Fill in the information below to create your project
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <Card className="border-border/40 dark:border-border/70 rounded-xl overflow-hidden shadow-sm">
+            <CardContent className="p-5 sm:p-6">
                 <Form {...form}>
                   <form
                     onSubmit={form.handleSubmit(onSubmit)}
                     className="space-y-6"
                   >
-                    {/* Project Image Section */}
-                    <FormField
-                      control={form.control}
-                      name="img"
-                      render={({ field }) => (
-                        <ImageSelector
-                          imageSelection={imageSelection}
-                          urlField={field}
-                          shape="square"
-                          size="md"
-                          layout="horizontal"
-                          label="Project Icon"
-                          description="Upload a square image (max 5MB)"
-                          showUrlInput={true}
-                          disabled={loading}
-                        />
-                      )}
-                    />
+                    {/* Project Icon Section */}
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold text-foreground">Project Icon</h3>
+                        <p className="text-xs text-muted-foreground">Choose an icon to represent your project</p>
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name="img"
+                        render={({ field }) => (
+                          <ImageSelector
+                            imageSelection={imageSelection}
+                            urlField={field}
+                            shape="square"
+                            size="md"
+                            layout="horizontal"
+                            label=""
+                            description="Upload a square image (max 5MB)"
+                            showUrlInput={false}
+                            disabled={loading}
+                          />
+                        )}
+                      />
+                    </div>
 
-                    {/* Title Field */}
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Project Title *</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="text"
-                              placeholder="Enter project title"
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(e);
-                                // Auto-generate code from title
-                                const generatedCode = generateProjectCode(e.target.value);
-                                form.setValue("code", generatedCode);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="border-t border-border/40 dark:border-border/60" />
 
-                    {/* Project Code Field */}
-                    <FormField
-                      control={form.control}
-                      name="code"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Project Code *</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="text"
-                              placeholder="PROJ"
-                              {...field}
-                              onChange={(e) => {
-                                // Force uppercase
-                                const upperValue = e.target.value.toUpperCase();
-                                field.onChange(upperValue);
-                              }}
-                              maxLength={10}
-                              className="font-mono font-semibold"
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Auto-generated from title. You can edit it if needed (2-10 characters, uppercase letters/numbers).
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {/* Basic Information Section */}
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold text-foreground">Basic Information</h3>
+                        <p className="text-xs text-muted-foreground">Define the core details of your project</p>
+                      </div>
 
-                    {/* Description Field */}
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description *</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Describe your project..."
-                              className="min-h-[120px] resize-y"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Provide a clear description of your project goals
-                            and objectives
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      {/* Title Field */}
+                      <FormField
+                        control={form.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Project Title <span className="text-destructive">*</span></FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                placeholder="Enter project title"
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  // Auto-generate code from title
+                                  const generatedCode = generateProjectCode(e.target.value);
+                                  form.setValue("code", generatedCode);
+                                }}
+                                disabled={loading}
+                                className="rounded-lg"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    {/* Figma Link Field */}
-                    <FormField
-                      control={form.control}
-                      name="figmaLink"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Figma Link (Optional)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="url"
-                              placeholder="https://figma.com/..."
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Link to your project's Figma design files
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      {/* Project Code Field */}
+                      <FormField
+                        control={form.control}
+                        name="code"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Project Code <span className="text-destructive">*</span></FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                placeholder="PROJ"
+                                {...field}
+                                onChange={(e) => {
+                                  // Force uppercase
+                                  const upperValue = e.target.value.toUpperCase();
+                                  field.onChange(upperValue);
+                                }}
+                                maxLength={10}
+                                disabled={loading}
+                                className="font-mono font-semibold rounded-lg"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Auto-generated from title (2-10 characters, uppercase)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    {/* Swagger Link Field */}
-                    <FormField
-                      control={form.control}
-                      name="swaggerLink"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Swagger/API Documentation Link (Optional)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="url"
-                              placeholder="https://..."
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Link to your project's API documentation or Swagger spec
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      {/* Description Field */}
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description <span className="text-destructive">*</span></FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Describe your project goals and objectives..."
+                                className="min-h-[120px] resize-none rounded-lg"
+                                {...field}
+                                disabled={loading}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
-                    {/* Members Selection with Tabs */}
-                    <div className="space-y-2">
-                      <FormLabel>Add Members *</FormLabel>
+                    <div className="border-t border-border/40 dark:border-border/60" />
+
+                    {/* External Links Section */}
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold text-foreground">External Links</h3>
+                        <p className="text-xs text-muted-foreground">Connect design files and documentation</p>
+                      </div>
+
+                      {/* Figma Link Field */}
+                      <FormField
+                        control={form.control}
+                        name="figmaLink"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Figma Link</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="url"
+                                placeholder="https://figma.com/..."
+                                {...field}
+                                disabled={loading}
+                                className="rounded-lg"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Swagger Link Field */}
+                      <FormField
+                        control={form.control}
+                        name="swaggerLink"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>API Documentation Link</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="url"
+                                placeholder="https://..."
+                                {...field}
+                                disabled={loading}
+                                className="rounded-lg"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="border-t border-border/40 dark:border-border/60" />
+
+                    {/* Team Members Section */}
+                    <div className="space-y-3.5">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold text-foreground">Team Members <span className="text-destructive">*</span></h3>
+                        <p className="text-xs text-muted-foreground">Add people to your project</p>
+                      </div>
+
                       <Tabs defaultValue="members" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger value="members" className="gap-2">
-                            <UserPlus className="h-4 w-4" />
-                            <p className="hidden sm:block">Individual Members</p>
+                        <TabsList className="grid w-full grid-cols-2 h-10 rounded-lg bg-muted/60">
+                          <TabsTrigger value="members" className="gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                            <UserPlus className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline text-sm">Individual Members</span>
+                            <span className="sm:hidden text-sm">Members</span>
                           </TabsTrigger>
-                          <TabsTrigger value="teams" className="gap-2">
-                            <Users className="h-4 w-4" />
-                            <p className="hidden sm:block">Add by Team</p>
+                          <TabsTrigger value="teams" className="gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                            <Users className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline text-sm">Add by Team</span>
+                            <span className="sm:hidden text-sm">Teams</span>
                           </TabsTrigger>
                         </TabsList>
-                        
-                        <TabsContent value="members" className="mt-4 space-y-2">
+
+                        <TabsContent value="members" className="mt-3.5 space-y-2">
                           <UserSelector
                             selectedUsers={selectedUsers}
                             onUsersChange={setSelectedUsers}
                             disabled={loading}
                             placeholder="Search users by name or email..."
                           />
-                          <FormDescription>
+                          <FormDescription className="text-xs">
                             Search and select individual project members
                           </FormDescription>
                         </TabsContent>
-                        
-                        <TabsContent value="teams" className="mt-4 space-y-2">
+
+                        <TabsContent value="teams" className="mt-3.5 space-y-2">
                           <TeamSelector
                             selectedTeams={selectedTeams}
                             onTeamsChange={setSelectedTeams}
@@ -379,57 +405,77 @@ export default function CreateProjectPage() {
                             disabled={loading}
                             placeholder="Search teams to add all members..."
                           />
-                          <FormDescription>
-                            Select a team to automatically add all its members and link the project to that team
+                          <FormDescription className="text-xs">
+                            Select a team to add all members and link the project
                           </FormDescription>
                         </TabsContent>
                       </Tabs>
-                      
+
                       {linkedTeam && (
-                        <div className="rounded-lg bg-primary/10 border border-primary/20 p-3">
-                          <p className="text-sm font-medium text-primary">
-                            This project will be linked to team: <strong>{linkedTeam.name}</strong>
+                        <motion.div
+                          className="rounded-lg bg-primary/10 dark:bg-primary/10 border border-primary/30 dark:border-primary/30 p-2.5"
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <p className="text-xs font-medium text-primary dark:text-primary">
+                            Linked to team: <strong>{linkedTeam.name}</strong>
                           </p>
-                        </div>
+                        </motion.div>
                       )}
-                      
+
                       {selectedUsers.length === 0 && error && (
-                        <p className="text-sm font-medium text-destructive">
+                        <p className="text-xs font-medium text-destructive">
                           At least one member is required
                         </p>
                       )}
-                      
+
                       {selectedUsers.length > 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          {selectedUsers.length} member{selectedUsers.length !== 1 ? 's' : ''} selected
-                        </p>
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border/40 dark:border-border/60">
+                          <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10">
+                            <Users className="w-3 h-3 text-primary" />
+                          </div>
+                          <p className="text-xs font-medium text-foreground">
+                            {selectedUsers.length} member{selectedUsers.length !== 1 ? 's' : ''} selected
+                          </p>
+                        </div>
                       )}
                     </div>
 
                     {/* Error Message */}
                     {error && (
-                      <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4">
-                        <p className="text-sm font-medium text-destructive">
+                      <motion.div
+                        className="rounded-lg bg-destructive/10 dark:bg-destructive/10 border border-destructive/30 dark:border-destructive/30 p-3"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <p className="text-xs font-medium text-destructive dark:text-destructive">
                           {error}
                         </p>
-                      </div>
+                      </motion.div>
                     )}
 
                     {/* Success Message */}
                     {success && (
-                      <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-4">
-                        <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                      <motion.div
+                        className="rounded-lg bg-green-500/10 dark:bg-green-500/10 border border-green-500/30 dark:border-green-500/30 p-3"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <p className="text-xs font-medium text-green-600 dark:text-green-400">
                           Project created successfully! Redirecting...
                         </p>
-                      </div>
+                      </motion.div>
                     )}
 
                     {/* Form Actions */}
-                    <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-border/50 mt-8">
+                    <div className="flex flex-col-reverse sm:flex-row gap-2.5 pt-5 border-t border-border/40 dark:border-border/60">
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full sm:w-auto"
+                        className="w-full sm:w-auto rounded-lg text-sm h-9"
                         onClick={() => router.push("/projects")}
                         disabled={loading}
                       >
@@ -437,7 +483,7 @@ export default function CreateProjectPage() {
                       </Button>
                       <Button
                         type="submit"
-                        className="w-full sm:w-auto sm:ml-auto shadow-sm hover:shadow-md transition-shadow"
+                        className="w-full sm:w-auto sm:ml-auto rounded-lg bg-primary hover:bg-primary/90 dark:hover:bg-primary/90 shadow-sm hover:shadow transition-all duration-200 text-sm h-9 font-medium"
                         disabled={loading}
                       >
                         {loading ? "Creating..." : "Create Project"}

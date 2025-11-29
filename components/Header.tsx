@@ -17,6 +17,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { motion } from "framer-motion"
 
 export function Header() {
   const auth = useAuth()
@@ -41,99 +42,115 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b backdrop-blur bg-background/10 shrink-0">
-      <div className="flex h-14 items-center px-4 gap-4 max-w-full">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 backdrop-blur-xl bg-background/80 dark:bg-background/60 supports-[backdrop-filter]:bg-background/60">
+      <motion.div
+        className="flex h-16 items-center px-6 gap-4 max-w-full"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <SidebarTrigger className="cursor-pointer shrink-0 hover:bg-primary/10 dark:hover:bg-primary/10 rounded-lg transition-all duration-200" />
 
-        <SidebarTrigger className="cursor-pointer shrink-0"/>
-
-        <div 
+        <div
           className={`flex items-center gap-2 transition-all duration-300 ease-in-out ${
             state === "collapsed" ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none"
           }`}
         >
-          <div className="flex items-center justify-center size-8 rounded-md bg-primary text-primary-foreground font-bold text-sm">
+          <div className="flex items-center justify-center size-8 rounded-lg bg-linear-to-br from-primary/90 to-primary text-primary-foreground font-bold text-sm shadow-md dark:shadow-primary/20">
             CT
           </div>
-          <span className="font-semibold text-lg hidden sm:inline-block">
+          <span className="font-bold text-base hidden sm:inline-block tracking-tight">
             Codeable Tickets
           </span>
         </div>
 
         {/* Spacer */}
         <div className="flex-1 min-w-0" />
-          {/* Notifications Dropdown */}
-          <DropdownMenu aria-label="Notifications">
-            <DropdownMenuTrigger asChild aria-label="Notifications Toggle">
-              <Button variant="ghost" size="icon" className="rounded-full cursor-pointer shrink-0">
-                <Bell className="sm:size-5 size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
-              <DropdownMenuLabel className="text-sm font-semibold font-sans">Notifications</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-sm">
-                <span>Notification 1</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-sm">
-                <span>Notification 2</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+        {/* Notifications Dropdown */}
+        <DropdownMenu aria-label="Notifications">
+          <DropdownMenuTrigger asChild aria-label="Notifications Toggle">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-lg shrink-0 hover:bg-primary/10 dark:hover:bg-primary/10 transition-all duration-200 relative"
+            >
+              <Bell className="w-[18px] h-[18px]" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full border-2 border-background" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuLabel className="text-sm font-semibold">Notifications</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              <Bell className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+              <p>No new notifications</p>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         {/* Account Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full cursor-pointer shrink-0"
+              className="rounded-lg shrink-0 hover:bg-primary/10 dark:hover:bg-primary/10 transition-all duration-200 h-10 w-10"
             >
-              <div className="flex items-center justify-center size-8 rounded-full bg-primary text-primary-foreground text-sm font-medium">
+              <div className="flex items-center justify-center size-8 rounded-lg bg-linear-to-br from-primary to-primary/80 text-primary-foreground text-sm font-semibold shadow-md dark:shadow-primary/20">
                 {getInitials(user?.email || undefined)}
               </div>
               <span className="sr-only">Account menu</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuLabel>
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">
-                  {user?.displayName || "User"}
-                </p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email || ""}
-                </p>
+              <div className="flex items-center gap-3 py-1">
+                <div className="flex items-center justify-center size-10 rounded-lg bg-linear-to-br from-primary to-primary/80 text-primary-foreground text-sm font-semibold">
+                  {getInitials(user?.email || undefined)}
+                </div>
+                <div className="flex flex-col">
+                  <p className="text-sm font-semibold leading-none mb-1">
+                    {user?.displayName || "User"}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email || ""}
+                  </p>
+                </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push(`/profile/${user?.uid}`)}>
-              <UserCircle className="mr-2 size-4" />
+            <DropdownMenuItem
+              onClick={() => router.push(`/profile/${user?.uid}`)}
+              className="cursor-pointer"
+            >
+              <UserCircle className="mr-2 w-4 h-4" />
               Profile
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Theme</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Theme</DropdownMenuLabel>
             <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value)}>
-              <DropdownMenuRadioItem value="light">
-                <Sun className="mr-2 size-4" />
+              <DropdownMenuRadioItem value="light" className="cursor-pointer">
+                <Sun className="mr-2 w-4 h-4" />
                 <span>Light</span>
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="dark">
-                <Moon className="mr-2 size-4" />
+              <DropdownMenuRadioItem value="dark" className="cursor-pointer">
+                <Moon className="mr-2 w-4 h-4" />
                 <span>Dark</span>
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="system">
-                <Monitor className="mr-2 size-4" />
+              <DropdownMenuRadioItem value="system" className="cursor-pointer">
+                <Monitor className="mr-2 w-4 h-4" />
                 <span>System</span>
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} variant="destructive">
-              <LogOut className="mr-2 size-4" />
+            <DropdownMenuItem onClick={handleLogout} variant="destructive" className="cursor-pointer">
+              <LogOut className="mr-2 w-4 h-4" />
               Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+      </motion.div>
     </header>
   )
 }
-

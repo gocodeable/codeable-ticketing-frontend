@@ -10,6 +10,7 @@ import { apiGet } from "@/lib/api/apiClient";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 export default function ProjectsPage() {
   const { user } = useAuth();
@@ -42,30 +43,38 @@ export default function ProjectsPage() {
   }, [user]);
   const hasProjects = projects && projects.length > 0;
 
-   return (
-     <div className="w-full min-h-screen min-w-0 bg-background font-sans bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background">
+  return (
+    <div className="w-full min-h-screen min-w-0 bg-background font-sans">
       <main className="w-full max-w-7xl mx-auto flex flex-col items-start justify-start gap-y-6 sm:gap-y-8 py-6 sm:py-8 md:py-10 lg:py-12 px-4 sm:px-6 lg:px-8">
         {hasProjects && (
-          <div className="w-full flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">Projects</h1>
+          <motion.div
+            className="w-full flex items-center justify-between"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <div className="space-y-1.5">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">Projects</h1>
               <p className="text-sm sm:text-base text-muted-foreground">
                 Manage and organize your team projects
               </p>
             </div>
             <Link href="/projects/create">
-              <Button size="default" className="gap-2 cursor-pointer shadow-sm hover:shadow-md transition-shadow">
+              <Button
+                size="default"
+                className="gap-2 cursor-pointer rounded-lg bg-primary hover:bg-primary/90 dark:hover:bg-primary/90 hover:shadow-md transition-all duration-200"
+              >
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Create Project</span>
                 <span className="sm:hidden">New</span>
               </Button>
             </Link>
-          </div>
+          </motion.div>
         )}
         {loading ? (
-          <ProjectsSkeleton count={5} />
+          <ProjectsSkeleton count={6} />
         ) : hasProjects ? (
-           <Projects projects={projects} showTitle={false} />
+          <Projects projects={projects} showTitle={false} />
         ) : (
           <div className="w-full overflow-hidden flex items-center justify-center min-h-[60vh]">
             <EmptyComponent type="project" />

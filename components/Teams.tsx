@@ -17,11 +17,11 @@ export function Teams({teams, type, isCurrentUser = true}: TeamsProps) {
     const getSectionIcon = () => {
         switch(type) {
             case "myTeams":
-                return <Users className="w-5 h-5 text-primary" />;
+                return <Users className="w-4 h-4 text-primary dark:text-primary/90" />;
             case "workingIn":
-                return <Briefcase className="w-5 h-5 text-primary" />;
+                return <Briefcase className="w-4 h-4 text-primary dark:text-primary/90" />;
             default:
-                return <Users className="w-5 h-5 text-primary" />;
+                return <Users className="w-4 h-4 text-primary dark:text-primary/90" />;
         }
     };
 
@@ -49,20 +49,20 @@ export function Teams({teams, type, isCurrentUser = true}: TeamsProps) {
 
     return (
         <div className="w-full max-w-full overflow-hidden">
-            <div className="flex items-start gap-3 mb-6">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 mt-1">
+            <div className="flex items-center gap-2.5 mb-3.5 pb-2.5 border-b border-border/40 dark:border-border/60">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20">
                     {getSectionIcon()}
                 </div>
                 <div>
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+                    <h2 className="text-lg font-semibold tracking-tight text-foreground">
                         {getSectionTitle()}
                     </h2>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                         {getSectionDescription()}
                     </p>
                 </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {teams.map((team, i) => (
                    <TeamCard key={team._id} team={team} i={i}/>
                 ))}

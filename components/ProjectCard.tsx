@@ -1,32 +1,13 @@
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent } from "./ui/card";
 import { Project as ProjectType } from "@/types/project";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon, Users } from "lucide-react";
 import { motion } from "framer-motion";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 const MAX_VISIBLE_AVATARS = 3;
-const getInitials = (name: string) => 
+const getInitials = (name: string) =>
     name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-
-interface MemberAvatarProps {
-    avatar: string;
-    name: string;
-    zIndex: number;
-}
-
-const MemberAvatar = ({ avatar, name, zIndex }: MemberAvatarProps) => (
-    <Avatar 
-        className="size-7 sm:size-8 rounded-full ring-2 ring-background"
-        style={{ zIndex }}
-    >
-        <AvatarImage src={avatar} alt={name} className="rounded-full object-cover" />
-        <AvatarFallback className="text-xs bg-primary/10 text-primary rounded-full">
-            {getInitials(name)}
-        </AvatarFallback>
-    </Avatar>
-);
 
 interface ProjectCardProps {
     project: ProjectType;
@@ -41,75 +22,97 @@ export default function ProjectCard({ project, i }: ProjectCardProps) {
     return (
         <motion.div
             className="w-full"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 * i }}
+            transition={{ duration: 0.25, ease: "easeOut", delay: 0.03 * i }}
         >
-            <Link href={`/project/${project._id}`} className="block h-full">
-                <Card className="h-full rounded-md flex flex-col hover:shadow-lg transition-shadow duration-200 cursor-pointer group py-2 px-2 gap-0">
-                    <CardHeader className="py-0 mb-2 flex justify-start items-center gap-2">
-                        {project.img ? (
-                            <Image 
-                                src={project.img} 
-                                alt={project.title} 
-                                width={100} 
-                                height={100} 
-                                className="w-10 h-10 rounded-sm object-cover" 
-                            />
-                        ) : (
-                            <div className="w-10 h-10 bg-primary/10 rounded-sm shrink-0 flex items-center justify-center">
-                                <span className="text-primary font-bold text-xs">
-                                    {project.code?.slice(0, 2) || "PR"}
-                                </span>
-                            </div>
-                        )}
-                        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                            <CardTitle className="text-base sm:text-md group-hover:text-primary transition-colors truncate">
-                                {project.title}
-                            </CardTitle>
-                            <span className="text-xs font-mono font-semibold text-primary/80">
-                                {project.code}
-                            </span>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-2 py-0 mt-0">
-                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
-                            {project.description}
-                        </p>
-                        
-                        <div className="flex items-center justify-between mt-auto pt-1">
-                            {members.length > 0 ? (
-                                <div className="flex items-center gap-2">
-                                    <div className="flex -space-x-2">
-                                        {visibleMembers.map((member: any, index) => (
-                                            <MemberAvatar 
-                                                key={member.uid || member._id || index}
-                                                avatar={member.avatar || ""}
-                                                name={member.name || member.email || "User"}
-                                                zIndex={visibleMembers.length - index}
-                                            />
-                                        ))}
-                                        {extraCount > 0 && (
-                                            <Avatar className="size-7 sm:size-8 rounded-full ring-2 ring-background">
-                                                <AvatarFallback className="text-xs bg-muted text-muted-foreground rounded-full">
-                                                    +{extraCount}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                        )}
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
-                                        <Users className="size-3 sm:size-4" />
-                                        <span>{members.length}</span>
-                                    </div>
+            <Link href={`/project/${project._id}`} className="block">
+                <Card className="group relative overflow-hidden rounded-lg border border-border/40 dark:border-border/70 bg-card hover:border-primary/50 dark:hover:border-primary/60 hover:shadow-md dark:hover:shadow-primary/5 transition-all duration-200">
+                    <CardContent className="p-3">
+                        {/* Header Row */}
+                        <div className="flex items-center gap-2 mb-2">
+                            {/* Icon */}
+                            {project.img ? (
+                                <div className="shrink-0 w-8 h-8 rounded-md overflow-hidden ring-1 ring-border/30 dark:ring-border/50">
+                                    <Image
+                                        src={project.img}
+                                        alt={project.title}
+                                        width={32}
+                                        height={32}
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
-                                    <Users className="size-3 sm:size-4" />
-                                    <span>No members</span>
+                                <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 dark:bg-primary/15 flex items-center justify-center">
+                                    <span className="text-primary text-[11px] font-bold">
+                                        {project.code?.slice(0, 2) || "PR"}
+                                    </span>
                                 </div>
                             )}
-                            <ArrowRightIcon className="size-4 sm:size-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+
+                            {/* Title & Code */}
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                                    {project.title}
+                                </h3>
+                                <span className="text-[11px] font-mono font-medium text-muted-foreground">
+                                    {project.code}
+                                </span>
+                            </div>
+
+                            {/* Arrow */}
+                            <ArrowRightIcon className="shrink-0 w-4 h-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                        </div>
+
+                        {/* Description */}
+                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-2">
+                            {project.description}
+                        </p>
+
+                        {/* Members Footer */}
+                        <div className="flex items-center gap-2 pt-1.5 border-t border-border/30 dark:border-border/50">
+                            {members.length > 0 ? (
+                                <>
+                                    <div className="flex -space-x-1.5">
+                                        {visibleMembers.map((member: any, index) => (
+                                            <div
+                                                key={member.uid || member._id || index}
+                                                className="w-5 h-5 rounded-full ring-1.5 ring-background dark:ring-card overflow-hidden bg-primary/10 dark:bg-primary/15 flex items-center justify-center"
+                                                style={{ zIndex: visibleMembers.length - index }}
+                                            >
+                                                {member.avatar ? (
+                                                    <Image
+                                                        src={member.avatar}
+                                                        alt={member.name || "User"}
+                                                        width={20}
+                                                        height={20}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <span className="text-[9px] font-semibold text-primary">
+                                                        {getInitials(member.name || member.email || "U")}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {extraCount > 0 && (
+                                            <div className="w-5 h-5 rounded-full ring-1.5 ring-background dark:ring-card bg-muted flex items-center justify-center">
+                                                <span className="text-[9px] font-semibold text-muted-foreground">
+                                                    +{extraCount}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className="text-[11px] text-muted-foreground">
+                                        {members.length} {members.length === 1 ? 'member' : 'members'}
+                                    </span>
+                                </>
+                            ) : (
+                                <div className="flex items-center gap-1">
+                                    <Users className="w-3 h-3 text-muted-foreground/60" />
+                                    <span className="text-[11px] text-muted-foreground/60">No members</span>
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

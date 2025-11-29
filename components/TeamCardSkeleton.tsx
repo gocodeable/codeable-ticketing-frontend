@@ -4,28 +4,24 @@ import { Users, Crown } from "lucide-react";
 
 export function TeamCardSkeleton() {
     return (
-        <Card className="h-full rounded-md flex flex-col py-2 px-2 gap-0 animate-pulse">
-            <CardHeader className="py-0 mb-2 flex justify-start items-center gap-2">
-                <Skeleton className="w-10 h-10 rounded-full" />
-                <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/3" />
-                </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 py-0 mt-0">
-                <Skeleton className="h-3.5 w-full" />
-                <Skeleton className="h-3.5 w-5/6" />
-                
-                <div className="flex items-center justify-between mt-auto pt-2">
-                    <div className="flex items-center gap-2">
-                        <div className="flex -space-x-2">
-                            <Skeleton className="size-7 sm:size-8 rounded-full ring-2 ring-background" />
-                            <Skeleton className="size-7 sm:size-8 rounded-full ring-2 ring-background" />
-                            <Skeleton className="size-7 sm:size-8 rounded-full ring-2 ring-background" />
-                        </div>
-                        <Skeleton className="h-4 w-6" />
+        <Card className="h-full rounded-xl flex flex-col border-border/40 dark:border-border p-3.5 animate-pulse">
+            <CardContent className="p-0 flex flex-col gap-2.5">
+                <div className="flex items-start gap-2.5">
+                    <Skeleton className="shrink-0 w-9 h-9 rounded-lg" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                        <Skeleton className="h-3.5 w-3/4" />
+                        <Skeleton className="h-3 w-full" />
+                        <Skeleton className="h-3 w-5/6" />
                     </div>
-                    <Skeleton className="size-4 sm:size-5 rounded-full" />
+                </div>
+
+                <div className="flex items-center gap-2 pt-2 border-t border-border/40 dark:border-border/60">
+                    <div className="flex -space-x-1.5">
+                        <Skeleton className="w-6 h-6 rounded-full ring-2 ring-background dark:ring-background" />
+                        <Skeleton className="w-6 h-6 rounded-full ring-2 ring-background dark:ring-background" />
+                        <Skeleton className="w-6 h-6 rounded-full ring-2 ring-background dark:ring-background" />
+                    </div>
+                    <Skeleton className="h-3 w-16" />
                 </div>
             </CardContent>
         </Card>
@@ -34,13 +30,13 @@ export function TeamCardSkeleton() {
 
 export function TeamsSkeleton({ count = 3, type = "myTeams" }: { count?: number; type?: string }) {
     const Icon = type === "workingIn" ? Users : Crown;
-    
+
     return (
         <div className="w-full max-w-full overflow-hidden">
             {/* Section Header Skeleton */}
-            <div className="flex items-start gap-3 mb-6">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 mt-1">
-                    <Icon className="w-5 h-5 text-primary animate-pulse" />
+            <div className="flex items-center gap-3 mb-6 pb-3 border-b border-border/40 dark:border-border/60">
+                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 dark:bg-primary/20">
+                    <Icon className="w-5 h-5 text-primary dark:text-primary/90 animate-pulse" />
                 </div>
                 <div className="space-y-2">
                     <Skeleton className="h-7 w-32" />
@@ -49,7 +45,7 @@ export function TeamsSkeleton({ count = 3, type = "myTeams" }: { count?: number;
             </div>
 
             {/* Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Array.from({ length: count }).map((_, i) => (
                     <TeamCardSkeleton key={i} />
                 ))}
