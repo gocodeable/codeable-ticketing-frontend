@@ -510,6 +510,12 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
                       // Add the new issue to the issues list
                       setIssues([...issues, newIssue]);
                     }}
+                    onIssueUpdated={(updatedIssue) => {
+                      // Update the issue in the issues list
+                      setIssues(issues.map(issue => 
+                        issue._id === updatedIssue._id ? updatedIssue : issue
+                      ));
+                    }}
                     onIssuesReordered={(statusId, reorderedIssues) => {
                       // Update issues with new positions
                       setIssues((prevIssues) => {

@@ -27,6 +27,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { ProjectMember } from "@/types/project";
+import { Issue } from "@/types/issue";
 import Image from "next/image";
 import { DEFAULT_AVATAR } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -53,7 +54,7 @@ interface AddIssueDialogProps {
   projectId: string;
   workflowStatusId: string;
   projectMembers: ProjectMember[];
-  onIssueCreated?: (issue: any) => void;
+  onIssueCreated?: (issue: Issue) => void;
 }
 
 export function AddIssueDialog({
@@ -289,7 +290,10 @@ export function AddIssueDialog({
           : undefined,
         attachments: attachments
           .filter((att) => att.url && !att.error)
-          .map((att) => att.url!),
+          .map((att) => ({
+            link: att.url!,
+            fileName: att.file.name,
+          })),
       };
 
       const response = await apiPost("/api/issues", issueData, idToken);

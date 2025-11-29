@@ -10,12 +10,14 @@ interface SortableIssueCardProps {
   issue: Issue;
   getPriorityColor: (priority: string) => string;
   disabled?: boolean;
+  onClick?: () => void;
 }
 
 export default function SortableIssueCard({
   issue,
   getPriorityColor,
   disabled = false,
+  onClick,
 }: SortableIssueCardProps) {
   const {
     attributes,
@@ -45,7 +47,7 @@ export default function SortableIssueCard({
           <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
         </div>
       )}
-      <IssueCard issue={issue} getPriorityColor={getPriorityColor} />
+      <IssueCard issue={issue} getPriorityColor={getPriorityColor} onClick={onClick} />
     </div>
   );
 }
