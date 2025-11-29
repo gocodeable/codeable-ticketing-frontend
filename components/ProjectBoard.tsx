@@ -36,12 +36,13 @@ interface ProjectBoardProps {
   isAdmin: boolean;
   userRole?: "admin" | "developer" | "qa";
   projectMembers: ProjectMember[];
+  initialIssueId?: string;
 }
 
 // Sortable Status Column Component
 
 
-export default function ProjectBoard({ projectId, isAdmin, userRole, projectMembers }: ProjectBoardProps) {
+export default function ProjectBoard({ projectId, isAdmin, userRole, projectMembers, initialIssueId }: ProjectBoardProps) {
   const { user } = useAuth();
   const [statuses, setStatuses] = useState<WorkflowStatus[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -489,6 +490,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
                     projectMembers={projectMembers}
                     getTypeIcon={getTypeIcon}
                     getPriorityColor={getPriorityColor}
+                    initialIssueId={initialIssueId}
                     onStatusUpdate={(updatedStatus) => {
                       setStatuses(statuses.map(s => 
                         s._id === updatedStatus._id ? updatedStatus : s
