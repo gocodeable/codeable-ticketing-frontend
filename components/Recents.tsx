@@ -37,11 +37,9 @@ export function Recents() {
     }, [user])
     return recents && recents.length > 0 ? (
         <div className="w-full max-w-full overflow-hidden">
-            <div className="flex items-center gap-3 mb-5">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20">
-                    <History className="w-4 h-4 text-primary" />
-                </div>
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Recent Activity</h2>
+            <div className="flex items-center gap-2 mb-4">
+                <History className="w-5 h-5 text-primary dark:text-primary/90" />
+                <h2 className="text-lg font-semibold tracking-tight">Recent Activity</h2>
             </div>
             <RecentsCarousel recents={recents} />
         </div>

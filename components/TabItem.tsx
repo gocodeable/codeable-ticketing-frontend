@@ -10,42 +10,45 @@ interface TabItemProps {
 export function TabItem({ item }: TabItemProps) {
     const statusConfig = {
         open: {
-            className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-800",
+            className: "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border-blue-200 dark:border-blue-800/50",
             label: "Open"
         },
         "in-progress": {
-            className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800",
+            className: "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border-amber-200 dark:border-amber-800/50",
             label: "In Progress"
         },
         closed: {
-            className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200 dark:border-green-800",
+            className: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50",
             label: "Closed"
         },
     }
 
     const priorityConfig = {
         low: {
-            className: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700",
+            className: "bg-slate-50 text-slate-700 dark:bg-slate-900/50 dark:text-slate-400 border-slate-200 dark:border-slate-800/50",
             label: "Low"
         },
         medium: {
-            className: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-200 dark:border-orange-800",
+            className: "bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400 border-orange-200 dark:border-orange-800/50",
             label: "Medium"
         },
         high: {
-            className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border-red-200 dark:border-red-800",
+            className: "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 border-rose-200 dark:border-rose-800/50",
             label: "High"
         },
     }
 
     return (
-        <Item variant="outline" className="cursor-pointer hover:bg-accent/50 transition-colors border-none">
+        <Item
+            variant="outline"
+            className="cursor-pointer hover:bg-primary/5 dark:hover:bg-primary/5 transition-all duration-200 border-none rounded-xl group"
+        >
             <ItemContent>
                 <ItemHeader>
-                    <ItemTitle>{item.title}</ItemTitle>
+                    <ItemTitle className="group-hover:text-primary transition-colors">{item.title}</ItemTitle>
                     <div className="flex items-center gap-2">
                         {item.priority && (
-                            <Badge className={priorityConfig[item.priority].className}>
+                            <Badge className={`${priorityConfig[item.priority].className} text-xs font-semibold border`}>
                                 {priorityConfig[item.priority].label}
                             </Badge>
                         )}
@@ -53,7 +56,7 @@ export function TabItem({ item }: TabItemProps) {
                 </ItemHeader>
                 <ItemDescription className="flex items-center gap-1.5">
                     <KanbanIcon className="w-4 h-4 text-muted-foreground" />
-                    <span className="truncate">{item.project}</span>
+                    <span className="truncate text-muted-foreground">{item.project}</span>
                 </ItemDescription>
             </ItemContent>
         </Item>
