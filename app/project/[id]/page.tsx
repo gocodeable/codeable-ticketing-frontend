@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, use, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import {
@@ -31,19 +31,46 @@ import { UpdateProjectSheet } from "@/components/UpdateProjectSheet";
 import { ProjectMembersModal } from "@/components/ProjectMembersModal";
 import { toast } from "sonner";
 
+// Separate component to handle search params (requires Suspense)
+function ProjectBoardWithSearchParams({
+  projectId,
+  isAdmin,
+  userRole,
+  projectMembers,
+}: {
+  projectId: string;
+  isAdmin: boolean;
+  userRole?: "admin" | "developer" | "qa";
+  projectMembers: Array<{ uid: string; name: string; email: string; avatar?: string; role?: "admin" | "developer" | "qa" | undefined }>;
+}) {
+  const searchParams = useSearchParams();
+  const initialIssueId = searchParams.get("issueId");
+  
+  return (
+    <ProjectBoard 
+      projectId={projectId} 
+      isAdmin={isAdmin} 
+      userRole={userRole}
+      projectMembers={projectMembers}
+      initialIssueId={initialIssueId || undefined}
+    />
+  );
+}
+
 export default function ProjectPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { id } = use(params);
+  
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdateSheetOpen, setIsUpdateSheetOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
-  const router = useRouter();
-  const { user } = useAuth();
-  const { id } = use(params);
   const fetchProject = async () => {
     try {
       setIsLoading(true);
@@ -267,18 +294,20 @@ export default function ProjectPage({
                 </div>
               </TabsContent>
               <TabsContent value="board" className="mt-3 sm:mt-4">
-                <ProjectBoard 
-                  projectId={id} 
-                  isAdmin={!!isAdmin} 
-                  userRole={userRole}
-                  projectMembers={Array.isArray(project.members) ? project.members.map((m: any) => ({
-                    uid: m.uid,
-                    name: m.name,
-                    email: m.email,
-                    avatar: m.avatar,
-                    role: m.role,
-                  })) : []}
-                />
+                <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="text-muted-foreground">Loading board...</div></div>}>
+                  <ProjectBoardWithSearchParams
+                    projectId={id}
+                    isAdmin={!!isAdmin}
+                    userRole={userRole}
+                    projectMembers={Array.isArray(project.members) ? project.members.map((m: any) => ({
+                      uid: m.uid,
+                      name: m.name,
+                      email: m.email,
+                      avatar: m.avatar,
+                      role: m.role as "admin" | "developer" | "qa" | undefined,
+                    })) : []}
+                  />
+                </Suspense>
               </TabsContent>
               <TabsContent
                 value="members"
