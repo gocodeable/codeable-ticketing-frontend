@@ -1,14 +1,15 @@
 "use client";
 
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Project as ProjectType } from "@/types/project";
 import { EmptyComponent } from "@/components/Empty";
 import { Projects } from "@/components/Projects";
 import { ProjectsSkeleton } from "@/components/ProjectCardSkeleton";
 import { apiGet } from "@/lib/api/apiClient";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
@@ -16,6 +17,7 @@ export default function ProjectsPage() {
   const { user } = useAuth();
   const [projects, setProjects] = useState<ProjectType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchProjects = async () => {
     if (!user) return;
@@ -41,6 +43,17 @@ export default function ProjectsPage() {
   useEffect(() => {
     fetchProjects();
   }, [user]);
+
+  const filteredProjects = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return projects;
+    }
+    const query = searchQuery.toLowerCase().trim();
+    return projects.filter((project) =>
+      project.title.toLowerCase().includes(query)
+    );
+  }, [projects, searchQuery]);
+
   const hasProjects = projects && projects.length > 0;
 
   return (
@@ -71,10 +84,29 @@ export default function ProjectsPage() {
             </Link>
           </motion.div>
         )}
+        {hasProjects && (
+          <motion.div
+            className="w-full"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+          >
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                type="text"
+                placeholder="Search projects by name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-full max-w-md"
+              />
+            </div>
+          </motion.div>
+        )}
         {loading ? (
           <ProjectsSkeleton count={6} />
         ) : hasProjects ? (
-          <Projects projects={projects} showTitle={false} />
+          <Projects projects={filteredProjects} showTitle={false} />
         ) : (
           <div className="w-full overflow-hidden flex items-center justify-center min-h-[60vh]">
             <EmptyComponent type="project" />
