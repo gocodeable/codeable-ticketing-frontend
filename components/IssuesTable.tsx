@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { Issue } from "@/types/issue";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { Issue, IssueAssignee } from "@/types/issue";
 import { WorkflowStatus } from "@/types/workflowStatus";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { apiGet } from "@/lib/api/apiClient";
@@ -26,10 +26,14 @@ import { DEFAULT_AVATAR } from "@/lib/constants";
 import { Loader2, AlertCircle, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { IssueDetailDialog } from "@/components/IssueDetailDialog";
 
 interface IssuesTableProps {
   projectId: string;
   onIssuesCountChange?: (count: number) => void;
+  isAdmin?: boolean;
+  userRole?: "admin" | "developer" | "qa";
+  projectMembers?: Array<{ uid: string; name: string; email: string; avatar?: string }>;
 }
 
 interface ReporterInfo {
@@ -38,16 +42,34 @@ interface ReporterInfo {
   avatar?: string;
 }
 
-export default function IssuesTable({ projectId, onIssuesCountChange }: IssuesTableProps) {
+interface AssigneeInfo {
+  uid: string;
+  name: string;
+  avatar?: string;
+}
+
+export default function IssuesTable({ 
+  projectId, 
+  onIssuesCountChange,
+  isAdmin = false,
+  userRole,
+  projectMembers = [],
+}: IssuesTableProps) {
   const { user } = useAuth();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [statuses, setStatuses] = useState<WorkflowStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reporters, setReporters] = useState<Map<string, ReporterInfo>>(new Map());
+  const [assignees, setAssignees] = useState<Map<string, AssigneeInfo>>(new Map());
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const [assigneeSearchQuery, setAssigneeSearchQuery] = useState("");
+  const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
+  const assigneeDropdownRef = useRef<HTMLDivElement>(null);
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
 
   const getPriorityColor = (priority: string) => {
     const p = priority || "medium";
@@ -96,6 +118,56 @@ export default function IssuesTable({ projectId, onIssuesCountChange }: IssuesTa
         if (onIssuesCountChange) {
           onIssuesCountChange(fetchedIssues.length);
         }
+        
+        const assigneeMap = new Map<string, AssigneeInfo>();
+        fetchedIssues.forEach((issue: Issue) => {
+          if (issue.assignee) {
+            if (typeof issue.assignee === "object" && issue.assignee.uid) {
+              // Already populated assignee object
+              assigneeMap.set(issue.assignee.uid, {
+                uid: issue.assignee.uid,
+                name: issue.assignee.name,
+                avatar: issue.assignee.avatar,
+              });
+            } else if (typeof issue.assignee === "string") {
+              // Assignee is just a UID string, we'll fetch it
+              if (!assigneeMap.has(issue.assignee)) {
+                assigneeMap.set(issue.assignee, {
+                  uid: issue.assignee,
+                  name: "",
+                  avatar: undefined,
+                });
+              }
+            }
+          }
+        });
+
+        // Fetch assignee information for UIDs that don't have full info
+        const assigneeUidsToFetch = Array.from(assigneeMap.values())
+          .filter(a => !a.name)
+          .map(a => a.uid);
+
+        if (assigneeUidsToFetch.length > 0) {
+          await Promise.all(
+            assigneeUidsToFetch.map(async (uid) => {
+              try {
+                const userResponse = await apiGet(`/api/user?uid=${uid}`, idToken);
+                const userData = await userResponse.json();
+                if (userData.success && userData.data) {
+                  assigneeMap.set(uid, {
+                    uid: userData.data.uid,
+                    name: userData.data.name,
+                    avatar: userData.data.avatar,
+                  });
+                }
+              } catch (err) {
+                console.error(`Error fetching assignee ${uid}:`, err);
+              }
+            })
+          );
+        }
+        
+        setAssignees(assigneeMap);
         
         // Fetch reporter information for all unique reporters
         const reporterUids = [
@@ -168,7 +240,18 @@ export default function IssuesTable({ projectId, onIssuesCountChange }: IssuesTa
     return reporters.get(reporterUid) || null;
   };
 
-  // Filter issues based on search query, priority, and status
+  const getAssigneeUid = (assignee: string | IssueAssignee | null | undefined): string | null => {
+    if (!assignee) return null;
+    if (typeof assignee === "object" && assignee.uid) {
+      return assignee.uid;
+    }
+    if (typeof assignee === "string") {
+      return assignee;
+    }
+    return null;
+  };
+
+  // Filter issues based on search query, priority, status, and assignee
   const filteredIssues = useMemo(() => {
     let filtered = [...issues];
 
@@ -197,16 +280,63 @@ export default function IssuesTable({ projectId, onIssuesCountChange }: IssuesTa
       });
     }
 
+    // Filter by assignee
+    if (assigneeFilter !== "all") {
+      if (assigneeFilter === "unassigned") {
+        filtered = filtered.filter((issue) => !issue.assignee);
+      } else {
+        filtered = filtered.filter((issue) => {
+          const assigneeUid = getAssigneeUid(issue.assignee);
+          return assigneeUid === assigneeFilter;
+        });
+      }
+    }
+
     return filtered;
-  }, [issues, searchQuery, priorityFilter, statusFilter, statuses]);
+  }, [issues, searchQuery, priorityFilter, statusFilter, assigneeFilter, statuses]);
 
   const clearFilters = () => {
     setSearchQuery("");
     setPriorityFilter("all");
     setStatusFilter("all");
+    setAssigneeFilter("all");
+    setAssigneeSearchQuery("");
   };
 
-  const hasActiveFilters = searchQuery.trim() !== "" || priorityFilter !== "all" || statusFilter !== "all";
+  const hasActiveFilters = searchQuery.trim() !== "" || priorityFilter !== "all" || statusFilter !== "all" || assigneeFilter !== "all";
+
+  // Filter assignees based on search query
+  const filteredAssignees = useMemo(() => {
+    const assigneesList = Array.from(assignees.values());
+    if (!assigneeSearchQuery.trim()) {
+      return assigneesList;
+    }
+    const query = assigneeSearchQuery.toLowerCase();
+    return assigneesList.filter(
+      (assignee) =>
+        assignee.name.toLowerCase().includes(query) ||
+        assignee.uid.toLowerCase().includes(query)
+    );
+  }, [assignees, assigneeSearchQuery]);
+
+  // Close assignee dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        assigneeDropdownRef.current &&
+        !assigneeDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowAssigneeDropdown(false);
+      }
+    };
+
+    if (showAssigneeDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [showAssigneeDropdown]);
 
   if (loading) {
     return (
@@ -248,7 +378,7 @@ export default function IssuesTable({ projectId, onIssuesCountChange }: IssuesTa
       {/* Search and Filter Bar */}
       <div className="w-full flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-muted/30 dark:bg-muted/20 rounded-xl p-4 border border-border/40 dark:border-border/60">
         {/* Search Bar */}
-        <div className="relative flex-1 w-full sm:max-w-md">
+        <div className="relative flex-1 w-full sm:max-w-lg">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             type="text"
@@ -324,6 +454,141 @@ export default function IssuesTable({ projectId, onIssuesCountChange }: IssuesTa
           </SelectContent>
         </Select>
 
+        {/* Assignee Filter */}
+        <div className="relative w-full sm:w-[180px]" ref={assigneeDropdownRef}>
+          <div
+            className="w-full h-10 bg-background border border-border/60 dark:border-border/40 rounded-md shadow-sm px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => {
+              setShowAssigneeDropdown(!showAssigneeDropdown);
+              if (!showAssigneeDropdown) {
+                setAssigneeSearchQuery("");
+              }
+            }}
+          >
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {assigneeFilter === "all" ? (
+                <span className="text-sm text-muted-foreground">All Assignees</span>
+              ) : (
+                (() => {
+                  const selectedAssignee = assignees.get(assigneeFilter);
+                  return selectedAssignee ? (
+                    <>
+                      <div className="relative h-5 w-5 rounded-full overflow-hidden ring-1 ring-background shrink-0">
+                        <Image
+                          src={selectedAssignee.avatar || DEFAULT_AVATAR}
+                          alt={selectedAssignee.name}
+                          width={20}
+                          height={20}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <span className="text-sm text-foreground font-medium truncate">
+                        {selectedAssignee.name}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Unassigned</span>
+                  );
+                })()
+              )}
+            </div>
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          </div>
+
+          {showAssigneeDropdown && (
+            <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-60 overflow-hidden flex flex-col">
+              <div className="p-2 border-b border-border">
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Search assignees..."
+                    value={assigneeSearchQuery}
+                    onChange={(e) => setAssigneeSearchQuery(e.target.value)}
+                    className="pl-8 pr-4 h-9 text-sm"
+                    autoFocus
+                  />
+                  {assigneeSearchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 rounded-md hover:bg-muted"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAssigneeSearchQuery("");
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="overflow-y-auto max-h-48">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAssigneeFilter("all");
+                    setShowAssigneeDropdown(false);
+                    setAssigneeSearchQuery("");
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left border-b border-border",
+                    assigneeFilter === "all" && "bg-muted"
+                  )}
+                >
+                  <span className="text-sm font-medium">All Assignees</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAssigneeFilter("unassigned");
+                    setShowAssigneeDropdown(false);
+                    setAssigneeSearchQuery("");
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left border-b border-border",
+                    assigneeFilter === "unassigned" && "bg-muted"
+                  )}
+                >
+                  <span className="text-sm text-muted-foreground italic">Unassigned</span>
+                </button>
+                {filteredAssignees.length > 0 ? (
+                  filteredAssignees.map((assignee) => (
+                    <button
+                      key={assignee.uid}
+                      type="button"
+                      onClick={() => {
+                        setAssigneeFilter(assignee.uid);
+                        setShowAssigneeDropdown(false);
+                        setAssigneeSearchQuery("");
+                      }}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left border-b border-border last:border-0",
+                        assigneeFilter === assignee.uid && "bg-muted"
+                      )}
+                    >
+                      <div className="shrink-0 relative h-7 w-7 rounded-full overflow-hidden ring-2 ring-border">
+                        <Image
+                          src={assignee.avatar || DEFAULT_AVATAR}
+                          alt={assignee.name}
+                          width={28}
+                          height={28}
+                          className="rounded-full object-cover"
+                        />
+                      </div>
+                      <span className="text-sm font-medium truncate">{assignee.name}</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                    No assignees found
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Clear Filters Button */}
         {hasActiveFilters && (
           <Button
@@ -386,9 +651,10 @@ export default function IssuesTable({ projectId, onIssuesCountChange }: IssuesTa
             return (
               <TableRow
                 key={issue._id}
+                onClick={() => setSelectedIssueId(issue._id)}
                 className={cn(
                   "border-b border-border/30 dark:border-border/40 transition-all duration-150",
-                  "hover:bg-muted/40 hover:shadow-sm",
+                  "hover:bg-muted/40 hover:shadow-sm cursor-pointer",
                   isEven ? "bg-background" : "bg-muted/10"
                 )}
               >
@@ -464,6 +730,26 @@ export default function IssuesTable({ projectId, onIssuesCountChange }: IssuesTa
       </Table>
         </div>
       )}
+
+      <IssueDetailDialog
+        open={selectedIssueId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedIssueId(null);
+        }}
+        issueId={selectedIssueId}
+        getPriorityColor={getPriorityColor}
+        isAdmin={isAdmin}
+        userRole={userRole}
+        projectMembers={projectMembers}
+        onIssueUpdated={(updatedIssue) => {
+          setIssues((prevIssues) =>
+            prevIssues.map((issue) =>
+              issue._id === updatedIssue._id ? updatedIssue : issue
+            )
+          );
+          fetchIssues();
+        }}
+      />
     </div>
   );
 }
