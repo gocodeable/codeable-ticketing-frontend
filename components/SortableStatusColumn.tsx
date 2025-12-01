@@ -40,6 +40,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AddIssueDialog } from "@/components/AddIssueDialog";
+import { IssueDetailDialog } from "@/components/IssueDetailDialog";
 
 // Droppable wrapper for status column to accept issues from other columns
 function StatusDroppable({ statusId, children }: { statusId: string; children: React.ReactNode }) {
@@ -68,6 +69,8 @@ export default function SortableStatusColumn({
   onStatusUpdate,
   onStatusDelete,
   onIssueCreated,
+  onIssueUpdated,
+  initialIssueId,
 }: {
   status: WorkflowStatus;
   statusIssues: Issue[];
@@ -80,7 +83,9 @@ export default function SortableStatusColumn({
   onStatusUpdate?: (status: WorkflowStatus) => void;
   onStatusDelete?: (statusId: string) => void;
   onIssueCreated?: (issue: Issue) => void;
+  onIssueUpdated?: (issue: Issue) => void;
   onIssuesReordered?: (statusId: string, reorderedIssues: Issue[]) => void;
+  initialIssueId?: string;
 }) {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -93,8 +98,8 @@ export default function SortableStatusColumn({
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAddIssueDialog, setShowAddIssueDialog] = useState(false);
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [localIssues, setLocalIssues] = useState<Issue[]>(statusIssues);
-  const [isReordering, setIsReordering] = useState(false);
 
   // Update local issues when statusIssues prop changes
   useEffect(() => {
@@ -143,6 +148,13 @@ export default function SortableStatusColumn({
     const isReporter = user?.uid === issue.reporter;
     return isAssignee || isReporter;
   };
+
+  // Open issue dialog if initialIssueId matches an issue in this column
+  useEffect(() => {
+    if (initialIssueId && statusIssues.some(issue => issue._id === initialIssueId)) {
+      setSelectedIssueId(initialIssueId);
+    }
+  }, [initialIssueId, statusIssues]);
 
   const handleEdit = () => {
     setEditName(status.name);
@@ -355,6 +367,7 @@ export default function SortableStatusColumn({
                 issue={issue}
                 getPriorityColor={getPriorityColor}
                 disabled={!canReorderIssue(issue)}
+                onClick={() => setSelectedIssueId(issue._id)}
               />
             ))}
           </SortableContext>
@@ -381,6 +394,29 @@ export default function SortableStatusColumn({
         onIssueCreated={(newIssue) => {
           if (onIssueCreated) {
             onIssueCreated(newIssue);
+          }
+        }}
+      />
+
+      {/* Issue Detail Dialog */}
+      <IssueDetailDialog
+        open={selectedIssueId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedIssueId(null);
+        }}
+        issueId={selectedIssueId}
+        getPriorityColor={getPriorityColor}
+        isAdmin={isAdmin}
+        userRole={userRole}
+        projectMembers={projectMembers.map((member) => ({
+          uid: typeof member === "string" ? member : member.uid,
+          name: typeof member === "string" ? "" : member.name,
+          email: typeof member === "string" ? "" : member.email || "",
+          avatar: typeof member === "string" ? undefined : member.avatar,
+        }))}
+        onIssueUpdated={(updatedIssue) => {
+          if (onIssueUpdated) {
+            onIssueUpdated(updatedIssue);
           }
         }}
       />
