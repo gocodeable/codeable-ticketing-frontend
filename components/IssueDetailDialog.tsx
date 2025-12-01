@@ -484,124 +484,135 @@ export function IssueDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-[98vw]! w-full h-[92vh] max-h-[92vh] overflow-hidden p-0 gap-0">
         {loading ? (
           <>
-            <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
-              <DialogTitle>Loading Issue</DialogTitle>
+            <DialogHeader className="px-6 sm:px-8 pt-6 pb-4 border-b border-border/40 dark:border-border/60 bg-muted/30">
+              <DialogTitle className="text-xl">Loading Issue</DialogTitle>
             </DialogHeader>
             <div className="flex items-center justify-center p-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Loading issue details...</p>
+              </div>
             </div>
           </>
         ) : issue ? (
           <>
-            <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  {!isEditing ? (
-                    <>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-mono text-muted-foreground">
-                          {issue.issueCode}
-                        </span>
-                        {issue.type && (
+            {/* Modern Header with gradient */}
+            <div className="relative bg-gradient-to-br from-muted/50 via-background to-muted/30 border-b border-border/40 dark:border-border/60">
+              <div className="px-6 sm:px-8 pt-6 pb-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    {!isEditing ? (
+                      <>
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                          <span className="text-xs font-mono font-semibold text-primary bg-primary/10 dark:bg-primary/15 px-2.5 py-1 rounded-md border border-primary/20">
+                            {issue.issueCode}
+                          </span>
+                          {issue.type && (
+                            <span
+                              className={cn(
+                                "text-xs font-medium px-2.5 py-1 rounded-md text-white",
+                                getTypeColor(issue.type)
+                              )}
+                            >
+                              {issue.type.toUpperCase()}
+                            </span>
+                          )}
                           <span
                             className={cn(
-                              "text-xs px-2 py-0.5 rounded-full text-white",
-                              getTypeColor(issue.type)
+                              "text-xs font-medium px-2.5 py-1 rounded-md border",
+                              getPriorityColor(issue.priority || "medium")
                             )}
                           >
-                            {issue.type}
+                            {(issue.priority || "medium").toUpperCase()}
                           </span>
-                        )}
-                        <span
-                          className={cn(
-                            "text-xs px-2 py-0.5 rounded-full border",
-                            getPriorityColor(issue.priority || "medium")
-                          )}
-                        >
-                          {issue.priority || "medium"}
-                        </span>
-                      </div>
-                      <DialogTitle className="text-2xl font-bold tracking-tight mb-2">
-                        {issue.title}
-                      </DialogTitle>
-                      <DialogDescription className="text-sm text-muted-foreground">
-                        {typeof issue.workflowStatus === "object" && issue.workflowStatus
-                          ? issue.workflowStatus.name
-                          : "Unknown Status"}
-                      </DialogDescription>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-mono text-muted-foreground">
-                          {issue.issueCode}
-                        </span>
-                      </div>
-                      <DialogTitle className="text-2xl font-bold tracking-tight mb-2">
-                        Edit Issue
-                      </DialogTitle>
-                      <DialogDescription className="text-sm text-muted-foreground">
-                        Update issue details and attachments
-                      </DialogDescription>
-                    </>
-                  )}
-                </div>
-                {!isEditing && canEditIssue() && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleEdit}
-                    className="gap-2"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Edit
-                  </Button>
-                )}
-                {isEditing && (
-                  <div className="flex items-center gap-2">
+                        </div>
+                        <DialogTitle className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 text-foreground">
+                          {issue.title}
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-muted-foreground flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-primary/60 inline-block" />
+                          {typeof issue.workflowStatus === "object" && issue.workflowStatus
+                            ? issue.workflowStatus.name
+                            : "Unknown Status"}
+                        </DialogDescription>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-xs font-mono font-semibold text-primary bg-primary/10 dark:bg-primary/15 px-2.5 py-1 rounded-md border border-primary/20">
+                            {issue.issueCode}
+                          </span>
+                        </div>
+                        <DialogTitle className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 text-foreground">
+                          Edit Issue
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-muted-foreground">
+                          Update issue details and attachments
+                        </DialogDescription>
+                      </>
+                    )}
+                  </div>
+                  {!isEditing && canEditIssue() && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleCancelEdit}
-                      disabled={isSaving}
-                      className="gap-2"
+                      onClick={handleEdit}
+                      className="gap-2 rounded-lg shrink-0"
                     >
-                      <X className="w-4 h-4" />
-                      Cancel
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Edit</span>
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleSaveEdit}
-                      disabled={isSaving || !editTitle.trim()}
-                      className="gap-2"
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4" />
-                          Save
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
+                  )}
+                  {isEditing && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCancelEdit}
+                        disabled={isSaving}
+                        className="gap-2 rounded-lg"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Cancel</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveEdit}
+                        disabled={isSaving || !editTitle.trim()}
+                        className="gap-2 rounded-lg bg-primary hover:bg-primary/90"
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span className="hidden sm:inline">Saving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Save</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </DialogHeader>
+            </div>
 
-            <div className="px-6 py-5 space-y-6">
+            {/* Two-Column Layout */}
+            <div className="flex-1 overflow-hidden flex">
+              {/* Left Column - Issue Details */}
+              <div className="flex-1 overflow-y-auto border-r border-border/40 dark:border-border/60">
+                <div className="px-6 sm:px-8 py-6">
               {isEditing ? (
                 // Edit Form
-                <>
+                <div className="space-y-6">
                   {/* Title */}
                   <div className="space-y-2">
-                    <Label htmlFor="edit-title" className="text-sm font-semibold">
+                    <Label htmlFor="edit-title" className="text-sm font-semibold text-foreground">
                       Title <span className="text-destructive">*</span>
                     </Label>
                     <Input
@@ -611,13 +622,13 @@ export function IssueDetailDialog({
                       onChange={(e) => setEditTitle(e.target.value)}
                       disabled={isSaving}
                       required
-                      className="h-11"
+                      className="h-11 rounded-lg"
                     />
                   </div>
 
                   {/* Description */}
                   <div className="space-y-2">
-                    <Label htmlFor="edit-description" className="text-sm font-semibold">
+                    <Label htmlFor="edit-description" className="text-sm font-semibold text-foreground">
                       Description
                     </Label>
                     <Textarea
@@ -626,8 +637,8 @@ export function IssueDetailDialog({
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
                       disabled={isSaving}
-                      rows={4}
-                      className="resize-none"
+                      rows={5}
+                      className="resize-none rounded-lg"
                     />
                   </div>
 
@@ -970,90 +981,100 @@ export function IssueDetailDialog({
                       </div>
                     )}
                   </div>
-                </>
+                </div>
               ) : (
                 // View Mode
-                <>
+                <div className="space-y-6">
                   {/* Description */}
                   {issue.description && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">Description</Label>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {issue.description}
-                      </p>
+                    <div className="space-y-2.5">
+                      <Label className="text-sm font-semibold text-foreground">Description</Label>
+                      <div className="rounded-lg bg-muted/30 border border-border/40 dark:border-border/60 p-4">
+                        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                          {issue.description}
+                        </p>
+                      </div>
                     </div>
                   )}
 
               {/* Details Grid */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Assignee */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold flex items-center gap-2">
-                    <User className="w-4 h-4" />
+                <div className="space-y-2.5">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" />
                     Assignee
                   </Label>
                   {issue.assignee && typeof issue.assignee === "object" ? (
-                    <div className="flex items-center gap-2">
-                      <div className="relative h-8 w-8 rounded-full overflow-hidden ring-2 ring-background">
+                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
+                      <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-background">
                         <Image
                           src={issue.assignee.avatar || DEFAULT_AVATAR}
                           alt={issue.assignee.name}
-                          width={32}
-                          height={32}
+                          width={36}
+                          height={36}
                           className="rounded-full object-cover"
                         />
                       </div>
-                      <span className="text-sm">{issue.assignee.name}</span>
+                      <span className="text-sm font-medium">{issue.assignee.name}</span>
                     </div>
                   ) : (
-                    <span className="text-sm text-muted-foreground">Unassigned</span>
+                    <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 dark:border-border/60 border-dashed">
+                      <span className="text-sm text-muted-foreground">Unassigned</span>
+                    </div>
                   )}
                 </div>
 
                 {/* Due Date */}
                 {issue.estimatedCompletionDate && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold flex items-center gap-2">
-                      <CalendarIcon className="w-4 h-4" />
+                  <div className="space-y-2.5">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                      <CalendarIcon className="w-3.5 h-3.5" />
                       Due Date
                     </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(issue.estimatedCompletionDate), "PPP")}
-                    </p>
+                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
+                      <p className="text-sm font-medium">
+                        {format(new Date(issue.estimatedCompletionDate), "PPP")}
+                      </p>
+                    </div>
                   </div>
                 )}
 
                 {/* Created At */}
                 {issue.createdAt && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
+                  <div className="space-y-2.5">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
                       Created
                     </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(issue.createdAt), "PPP")}
-                    </p>
+                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
+                      <p className="text-sm font-medium">
+                        {format(new Date(issue.createdAt), "PPP")}
+                      </p>
+                    </div>
                   </div>
                 )}
 
                 {/* Updated At */}
                 {issue.updatedAt && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
+                  <div className="space-y-2.5">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
                       Updated
                     </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(issue.updatedAt), "PPP")}
-                    </p>
+                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
+                      <p className="text-sm font-medium">
+                        {format(new Date(issue.updatedAt), "PPP")}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
 
               {/* Attachments */}
               {issue.attachments && issue.attachments.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold flex items-center gap-2">
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <File className="w-4 h-4" />
                     Attachments ({issue.attachments.length})
                   </Label>
@@ -1064,10 +1085,10 @@ export function IssueDetailDialog({
                       return (
                         <div
                           key={index}
-                          className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30"
+                          className="flex items-center gap-3 p-3 rounded-lg border border-border/40 dark:border-border/60 bg-muted/30 hover:bg-muted/40 transition-colors"
                         >
-                          <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                            <File className="h-4 w-4 text-muted-foreground" />
+                          <div className="w-9 h-9 rounded-lg bg-primary/10 dark:bg-primary/15 flex items-center justify-center shrink-0">
+                            <File className="h-4 w-4 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">
@@ -1079,17 +1100,17 @@ export function IssueDetailDialog({
                             size="sm"
                             onClick={() => handleDownload(attachment, attachmentId)}
                             disabled={isDownloading}
-                            className="gap-2"
+                            className="gap-2 rounded-lg shrink-0"
                           >
                             {isDownloading ? (
                               <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Downloading...
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span className="hidden sm:inline">Downloading...</span>
                               </>
                             ) : (
                               <>
-                                <Download className="w-4 h-4" />
-                                Download
+                                <Download className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Download</span>
                               </>
                             )}
                           </Button>
@@ -1099,10 +1120,17 @@ export function IssueDetailDialog({
                   </div>
                 </div>
               )}
+                </div>
+              )}
+            </div>
+          </div>
 
+          {/* Right Column - Comments */}
+          <div className="w-[40%] min-w-[400px] max-w-[550px] overflow-y-auto bg-muted/20">
+                <div className="px-6 py-6 h-full">
                   {/* Comments */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold flex items-center gap-2">
+                  <div className="space-y-3 h-full flex flex-col">
+                    <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <MessageCircle className="w-4 h-4" />
                       Comments ({issue.comments?.length || issue.commentCount || 0})
                     </Label>
@@ -1111,9 +1139,9 @@ export function IssueDetailDialog({
                         {issue.comments.map((comment) => (
                           <div
                             key={comment._id}
-                            className="p-4 rounded-lg border border-border bg-muted/30"
+                            className="p-4 rounded-lg border border-border/40 dark:border-border/60 bg-muted/30"
                           >
-                            <div className="flex items-start gap-3 mb-2">
+                            <div className="flex items-start gap-3 mb-3">
                               {(() => {
                                 const author =
                                   comment.author ||
@@ -1122,17 +1150,17 @@ export function IssueDetailDialog({
                                     : null);
                                 return author ? (
                                   <>
-                                    <div className="relative h-8 w-8 rounded-full overflow-hidden ring-2 ring-background shrink-0">
+                                    <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-background shrink-0">
                                       <Image
                                         src={author.avatar || DEFAULT_AVATAR}
                                         alt={author.name || "User"}
-                                        width={32}
-                                        height={32}
+                                        width={36}
+                                        height={36}
                                         className="rounded-full object-cover"
                                       />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium">
+                                      <p className="text-sm font-semibold">
                                         {author.name || "Unknown User"}
                                       </p>
                                       {comment.createdAt && (
@@ -1151,21 +1179,21 @@ export function IssueDetailDialog({
                                 );
                               })()}
                             </div>
-                            <p className="text-sm text-foreground whitespace-pre-wrap ml-11">
+                            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed ml-12">
                               {comment.message}
                             </p>
                             {comment.attachments && comment.attachments.length > 0 && (
-                              <div className="mt-3 ml-11 space-y-2">
+                              <div className="mt-3 ml-12 space-y-2">
                                 {comment.attachments.map((attachment, index) => {
                                   const attachmentId = `${comment._id}-${index}`;
                                   const isDownloading = downloadingAttachments.has(attachmentId);
                                   return (
                                     <div
                                       key={index}
-                                      className="flex items-center gap-2 p-2 rounded border border-border bg-background"
+                                      className="flex items-center gap-2 p-2 rounded-lg border border-border/40 dark:border-border/60 bg-background"
                                     >
                                       <File className="h-4 w-4 text-muted-foreground" />
-                                      <span className="text-xs truncate flex-1">
+                                      <span className="text-xs truncate flex-1 font-medium">
                                         {attachment.fileName}
                                       </span>
                                       <Button
@@ -1173,7 +1201,7 @@ export function IssueDetailDialog({
                                         size="sm"
                                         onClick={() => handleDownload(attachment, attachmentId)}
                                         disabled={isDownloading}
-                                        className="h-6 px-2"
+                                        className="h-7 px-2 rounded-md"
                                       >
                                         {isDownloading ? (
                                           <Loader2 className="w-3 h-3 animate-spin" />
@@ -1193,14 +1221,14 @@ export function IssueDetailDialog({
                       <p className="text-sm text-muted-foreground">No comments yet</p>
                     )}
                   </div>
-                </>
-              )}
+                </div>
+              </div>
             </div>
           </>
         ) : (
           <>
-            <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
-              <DialogTitle>Issue Not Found</DialogTitle>
+            <DialogHeader className="px-6 sm:px-8 pt-6 pb-4 border-b border-border/40 dark:border-border/60 bg-muted/30">
+              <DialogTitle className="text-xl">Issue Not Found</DialogTitle>
               <DialogDescription>
                 The issue you're looking for could not be found.
               </DialogDescription>
