@@ -300,6 +300,16 @@ export default function ProjectPage({
                   <IssuesTable 
                     projectId={id} 
                     onIssuesCountChange={(count) => setIssueCount(count)}
+                    isAdmin={!!isAdmin}
+                    userRole={userRole}
+                    projectMembers={Array.isArray(project.members) ? project.members
+                      .filter((m: any) => typeof m === "object" && m !== null && m.uid)
+                      .map((m: any) => ({
+                        uid: m.uid,
+                        name: m.name || "",
+                        email: m.email || "",
+                        avatar: m.avatar,
+                      })) : []}
                   />
                 </div>
               </TabsContent>
