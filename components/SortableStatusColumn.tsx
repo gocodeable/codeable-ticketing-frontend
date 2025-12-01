@@ -70,6 +70,7 @@ export default function SortableStatusColumn({
   onStatusDelete,
   onIssueCreated,
   onIssueUpdated,
+  onIssueDeleted,
   initialIssueId,
 }: {
   status: WorkflowStatus;
@@ -84,6 +85,7 @@ export default function SortableStatusColumn({
   onStatusDelete?: (statusId: string) => void;
   onIssueCreated?: (issue: Issue) => void;
   onIssueUpdated?: (issue: Issue) => void;
+  onIssueDeleted?: (issueId: string) => void;
   onIssuesReordered?: (statusId: string, reorderedIssues: Issue[]) => void;
   initialIssueId?: string;
 }) {
@@ -417,6 +419,11 @@ export default function SortableStatusColumn({
         onIssueUpdated={(updatedIssue) => {
           if (onIssueUpdated) {
             onIssueUpdated(updatedIssue);
+          }
+        }}
+        onIssueDeleted={(deletedIssueId) => {
+          if (onIssueDeleted) {
+            onIssueDeleted(deletedIssueId);
           }
         }}
       />

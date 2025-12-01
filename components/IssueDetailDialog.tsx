@@ -8,51 +8,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Issue, Attachment } from "@/types/issue";
 import { Comment } from "@/types/comment";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { apiGet, apiPatch } from "@/lib/api/apiClient";
+import { apiGet, apiPatch, apiDelete } from "@/lib/api/apiClient";
 import { toast } from "sonner";
-import {
-  Loader2,
-  Calendar as CalendarIcon,
-  File,
-  Download,
-  MessageCircle,
-  User,
-  Clock,
-  Pencil,
-  X,
-  Check,
-  Search,
-  Trash2,
-  Upload,
-} from "lucide-react";
-import Image from "next/image";
-import { DEFAULT_AVATAR } from "@/lib/constants";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Loader2 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { uploadMediaToStorage } from "@/lib/firebase/uploadMedia";
 import { UserSuggestion } from "@/components/UserSelector";
-import { apiDelete } from "@/lib/api/apiClient";
+
+// Import new components
+import { IssueDetailHeader } from "./IssueDetailHeader";
+import { IssueEditForm } from "./IssueEditForm";
+import { IssueViewMode } from "./IssueViewMode";
+import { IssueCommentsSection } from "./IssueCommentsSection";
+import { IssueDeleteDialog } from "./IssueDeleteDialog";
+import { useIssuePermissions } from "../hooks/useIssuePermissions";
 
 interface IssueDetailDialogProps {
   open: boolean;
@@ -63,6 +35,7 @@ interface IssueDetailDialogProps {
   userRole?: "admin" | "developer" | "qa";
   projectMembers?: Array<{ uid: string; name: string; email: string; avatar?: string }>;
   onIssueUpdated?: (issue: Issue) => void;
+  onIssueDeleted?: (issueId: string) => void;
 }
 
 interface PopulatedIssue extends Omit<Issue, 'comments'> {
@@ -78,6 +51,7 @@ export function IssueDetailDialog({
   userRole,
   projectMembers = [],
   onIssueUpdated,
+  onIssueDeleted,
 }: IssueDetailDialogProps) {
   const { user } = useAuth();
   const [issue, setIssue] = useState<PopulatedIssue | null>(null);
@@ -85,6 +59,7 @@ export function IssueDetailDialog({
   const [downloadingAttachments, setDownloadingAttachments] = useState<Set<string>>(new Set());
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // Edit form state
   const [editTitle, setEditTitle] = useState("");
@@ -107,6 +82,13 @@ export function IssueDetailDialog({
   const [showAssigneeSuggestions, setShowAssigneeSuggestions] = useState(false);
   const assigneeSearchRef = useRef<HTMLDivElement>(null);
   const assigneeInputRef = useRef<HTMLInputElement>(null);
+
+  // Use permissions hook
+  const { canEditIssue, canDeleteIssue } = useIssuePermissions({
+    issue: issue as Issue | null,
+    isAdmin,
+    userRole,
+  });
 
   useEffect(() => {
     if (open && issueId && user) {
@@ -167,35 +149,6 @@ export function IssueDetailDialog({
     }
   };
 
-  const getTypeColor = (type?: string) => {
-    switch (type) {
-      case "bug":
-        return "bg-red-500";
-      case "story":
-        return "bg-green-500";
-      case "epic":
-        return "bg-purple-500";
-      default:
-        return "bg-blue-500";
-    }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (!bytes || bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
-  };
-
-  // Check if user can edit this issue
-  const canEditIssue = (): boolean => {
-    if (!user || !issue) return false;
-    if (isAdmin || userRole === "qa") return true;
-    // Check if user is the reporter
-    return user.uid === issue.reporter;
-  };
-
   const handleEdit = () => {
     setIsEditing(true);
   };
@@ -212,6 +165,10 @@ export function IssueDetailDialog({
       setEditAttachments(issue.attachments || []);
       setNewAttachments([]);
     }
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteDialog(true);
   };
 
   const handleSaveEdit = async () => {
@@ -483,760 +440,119 @@ export function IssueDetailDialog({
   if (!open) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[98vw]! w-full h-[92vh] max-h-[92vh] overflow-hidden p-0 gap-0">
-        {loading ? (
-          <>
-            <DialogHeader className="px-6 sm:px-8 pt-6 pb-4 border-b border-border/40 dark:border-border/60 bg-muted/30">
-              <DialogTitle className="text-xl">Loading Issue</DialogTitle>
-            </DialogHeader>
-            <div className="flex items-center justify-center p-12">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Loading issue details...</p>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-[98vw]! w-full h-[92vh] max-h-[92vh] overflow-hidden p-0 gap-0">
+          {loading ? (
+            <>
+              <DialogHeader className="px-6 sm:px-8 pt-6 pb-4 border-b border-border/40 dark:border-border/60 bg-muted/30">
+                <DialogTitle className="text-xl">Loading Issue</DialogTitle>
+              </DialogHeader>
+              <div className="flex items-center justify-center p-12">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Loading issue details...</p>
+                </div>
               </div>
-            </div>
-          </>
-        ) : issue ? (
-          <>
-            {/* Modern Header with gradient */}
-            <div className="relative bg-gradient-to-br from-muted/50 via-background to-muted/30 border-b border-border/40 dark:border-border/60">
-              <div className="px-6 sm:px-8 pt-6 pb-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    {!isEditing ? (
-                      <>
-                        <div className="flex items-center gap-2 mb-3 flex-wrap">
-                          <span className="text-xs font-mono font-semibold text-primary bg-primary/10 dark:bg-primary/15 px-2.5 py-1 rounded-md border border-primary/20">
-                            {issue.issueCode}
-                          </span>
-                          {issue.type && (
-                            <span
-                              className={cn(
-                                "text-xs font-medium px-2.5 py-1 rounded-md text-white",
-                                getTypeColor(issue.type)
-                              )}
-                            >
-                              {issue.type.toUpperCase()}
-                            </span>
-                          )}
-                          <span
-                            className={cn(
-                              "text-xs font-medium px-2.5 py-1 rounded-md border",
-                              getPriorityColor(issue.priority || "medium")
-                            )}
-                          >
-                            {(issue.priority || "medium").toUpperCase()}
-                          </span>
-                        </div>
-                        <DialogTitle className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 text-foreground">
-                          {issue.title}
-                        </DialogTitle>
-                        <DialogDescription className="text-sm text-muted-foreground flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-primary/60 inline-block" />
-                          {typeof issue.workflowStatus === "object" && issue.workflowStatus
-                            ? issue.workflowStatus.name
-                            : "Unknown Status"}
-                        </DialogDescription>
-                      </>
+            </>
+          ) : issue ? (
+            <>
+              {/* Header */}
+              <IssueDetailHeader
+                issue={issue as Issue}
+                isEditing={isEditing}
+                isSaving={isSaving}
+                getPriorityColor={getPriorityColor}
+                canEdit={canEditIssue()}
+                canDelete={canDeleteIssue()}
+                onEdit={handleEdit}
+                onCancelEdit={handleCancelEdit}
+                onSave={handleSaveEdit}
+                onDelete={handleDeleteClick}
+                editTitle={editTitle}
+              />
+
+              {/* Two-Column Layout */}
+              <div className="flex-1 overflow-hidden flex">
+                {/* Left Column - Issue Details */}
+                <div className="flex-1 overflow-y-auto border-r border-border/40 dark:border-border/60">
+                  <div className="px-6 sm:px-8 py-6">
+                    {isEditing ? (
+                      <IssueEditForm
+                        editTitle={editTitle}
+                        editDescription={editDescription}
+                        editType={editType}
+                        editPriority={editPriority}
+                        editAssignee={editAssignee}
+                        editDueDate={editDueDate}
+                        editAttachments={editAttachments}
+                        newAttachments={newAttachments}
+                        assigneeSearchQuery={assigneeSearchQuery}
+                        showAssigneeSuggestions={showAssigneeSuggestions}
+                        isSaving={isSaving}
+                        isDragActive={isDragActive}
+                        onTitleChange={setEditTitle}
+                        onDescriptionChange={setEditDescription}
+                        onTypeChange={setEditType}
+                        onPriorityChange={setEditPriority}
+                        onAssigneeChange={setEditAssignee}
+                        onDueDateChange={setEditDueDate}
+                        onAssigneeSearchChange={setAssigneeSearchQuery}
+                        onShowSuggestionsChange={setShowAssigneeSuggestions}
+                        onRemoveExistingAttachment={removeExistingAttachment}
+                        onRemoveNewAttachment={removeNewAttachment}
+                        getRootProps={getRootProps}
+                        getInputProps={getInputProps}
+                        filteredMembers={filteredMembers}
+                        assigneeSearchRef={assigneeSearchRef as React.RefObject<HTMLDivElement>}
+                        assigneeInputRef={assigneeInputRef as React.RefObject<HTMLInputElement>}
+                      />
                     ) : (
-                      <>
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-xs font-mono font-semibold text-primary bg-primary/10 dark:bg-primary/15 px-2.5 py-1 rounded-md border border-primary/20">
-                            {issue.issueCode}
-                          </span>
-                        </div>
-                        <DialogTitle className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 text-foreground">
-                          Edit Issue
-                        </DialogTitle>
-                        <DialogDescription className="text-sm text-muted-foreground">
-                          Update issue details and attachments
-                        </DialogDescription>
-                      </>
+                      <IssueViewMode
+                        issue={issue as Issue}
+                        downloadingAttachments={downloadingAttachments}
+                        onDownload={handleDownload}
+                      />
                     )}
                   </div>
-                  {!isEditing && canEditIssue() && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleEdit}
-                      className="gap-2 rounded-lg shrink-0"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Edit</span>
-                    </Button>
-                  )}
-                  {isEditing && (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCancelEdit}
-                        disabled={isSaving}
-                        className="gap-2 rounded-lg"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Cancel</span>
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={handleSaveEdit}
-                        disabled={isSaving || !editTitle.trim()}
-                        className="gap-2 rounded-lg bg-primary hover:bg-primary/90"
-                      >
-                        {isSaving ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span className="hidden sm:inline">Saving...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Check className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Save</span>
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
                 </div>
+
+                {/* Right Column - Comments */}
+                <IssueCommentsSection
+                  comments={issue.comments}
+                  commentCount={issue.commentCount}
+                  downloadingAttachments={downloadingAttachments}
+                  onDownload={handleDownload}
+                />
               </div>
-            </div>
+            </>
+          ) : (
+            <>
+              <DialogHeader className="px-6 sm:px-8 pt-6 pb-4 border-b border-border/40 dark:border-border/60 bg-muted/30">
+                <DialogTitle className="text-xl">Issue Not Found</DialogTitle>
+                <DialogDescription>
+                  The issue you're looking for could not be found.
+                </DialogDescription>
+              </DialogHeader>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
-            {/* Two-Column Layout */}
-            <div className="flex-1 overflow-hidden flex">
-              {/* Left Column - Issue Details */}
-              <div className="flex-1 overflow-y-auto border-r border-border/40 dark:border-border/60">
-                <div className="px-6 sm:px-8 py-6">
-              {isEditing ? (
-                // Edit Form
-                <div className="space-y-6">
-                  {/* Title */}
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-title" className="text-sm font-semibold text-foreground">
-                      Title <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="edit-title"
-                      placeholder="Enter issue title..."
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      disabled={isSaving}
-                      required
-                      className="h-11 rounded-lg"
-                    />
-                  </div>
-
-                  {/* Description */}
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-description" className="text-sm font-semibold text-foreground">
-                      Description
-                    </Label>
-                    <Textarea
-                      id="edit-description"
-                      placeholder="Describe the issue in detail..."
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      disabled={isSaving}
-                      rows={5}
-                      className="resize-none rounded-lg"
-                    />
-                  </div>
-
-                  {/* Type and Priority */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-type" className="text-sm font-semibold">
-                        Type
-                      </Label>
-                      <Select
-                        value={editType}
-                        onValueChange={(value: any) => setEditType(value)}
-                        disabled={isSaving}
-                      >
-                        <SelectTrigger id="edit-type" className="h-11">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="task">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-blue-500" />
-                              Task
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="bug">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-red-500" />
-                              Bug
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="story">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-green-500" />
-                              Story
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="epic">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-purple-500" />
-                              Epic
-                            </span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-priority" className="text-sm font-semibold">
-                        Priority
-                      </Label>
-                      <Select
-                        value={editPriority}
-                        onValueChange={(value: any) => setEditPriority(value)}
-                        disabled={isSaving}
-                      >
-                        <SelectTrigger id="edit-priority" className="h-11">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="highest">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-red-600" />
-                              Highest
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="high">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-orange-500" />
-                              High
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="medium">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                              Medium
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="low">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-blue-400" />
-                              Low
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="lowest">
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-gray-400" />
-                              Lowest
-                            </span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Due Date and Assignee */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Due Date */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">Due Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal h-11",
-                              !editDueDate && "text-muted-foreground"
-                            )}
-                            disabled={isSaving}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {editDueDate ? (
-                              format(editDueDate, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={editDueDate}
-                            onSelect={setEditDueDate}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    {/* Assignee */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">Assign To</Label>
-                      {editAssignee ? (
-                        <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg h-11">
-                          <div className="relative h-6 w-6 rounded-full overflow-hidden ring-2 ring-background">
-                            <Image
-                              src={editAssignee.avatar || DEFAULT_AVATAR}
-                              alt={editAssignee.name}
-                              width={24}
-                              height={24}
-                              className="rounded-full object-cover"
-                            />
-                          </div>
-                          <span className="text-sm font-medium truncate flex-1">
-                            {editAssignee.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditAssignee(null);
-                              setAssigneeSearchQuery("");
-                              setShowAssigneeSuggestions(false);
-                            }}
-                            disabled={isSaving}
-                            className="text-muted-foreground hover:text-destructive transition-colors"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="relative" ref={assigneeSearchRef}>
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                            <Input
-                              ref={assigneeInputRef}
-                              type="text"
-                              placeholder="Search members..."
-                              value={assigneeSearchQuery}
-                              onChange={(e) => {
-                                setAssigneeSearchQuery(e.target.value);
-                                setShowAssigneeSuggestions(
-                                  e.target.value.trim().length > 0
-                                );
-                              }}
-                              onFocus={() => {
-                                if (assigneeSearchQuery.trim().length > 0) {
-                                  setShowAssigneeSuggestions(true);
-                                }
-                              }}
-                              disabled={isSaving}
-                              className="pl-9 h-11"
-                            />
-                          </div>
-
-                          {/* Suggestions Dropdown */}
-                          {showAssigneeSuggestions && filteredMembers.length > 0 && (
-                            <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                              {filteredMembers.map((member) => (
-                                <button
-                                  key={member.uid}
-                                  type="button"
-                                  onClick={() => {
-                                    setEditAssignee(member);
-                                    setAssigneeSearchQuery("");
-                                    setShowAssigneeSuggestions(false);
-                                  }}
-                                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left border-b border-border last:border-0"
-                                >
-                                  <div className="shrink-0 relative h-8 w-8 rounded-full overflow-hidden ring-2 ring-border">
-                                    <Image
-                                      src={member.avatar || DEFAULT_AVATAR}
-                                      alt={member.name}
-                                      width={32}
-                                      height={32}
-                                      className="rounded-full object-cover"
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium truncate">
-                                      {member.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground truncate">
-                                      {member.email}
-                                    </p>
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* No Results Message */}
-                          {showAssigneeSuggestions &&
-                            assigneeSearchQuery.trim().length > 0 &&
-                            filteredMembers.length === 0 && (
-                              <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg p-4 text-center text-sm text-muted-foreground">
-                                No members found matching &quot;{assigneeSearchQuery}
-                                &quot;
-                              </div>
-                            )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Attachments */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-semibold">Attachments</Label>
-
-                    {/* Existing Attachments */}
-                    {editAttachments.length > 0 && (
-                      <div className="space-y-2">
-                        {editAttachments.map((attachment, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                              <File className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">
-                                {attachment.fileName}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeExistingAttachment(index)}
-                              disabled={isSaving}
-                              className="gap-2 text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Dropzone for new attachments */}
-                    <div
-                      {...getRootProps()}
-                      className={cn(
-                        "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all",
-                        isDragActive
-                          ? "border-primary bg-primary/5 scale-[1.01]"
-                          : "border-muted-foreground/25 hover:border-primary/50 hover:bg-accent/30",
-                        isSaving && "opacity-50 cursor-not-allowed"
-                      )}
-                    >
-                      <input {...getInputProps()} />
-                      <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                        <Upload className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                      {isDragActive ? (
-                        <p className="text-sm font-medium text-primary">
-                          Drop files here...
-                        </p>
-                      ) : (
-                        <>
-                          <p className="text-sm font-medium text-foreground mb-1">
-                            Drag & drop files here, or click to select
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Maximum file size: 50MB
-                          </p>
-                        </>
-                      )}
-                    </div>
-
-                    {/* New Attachments List */}
-                    {newAttachments.length > 0 && (
-                      <div className="space-y-2">
-                        {newAttachments.map((attachment, index) => (
-                          <div
-                            key={index}
-                            className={cn(
-                              "flex items-center gap-3 p-3 rounded-lg border",
-                              attachment.error
-                                ? "border-destructive/50 bg-destructive/10"
-                                : "border-border bg-muted/30"
-                            )}
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                              <File className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">
-                                {attachment.file.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatFileSize(attachment.file.size)}
-                                {attachment.uploading && " • Uploading..."}
-                                {attachment.deleting && " • Deleting..."}
-                                {attachment.error && ` • ${attachment.error}`}
-                              </p>
-                            </div>
-                            {attachment.uploading || attachment.deleting ? (
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => removeNewAttachment(index)}
-                                disabled={isSaving}
-                                className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded hover:bg-destructive/10 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                // View Mode
-                <div className="space-y-6">
-                  {/* Description */}
-                  {issue.description && (
-                    <div className="space-y-2.5">
-                      <Label className="text-sm font-semibold text-foreground">Description</Label>
-                      <div className="rounded-lg bg-muted/30 border border-border/40 dark:border-border/60 p-4">
-                        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                          {issue.description}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-              {/* Details Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Assignee */}
-                <div className="space-y-2.5">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5" />
-                    Assignee
-                  </Label>
-                  {issue.assignee && typeof issue.assignee === "object" ? (
-                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
-                      <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-background">
-                        <Image
-                          src={issue.assignee.avatar || DEFAULT_AVATAR}
-                          alt={issue.assignee.name}
-                          width={36}
-                          height={36}
-                          className="rounded-full object-cover"
-                        />
-                      </div>
-                      <span className="text-sm font-medium">{issue.assignee.name}</span>
-                    </div>
-                  ) : (
-                    <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 dark:border-border/60 border-dashed">
-                      <span className="text-sm text-muted-foreground">Unassigned</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Due Date */}
-                {issue.estimatedCompletionDate && (
-                  <div className="space-y-2.5">
-                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                      <CalendarIcon className="w-3.5 h-3.5" />
-                      Due Date
-                    </Label>
-                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
-                      <p className="text-sm font-medium">
-                        {format(new Date(issue.estimatedCompletionDate), "PPP")}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Created At */}
-                {issue.createdAt && (
-                  <div className="space-y-2.5">
-                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
-                      Created
-                    </Label>
-                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
-                      <p className="text-sm font-medium">
-                        {format(new Date(issue.createdAt), "PPP")}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Updated At */}
-                {issue.updatedAt && (
-                  <div className="space-y-2.5">
-                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
-                      Updated
-                    </Label>
-                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
-                      <p className="text-sm font-medium">
-                        {format(new Date(issue.updatedAt), "PPP")}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Attachments */}
-              {issue.attachments && issue.attachments.length > 0 && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <File className="w-4 h-4" />
-                    Attachments ({issue.attachments.length})
-                  </Label>
-                  <div className="space-y-2">
-                    {issue.attachments.map((attachment, index) => {
-                      const attachmentId = (attachment as any)._id || attachment.link;
-                      const isDownloading = downloadingAttachments.has(attachmentId);
-                      return (
-                        <div
-                          key={index}
-                          className="flex items-center gap-3 p-3 rounded-lg border border-border/40 dark:border-border/60 bg-muted/30 hover:bg-muted/40 transition-colors"
-                        >
-                          <div className="w-9 h-9 rounded-lg bg-primary/10 dark:bg-primary/15 flex items-center justify-center shrink-0">
-                            <File className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {attachment.fileName}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownload(attachment, attachmentId)}
-                            disabled={isDownloading}
-                            className="gap-2 rounded-lg shrink-0"
-                          >
-                            {isDownloading ? (
-                              <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span className="hidden sm:inline">Downloading...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Download className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">Download</span>
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column - Comments */}
-          <div className="w-[40%] min-w-[400px] max-w-[550px] overflow-y-auto bg-muted/20">
-                <div className="px-6 py-6 h-full">
-                  {/* Comments */}
-                  <div className="space-y-3 h-full flex flex-col">
-                    <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <MessageCircle className="w-4 h-4" />
-                      Comments ({issue.comments?.length || issue.commentCount || 0})
-                    </Label>
-                    {issue.comments && issue.comments.length > 0 ? (
-                      <div className="space-y-3">
-                        {issue.comments.map((comment) => (
-                          <div
-                            key={comment._id}
-                            className="p-4 rounded-lg border border-border/40 dark:border-border/60 bg-muted/30"
-                          >
-                            <div className="flex items-start gap-3 mb-3">
-                              {(() => {
-                                const author =
-                                  comment.author ||
-                                  (typeof comment.authorId === "object"
-                                    ? comment.authorId
-                                    : null);
-                                return author ? (
-                                  <>
-                                    <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-background shrink-0">
-                                      <Image
-                                        src={author.avatar || DEFAULT_AVATAR}
-                                        alt={author.name || "User"}
-                                        width={36}
-                                        height={36}
-                                        className="rounded-full object-cover"
-                                      />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-semibold">
-                                        {author.name || "Unknown User"}
-                                      </p>
-                                      {comment.createdAt && (
-                                        <p className="text-xs text-muted-foreground">
-                                          {format(new Date(comment.createdAt), "PPP 'at' p")}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="flex-1">
-                                    <p className="text-sm text-muted-foreground">
-                                      Unknown Author
-                                    </p>
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed ml-12">
-                              {comment.message}
-                            </p>
-                            {comment.attachments && comment.attachments.length > 0 && (
-                              <div className="mt-3 ml-12 space-y-2">
-                                {comment.attachments.map((attachment, index) => {
-                                  const attachmentId = `${comment._id}-${index}`;
-                                  const isDownloading = downloadingAttachments.has(attachmentId);
-                                  return (
-                                    <div
-                                      key={index}
-                                      className="flex items-center gap-2 p-2 rounded-lg border border-border/40 dark:border-border/60 bg-background"
-                                    >
-                                      <File className="h-4 w-4 text-muted-foreground" />
-                                      <span className="text-xs truncate flex-1 font-medium">
-                                        {attachment.fileName}
-                                      </span>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleDownload(attachment, attachmentId)}
-                                        disabled={isDownloading}
-                                        className="h-7 px-2 rounded-md"
-                                      >
-                                        {isDownloading ? (
-                                          <Loader2 className="w-3 h-3 animate-spin" />
-                                        ) : (
-                                          <Download className="w-3 h-3" />
-                                        )}
-                                      </Button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No comments yet</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <DialogHeader className="px-6 sm:px-8 pt-6 pb-4 border-b border-border/40 dark:border-border/60 bg-muted/30">
-              <DialogTitle className="text-xl">Issue Not Found</DialogTitle>
-              <DialogDescription>
-                The issue you're looking for could not be found.
-              </DialogDescription>
-            </DialogHeader>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <IssueDeleteDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        issue={issue as Issue | null}
+        onIssueDeleted={(deletedIssueId) => {
+          onOpenChange(false);
+          if (onIssueDeleted) {
+            onIssueDeleted(deletedIssueId);
+          }
+        }}
+        onClose={() => setShowDeleteDialog(false)}
+      />
+    </>
   );
 }
 

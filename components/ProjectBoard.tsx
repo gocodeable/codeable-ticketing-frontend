@@ -518,6 +518,10 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
                         issue._id === updatedIssue._id ? updatedIssue : issue
                       ));
                     }}
+                    onIssueDeleted={(deletedIssueId) => {
+                      // Remove the deleted issue from the issues list
+                      setIssues(issues.filter(issue => issue._id !== deletedIssueId));
+                    }}
                     onIssuesReordered={(statusId, reorderedIssues) => {
                       // Update issues with new positions
                       setIssues((prevIssues) => {
