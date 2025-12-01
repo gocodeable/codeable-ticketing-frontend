@@ -274,7 +274,7 @@ export default function TeamPage({
           transition={{ duration: 0.4, delay: 0.1 }}
         >
           <div className="w-full h-full flex flex-col overflow-visible">
-            <Tabs defaultValue="info" className="w-full h-full flex flex-col overflow-visible">
+            <Tabs defaultValue="members" className="w-full h-full flex flex-col overflow-visible">
               <TabsList className="w-full sm:w-fit justify-start overflow-x-auto h-10 bg-muted/60">
                 <TabsTrigger value="info" className="gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <Info className="w-3.5 h-3.5" />
