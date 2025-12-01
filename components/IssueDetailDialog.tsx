@@ -193,7 +193,8 @@ export function IssueDetailDialog({
     if (!user || !issue) return false;
     if (isAdmin || userRole === "qa") return true;
     // Check if user is the reporter
-    return user.uid === issue.reporter;
+    const reporterUid = typeof issue.reporter === "object" && issue.reporter ? issue.reporter.uid : issue.reporter;
+    return user.uid === reporterUid;
   };
 
   const handleEdit = () => {
@@ -1021,6 +1022,32 @@ export function IssueDetailDialog({
                   ) : (
                     <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 dark:border-border/60 border-dashed">
                       <span className="text-sm text-muted-foreground">Unassigned</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Reporter */}
+                <div className="space-y-2.5">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" />
+                    Reporter
+                  </Label>
+                  {issue.reporter && typeof issue.reporter === "object" ? (
+                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
+                      <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-background">
+                        <Image
+                          src={issue.reporter.avatar || DEFAULT_AVATAR}
+                          alt={issue.reporter.name}
+                          width={36}
+                          height={36}
+                          className="rounded-full object-cover"
+                        />
+                      </div>
+                      <span className="text-sm font-medium">{issue.reporter.name}</span>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 dark:border-border/60 border-dashed">
+                      <span className="text-sm text-muted-foreground">Unknown</span>
                     </div>
                   )}
                 </div>
