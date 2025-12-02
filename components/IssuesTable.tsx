@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
-import { Issue, IssueAssignee } from "@/types/issue";
+import { Issue, IssueAssignee, IssueReporter } from "@/types/issue";
 import { WorkflowStatus } from "@/types/workflowStatus";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { apiGet } from "@/lib/api/apiClient";
@@ -170,20 +170,20 @@ export default function IssuesTable({
         setAssignees(assigneeMap);
         
         // Fetch reporter information for all unique reporters
-        const reporterUids = [
-          ...new Set(
+        const reporterUids: string[] = Array.from(
+          new Set(
             (data.data || [])
-              .map((issue: Issue) => issue.reporter)
-              .filter(Boolean)
-          ),
-        ] as string[];
+              .map((issue: Issue) => getReporterUid(issue.reporter))
+              .filter((uid: string | null): uid is string => Boolean(uid))
+          )
+        );
 
         if (reporterUids.length > 0) {
           const reporterMap = new Map<string, ReporterInfo>();
           
           // Fetch each reporter's info
           await Promise.all(
-            reporterUids.map(async (uid) => {
+            reporterUids.map(async (uid: string) => {
               try {
                 const userResponse = await apiGet(`/api/user?uid=${uid}`, idToken);
                 const userData = await userResponse.json();
@@ -233,6 +233,17 @@ export default function IssuesTable({
       return issue.workflowStatus;
     }
     return issue.workflowStatus?._id || null;
+  };
+
+  const getReporterUid = (reporter: string | IssueReporter | null | undefined): string | null => {
+    if (!reporter) return null;
+    if (typeof reporter === "object" && reporter.uid) {
+      return reporter.uid;
+    }
+    if (typeof reporter === "string") {
+      return reporter;
+    }
+    return null;
   };
 
   const getReporterInfo = (reporterUid: string | undefined): ReporterInfo | null => {
@@ -646,7 +657,8 @@ export default function IssuesTable({
         </TableHeader>
         <TableBody>
           {filteredIssues.map((issue, index) => {
-            const reporterInfo = getReporterInfo(issue.reporter);
+            const reporterUid = getReporterUid(issue.reporter);
+            const reporterInfo = getReporterInfo(reporterUid || undefined);
             const isEven = index % 2 === 0;
             return (
               <TableRow
@@ -717,7 +729,7 @@ export default function IssuesTable({
                     </div>
                   ) : issue.reporter ? (
                     <span className="text-sm text-muted-foreground truncate">
-                      {issue.reporter}
+                      {typeof issue.reporter === "object" ? issue.reporter.name : issue.reporter}
                     </span>
                   ) : (
                     <span className="text-sm text-muted-foreground">-</span>
