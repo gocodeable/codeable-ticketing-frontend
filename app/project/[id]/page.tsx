@@ -7,14 +7,12 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft,
   AlertCircle,
-  Star,
   Info,
   List,
   LayoutDashboard,
   Users,
   Settings,
   Crown,
-  Plus,
   Edit,
 } from "lucide-react";
 import { Project } from "@/types/project";
