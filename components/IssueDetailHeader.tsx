@@ -5,13 +5,12 @@ import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Issue } from "@/types/issue";
 import { Pencil, Trash2, X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getTypeColor } from "../utils/issueUtils";
+import { getTypeColor, getPriorityColor } from "../utils/issueUtils";
 
 interface IssueDetailHeaderProps {
   issue: Issue;
   isEditing: boolean;
   isSaving: boolean;
-  getPriorityColor: (priority: string) => string;
   canEdit: boolean;
   canDelete: boolean;
   onEdit: () => void;
@@ -25,7 +24,6 @@ export function IssueDetailHeader({
   issue,
   isEditing,
   isSaving,
-  getPriorityColor,
   canEdit,
   canDelete,
   onEdit,

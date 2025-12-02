@@ -3,18 +3,19 @@ import { Card, CardContent } from "./ui/card"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
+import { getInitials } from "@/utils/issueUtils"
 
 interface TeamCardProps {
     team: TeamType
     i: number
 }
 
-const getInitials = (name: string) =>
-    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+const MAX_VISIBLE_AVATARS = 5
 
 export default function TeamCard({ team, i }: TeamCardProps) {
-    const visibleMembers = team.members.slice(0, 3)
-    const extraCount = team.members.length - 3
+    const members = team.members || []
+    const visibleMembers = members.slice(0, MAX_VISIBLE_AVATARS)
+    const extraCount = members.length - MAX_VISIBLE_AVATARS
 
     return (
         <motion.div
@@ -55,45 +56,45 @@ export default function TeamCard({ team, i }: TeamCardProps) {
                         </div>
 
                         <div className="flex items-center gap-2 pt-2 border-t border-border/40 dark:border-border/60">
-                            <div className="flex -space-x-1.5">
-                                {visibleMembers.map((member, index) => (
-                                    member.avatar ? (
-                                        <div
-                                            key={member.id}
-                                            className="w-6 h-6 rounded-full ring-2 ring-background dark:ring-background overflow-hidden"
-                                            style={{ zIndex: visibleMembers.length - index }}
-                                        >
-                                            <Image
-                                                src={member.avatar}
-                                                alt={member.name}
-                                                width={24}
-                                                height={24}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div
-                                            key={member.id}
-                                            className="w-6 h-6 rounded-full ring-2 ring-background dark:ring-background bg-primary/10 dark:bg-primary/20 flex items-center justify-center"
-                                            style={{ zIndex: visibleMembers.length - index }}
-                                        >
-                                            <span className="text-[10px] font-semibold text-primary dark:text-primary/90">
-                                                {getInitials(member.name)}
-                                            </span>
-                                        </div>
-                                    )
-                                ))}
-                                {extraCount > 0 && (
-                                    <div className="w-6 h-6 rounded-full ring-2 ring-background dark:ring-background bg-muted dark:bg-muted flex items-center justify-center">
-                                        <span className="text-[10px] font-semibold text-muted-foreground">
-                                            +{extraCount}
-                                        </span>
+                            {members.length > 0 ? (
+                                <>
+                                    <div className="flex items-center gap-0.5">
+                                        {visibleMembers.map((member: any, index) => (
+                                            <div
+                                                key={member.id || member.uid || index}
+                                                className="relative w-6 h-6 rounded-full ring-1.5 ring-background dark:ring-card overflow-hidden bg-primary/10 dark:bg-primary/15 flex items-center justify-center shrink-0"
+                                                style={{ zIndex: visibleMembers.length - index }}
+                                            >
+                                                {member.avatar ? (
+                                                    <Image
+                                                        src={member.avatar}
+                                                        alt={member.name || "User"}
+                                                        width={24}
+                                                        height={24}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <span className="text-[10px] font-semibold text-primary">
+                                                        {getInitials(member.name || member.email || "U")}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {extraCount > 0 && (
+                                            <div className="relative w-6 h-6 rounded-full ring-1.5 ring-background dark:ring-card overflow-hidden bg-muted hover:bg-muted/80 flex items-center justify-center shrink-0">
+                                                <span className="text-[10px] font-semibold text-foreground">
+                                                    +{extraCount}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                            <span className="text-xs text-muted-foreground font-medium">
-                                {team.members.length} {team.members.length === 1 ? 'member' : 'members'}
-                            </span>
+                                    <span className="text-[11px] text-muted-foreground">
+                                        {members.length} {members.length === 1 ? 'member' : 'members'}
+                                    </span>
+                                </>
+                            ) : (
+                                <span className="text-[11px] text-muted-foreground/60">No members</span>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

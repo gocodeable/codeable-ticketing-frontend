@@ -28,6 +28,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { apiPatch, apiDelete } from "@/lib/api/apiClient";
 import { toast } from "sonner";
+import { getStatusColor } from "@/utils/issueUtils";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -43,15 +45,24 @@ import { AddIssueDialog } from "@/components/AddIssueDialog";
 import { IssueDetailDialog } from "@/components/IssueDetailDialog";
 
 // Droppable wrapper for status column to accept issues from other columns
-function StatusDroppable({ statusId, children }: { statusId: string; children: React.ReactNode }) {
+function StatusDroppable({ 
+  statusId, 
+  children, 
+  disabled = false 
+}: { 
+  statusId: string; 
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
   const { setNodeRef, isOver } = useDroppable({
     id: statusId,
+    disabled,
   });
 
   return (
     <div
       ref={setNodeRef}
-      className={`transition-colors rounded-lg ${isOver ? "bg-primary/5 border-2 border-primary/20 border-dashed" : ""}`}
+      className={`transition-colors rounded-lg ${isOver && !disabled ? "bg-primary/5 border-2 border-primary/20 border-dashed" : ""} ${disabled ? "opacity-50" : ""}`}
     >
       {children}
     </div>
@@ -65,7 +76,6 @@ export default function SortableStatusColumn({
   userRole,
   projectId,
   projectMembers,
-  getPriorityColor,
   onStatusUpdate,
   onStatusDelete,
   onIssueCreated,
@@ -80,7 +90,6 @@ export default function SortableStatusColumn({
   projectId: string;
   projectMembers: ProjectMember[];
   getTypeIcon: (type: string) => string;
-  getPriorityColor: (priority: string) => string;
   onStatusUpdate?: (status: WorkflowStatus) => void;
   onStatusDelete?: (statusId: string) => void;
   onIssueCreated?: (issue: Issue) => void;
@@ -319,7 +328,12 @@ export default function SortableStatusColumn({
                     <GripVertical className="w-4 h-4" />
                   </Button>
                 )}
-                <h3 className="font-semibold text-foreground">{status.name}</h3>
+                <span className={cn(
+                  "inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border",
+                  getStatusColor(status.color)
+                )}>
+                  {status.name}
+                </span>
                 {canEdit && (
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                     <Button
@@ -357,7 +371,10 @@ export default function SortableStatusColumn({
       </div>
 
       {/* Issues List - Droppable area for cross-column dragging */}
-      <StatusDroppable statusId={status._id}>
+      <StatusDroppable 
+        statusId={status._id}
+        disabled={status.name.toLowerCase() === 'done' && !isAdmin && userRole !== 'qa'}
+      >
         <div className="p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-400px)] overflow-y-auto overflow-x-visible">
           <SortableContext
             items={localIssues.map((issue) => issue._id)}
@@ -367,7 +384,6 @@ export default function SortableStatusColumn({
               <SortableIssueCard
                 key={issue._id}
                 issue={issue}
-                getPriorityColor={getPriorityColor}
                 disabled={!canReorderIssue(issue)}
                 onClick={() => setSelectedIssueId(issue._id)}
               />
@@ -407,7 +423,6 @@ export default function SortableStatusColumn({
           if (!open) setSelectedIssueId(null);
         }}
         issueId={selectedIssueId}
-        getPriorityColor={getPriorityColor}
         isAdmin={isAdmin}
         userRole={userRole}
         projectMembers={projectMembers.map((member) => ({

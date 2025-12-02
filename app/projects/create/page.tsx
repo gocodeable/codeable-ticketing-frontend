@@ -15,9 +15,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -33,8 +30,20 @@ import z from "zod";
 import { apiPost } from "@/lib/api/apiClient";
 import { UserSelector, UserSuggestion } from "@/components/UserSelector";
 import { TeamSelector, TeamSuggestion } from "@/components/TeamSelector";
-import { Users, UserPlus } from "lucide-react";
+import { Users, UserPlus, Crown } from "lucide-react";
+import Image from "next/image";
 import { generateProjectCode } from "@/utils/generateProjectCode";
+import { MemberRole } from "@/types/project";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { DEFAULT_AVATAR } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 const projectSchema = z.object({
   id: z.string().optional(),
@@ -51,9 +60,50 @@ const projectSchema = z.object({
     .string()
     .min(10, "Description must be at least 10 characters")
     .max(1000, "Description must be less than 1000 characters"),
-  img: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
-  figmaLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
-  swaggerLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  img: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === "") return true;
+        if (val.startsWith("data:image/")) return true;
+        return val.startsWith("http://") || val.startsWith("https://");
+      },
+      { message: "Please upload a valid image" }
+    )
+    .or(z.literal("")),
+  figmaLink: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === "") return true;
+        try {
+          const url = new URL(val);
+          return url.protocol === "http:" || url.protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      { message: "Please enter a valid HTTP or HTTPS URL" }
+    )
+    .or(z.literal("")),
+  swaggerLink: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === "") return true;
+        try {
+          const url = new URL(val);
+          return url.protocol === "http:" || url.protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      { message: "Please enter a valid HTTP or HTTPS URL" }
+    )
+    .or(z.literal("")),
 });
 
 type ProjectFormData = z.infer<typeof projectSchema>;
@@ -64,7 +114,11 @@ export default function CreateProjectPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [selectedUsers, setSelectedUsers] = useState<UserSuggestion[]>([]);
+  interface UserWithRole extends UserSuggestion {
+    role: MemberRole;
+  }
+  
+  const [selectedUsers, setSelectedUsers] = useState<UserWithRole[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<TeamSuggestion[]>([]);
   const [linkedTeam, setLinkedTeam] = useState<TeamSuggestion | null>(null);
 
@@ -88,13 +142,36 @@ export default function CreateProjectPage() {
   // Handle team selection - add all team members to selected users and link project to team
   const handleTeamSelected = (team: TeamSuggestion) => {
     // Get unique members by combining existing and new team members
-    const newMembers = team.members.filter(
-      (member) => !selectedUsers.some((u) => u.uid === member.uid)
-    );
+    const newMembers: UserWithRole[] = team.members
+      .filter((member) => !selectedUsers.some((u) => u.uid === member.uid))
+      .map((member) => ({
+        ...member,
+        role: "developer" as MemberRole,
+      }));
     setSelectedUsers([...selectedUsers, ...newMembers]);
     
     // Set this team as the linked team for the project
     setLinkedTeam(team);
+  };
+
+  // Handle individual user selection - add with default role
+  const handleUsersChange = (users: UserSuggestion[]) => {
+    const usersWithRoles: UserWithRole[] = users.map((user) => {
+      // If user already exists, keep their role, otherwise default to developer
+      const existing = selectedUsers.find((u) => u.uid === user.uid);
+      return {
+        ...user,
+        role: existing?.role || ("developer" as MemberRole),
+      };
+    });
+    setSelectedUsers(usersWithRoles);
+  };
+
+  // Handle role change for a user
+  const handleRoleChange = (uid: string, newRole: MemberRole) => {
+    setSelectedUsers((prev) =>
+      prev.map((user) => (user.uid === uid ? { ...user, role: newRole } : user))
+    );
   };
 
   const onSubmit = async (data: ProjectFormData) => {
@@ -115,8 +192,26 @@ export default function CreateProjectPage() {
         throw new Error("Unauthorized");
       }
 
-      // Send member UIDs directly (much faster than email lookup)
+      // Send member UIDs and roles
       const memberUids = selectedUsers.map((u) => u.uid);
+      const memberRoles = selectedUsers.map((u) => ({
+        uid: u.uid,
+        role: u.role,
+      }));
+
+      const adminUids = selectedUsers
+        .filter((u) => u.role === "admin")
+        .map((u) => u.uid);
+      
+      if (user?.uid && !adminUids.includes(user.uid)) {
+        adminUids.push(user.uid);
+        const creatorRoleIndex = memberRoles.findIndex((mr) => mr.uid === user.uid);
+        if (creatorRoleIndex >= 0) {
+          memberRoles[creatorRoleIndex].role = "admin";
+        } else {
+          memberRoles.push({ uid: user.uid, role: "admin" });
+        }
+      }
 
       const response = await apiPost(
         "/projects/create/api",
@@ -128,6 +223,8 @@ export default function CreateProjectPage() {
           figmaLink: form.getValues("figmaLink") || "",
           swaggerLink: form.getValues("swaggerLink") || "",
           members: memberUids,
+          memberRoles: memberRoles,
+          admin: adminUids,
           teamId: linkedTeam?._id || undefined,
         },
         idToken
@@ -327,13 +424,22 @@ export default function CreateProjectPage() {
                           <FormItem>
                             <FormLabel>Figma Link</FormLabel>
                             <FormControl>
-                              <Input
-                                type="url"
-                                placeholder="https://figma.com/..."
-                                {...field}
-                                disabled={loading}
-                                className="rounded-lg"
-                              />
+                              <div className="relative">
+                                <Image
+                                  src="/figma.png"
+                                  alt="Figma"
+                                  width={16}
+                                  height={16}
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                                />
+                                <Input
+                                  type="url"
+                                  placeholder="https://figma.com/..."
+                                  {...field}
+                                  disabled={loading}
+                                  className="rounded-lg pl-9"
+                                />
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -348,13 +454,22 @@ export default function CreateProjectPage() {
                           <FormItem>
                             <FormLabel>API Documentation Link</FormLabel>
                             <FormControl>
-                              <Input
-                                type="url"
-                                placeholder="https://..."
-                                {...field}
-                                disabled={loading}
-                                className="rounded-lg"
-                              />
+                              <div className="relative">
+                                <Image
+                                  src="/swagger.png"
+                                  alt="Swagger"
+                                  width={16}
+                                  height={16}
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                                />
+                                <Input
+                                  type="url"
+                                  placeholder="https://..."
+                                  {...field}
+                                  disabled={loading}
+                                  className="rounded-lg pl-9"
+                                />
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -388,13 +503,112 @@ export default function CreateProjectPage() {
                         <TabsContent value="members" className="mt-3.5 space-y-2">
                           <UserSelector
                             selectedUsers={selectedUsers}
-                            onUsersChange={setSelectedUsers}
+                            onUsersChange={handleUsersChange}
                             disabled={loading}
                             placeholder="Search users by name or email..."
                           />
                           <FormDescription className="text-xs">
                             Search and select individual project members
                           </FormDescription>
+                          
+                          {/* Selected Users with Role Selectors */}
+                          {selectedUsers.length > 0 && (
+                            <div className="space-y-2 mt-3 max-h-64 overflow-y-auto">
+                              {selectedUsers.map((user) => (
+                                <div
+                                  key={user.uid}
+                                  className={cn(
+                                    "flex items-center gap-3 p-3 rounded-lg border transition-all",
+                                    user.role === "admin"
+                                      ? "bg-yellow-50/50 dark:bg-yellow-950/20 border-yellow-200/50 dark:border-yellow-800/30"
+                                      : "bg-card border-border/50 hover:bg-muted/50 hover:border-border"
+                                  )}
+                                >
+                                  {/* Avatar */}
+                                  <div className={cn(
+                                    "relative h-10 w-10 rounded-full overflow-hidden ring-2 shrink-0",
+                                    user.role === "admin" ? "ring-yellow-400/50" : "ring-border"
+                                  )}>
+                                    <Image
+                                      src={user.avatar || DEFAULT_AVATAR}
+                                      alt={user.name}
+                                      width={40}
+                                      height={40}
+                                      className="rounded-full object-cover"
+                                    />
+                                  </div>
+
+                                  {/* Name and Email */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-medium text-foreground truncate">
+                                        {user.name}
+                                      </p>
+                                      {user.role === "admin" && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-[10px] px-1.5 py-0 h-5 border-yellow-300 dark:border-yellow-700 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300"
+                                        >
+                                          <Crown className="w-2.5 h-2.5 mr-0.5" />
+                                          Admin
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {user.email}
+                                    </p>
+                                  </div>
+
+                                  {/* Role Selector */}
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <Select
+                                      value={user.role}
+                                      onValueChange={(value) =>
+                                        handleRoleChange(user.uid, value as MemberRole)
+                                      }
+                                    >
+                                      <SelectTrigger className={cn(
+                                        "w-30 h-8 text-xs border-border/50",
+                                        user.role === "admin" && "border-yellow-300/50 dark:border-yellow-700/50"
+                                      )}>
+                                        <SelectValue>
+                                          <div className="flex items-center gap-1.5">
+                                            <span className={cn(
+                                              "w-2 h-2 rounded-full",
+                                              user.role === "admin" && "bg-yellow-500",
+                                              user.role === "developer" && "bg-blue-500",
+                                              user.role === "qa" && "bg-purple-500"
+                                            )} />
+                                            <span className="capitalize">{user.role}</span>
+                                          </div>
+                                        </SelectValue>
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="admin">
+                                          <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                                            <span>Admin</span>
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="developer">
+                                          <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-blue-500" />
+                                            <span>Developer</span>
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="qa">
+                                          <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-purple-500" />
+                                            <span>QA</span>
+                                          </div>
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </TabsContent>
 
                         <TabsContent value="teams" className="mt-3.5 space-y-2">
