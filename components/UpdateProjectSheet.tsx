@@ -42,9 +42,52 @@ const updateProjectSchema = z.object({
     .string()
     .min(10, "Description must be at least 10 characters")
     .max(1000, "Description must be less than 1000 characters"),
-  img: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
-  figmaLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
-  swaggerLink: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  img: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === "") return true;
+        // Allow data URLs for image uploads
+        if (val.startsWith("data:image/")) return true;
+        // Allow HTTP/HTTPS URLs for existing stored images
+        return val.startsWith("http://") || val.startsWith("https://");
+      },
+      { message: "Please upload a valid image" }
+    )
+    .or(z.literal("")),
+  figmaLink: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === "") return true;
+        try {
+          const url = new URL(val);
+          return url.protocol === "http:" || url.protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      { message: "Please enter a valid HTTP or HTTPS URL" }
+    )
+    .or(z.literal("")),
+  swaggerLink: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === "") return true;
+        try {
+          const url = new URL(val);
+          return url.protocol === "http:" || url.protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      { message: "Please enter a valid HTTP or HTTPS URL" }
+    )
+    .or(z.literal("")),
 });
 
 type UpdateProjectFormData = z.infer<typeof updateProjectSchema>;
@@ -157,7 +200,7 @@ export function UpdateProjectSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-2">
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-6">
         {loading && (
           <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center">
             <Loader size="lg" hue={300} />

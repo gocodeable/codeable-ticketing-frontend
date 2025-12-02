@@ -7,14 +7,12 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft,
   AlertCircle,
-  Star,
   Info,
   List,
   LayoutDashboard,
   Users,
   Settings,
   Crown,
-  Plus,
   Edit,
 } from "lucide-react";
 import { Project } from "@/types/project";
@@ -289,7 +287,6 @@ export default function ProjectPage({
                 <ProjectInfo 
                   project={project} 
                   isAdmin={!!isAdmin}
-                  onEdit={() => setIsUpdateSheetOpen(true)}
                 />
               </TabsContent>
               <TabsContent value="issues" className="mt-3 sm:mt-4">
@@ -386,7 +383,10 @@ export default function ProjectPage({
               </TabsContent>
               {isAdmin && (
                 <TabsContent value="settings" className="mt-3 sm:mt-4">
-                  <ProjectSettings project={project} />
+                  <ProjectSettings
+                    project={project} 
+                    onEdit={() => setIsUpdateSheetOpen(true)}
+                  />
                 </TabsContent>
               )}
             </Tabs>

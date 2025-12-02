@@ -1,9 +1,10 @@
 /**
  * Generates a project code from a title (client-side version)
  * Examples:
- * - "Kanban Board" -> "KNBN"
- * - "E-Commerce Platform" -> "ECMM"
- * - "Task Management" -> "TSKM"
+ * - "Test Project" -> "TEPR"
+ * - "Kanban Board" -> "KABA"
+ * - "E-Commerce Platform" -> "ECPL"
+ * - "Task Management" -> "TAMA"
  * - "API" -> "API"
  */
 export const generateProjectCode = (title: string): string => {
@@ -37,9 +38,22 @@ export const generateProjectCode = (title: string): string => {
     return chars.slice(0, 4).join('').toUpperCase() || word.slice(0, 4).toUpperCase();
   }
 
-  // Multiple words - take first letter of each word
+  // Helper function to get 2 letters from a word
+  const getTwoLetters = (word: string): string => {
+    if (word.length >= 2) {
+      return word.slice(0, 2);
+    }
+    return word.slice(0, 1);
+  };
+
+  // Multiple words - take 2 letters from each word
   if (words.length <= 4) {
-    return words.map(w => w[0]).join('').toUpperCase();
+    const code = words
+      .map(w => getTwoLetters(w))
+      .join('')
+      .toUpperCase();
+    // Limit to 10 characters max
+    return code.slice(0, 10);
   }
 
   // More than 4 words - prioritize longer/more important words
@@ -48,11 +62,22 @@ export const generateProjectCode = (title: string): string => {
     .slice(0, 4);
   
   if (importantWords.length >= 2) {
-    return importantWords.map(w => w[0]).join('').toUpperCase();
+    const code = importantWords
+      .map(w => getTwoLetters(w))
+      .join('')
+      .toUpperCase();
+    // Limit to 10 characters max
+    return code.slice(0, 10);
   }
 
   // Fallback: just take first 4 words
-  return words.slice(0, 4).map(w => w[0]).join('').toUpperCase();
+  const code = words
+    .slice(0, 4)
+    .map(w => getTwoLetters(w))
+    .join('')
+    .toUpperCase();
+  // Limit to 10 characters max
+  return code.slice(0, 10);
 };
 
 /**

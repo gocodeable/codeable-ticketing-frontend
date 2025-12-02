@@ -2,10 +2,12 @@
 
 import { WorkflowStatus } from "@/types/workflowStatus";
 import { Issue } from "@/types/issue";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { apiGet, apiPatch } from "@/lib/api/apiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Loader2 } from "lucide-react";
+import IssuesFilterBar from "@/components/IssuesFilterBar";
+import { getAssigneeUid, getStatusId } from "@/utils/issueUtils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   DndContext,
@@ -43,6 +45,12 @@ interface ProjectBoardProps {
 // Sortable Status Column Component
 
 
+interface AssigneeInfo {
+  uid: string;
+  name: string;
+  avatar?: string;
+}
+
 export default function ProjectBoard({ projectId, isAdmin, userRole, projectMembers, initialIssueId, onIssuesCountChange }: ProjectBoardProps) {
   const { user } = useAuth();
   const [statuses, setStatuses] = useState<WorkflowStatus[]>([]);
@@ -51,6 +59,11 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
+  const [assignees, setAssignees] = useState<Map<string, AssigneeInfo>>(new Map());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -63,52 +76,61 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
     })
   );
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user || !projectId) return;
 
-      setLoading(true);
-      try {
-        const idToken = await user.getIdToken();
+  // Filter issues based on search, priority, status, and assignee
+  const filteredIssues = useMemo(() => {
+    let filtered = [...issues];
 
-        // Fetch workflow statuses
-        const statusesRes = await apiGet(
-          `/api/workflow-statuses/${projectId}`,
-          idToken
-        );
-        const statusesData = await statusesRes.json();
+    // Filter by search query (title or code)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(
+        (issue) =>
+          issue.title.toLowerCase().includes(query) ||
+          (issue.issueCode?.toLowerCase().includes(query) ?? false)
+      );
+    }
 
-        if (statusesData.success) {
-          setStatuses(statusesData.data);
+    // Filter by priority
+    if (priorityFilter !== "all") {
+      filtered = filtered.filter(
+        (issue) => (issue.priority || "medium") === priorityFilter
+      );
+    }
+
+    // Filter by status
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((issue) => {
+        const statusId = getStatusId(issue);
+        return statusId === statusFilter;
+      });
+    }
+
+    // Filter by assignee
+    if (assigneeFilter.length > 0) {
+      filtered = filtered.filter((issue) => {
+        const assigneeUid = getAssigneeUid(issue.assignee);
+        const isUnassigned = !issue.assignee;
+        
+        // If "unassigned" is selected and issue is unassigned, include it
+        if (assigneeFilter.includes("unassigned") && isUnassigned) {
+          return true;
         }
-
-        // Fetch issues
-        const issuesRes = await apiGet(
-          `/api/issues?projectId=${projectId}`,
-          idToken
-        );
-        const issuesData = await issuesRes.json();
-
-        if (issuesData.success) {
-          const fetchedIssues = issuesData.data || [];
-          setIssues(fetchedIssues);
-          if (onIssuesCountChange) {
-            onIssuesCountChange(fetchedIssues.length);
-          }
+        
+        // If assignee UID is in the selected filters, include it
+        if (assigneeUid && assigneeFilter.includes(assigneeUid)) {
+          return true;
         }
-      } catch (err) {
-        console.error("Error fetching board data:", err);
-        setError("Failed to load board data");
-      } finally {
-        setLoading(false);
-      }
-    };
+        
+        return false;
+      });
+    }
 
-    fetchData();
-  }, [projectId, user]);
+    return filtered;
+  }, [issues, searchQuery, priorityFilter, statusFilter, assigneeFilter]);
 
   const getIssuesByStatus = (statusId: string) => {
-    return issues
+    return filteredIssues
       .filter((issue) => {
         const workflowStatusId =
           typeof issue.workflowStatus === "string"
@@ -119,23 +141,99 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
       .sort((a, b) => (a.position || 0) - (b.position || 0));
   };
 
-  const getPriorityColor = (priority: string) => {
-    const p = priority || "medium";
-    switch (p.toLowerCase()) {
-      case "highest":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border-red-200 dark:border-red-800";
-      case "high":
-        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-200 dark:border-orange-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800";
-      case "low":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-800";
-      case "lowest":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700";
+  const fetchData = async () => {
+    if (!user || !projectId) return;
+
+    setLoading(true);
+    try {
+      const idToken = await user.getIdToken();
+
+      // Fetch workflow statuses
+      const statusesRes = await apiGet(
+        `/api/workflow-statuses/${projectId}`,
+        idToken
+      );
+      const statusesData = await statusesRes.json();
+
+      if (statusesData.success) {
+        setStatuses(statusesData.data);
+      }
+
+      // Fetch issues
+      const issuesRes = await apiGet(
+        `/api/issues?projectId=${projectId}`,
+        idToken
+      );
+      const issuesData = await issuesRes.json();
+
+      if (issuesData.success) {
+        const fetchedIssues = issuesData.data || [];
+        setIssues(fetchedIssues);
+        if (onIssuesCountChange) {
+          onIssuesCountChange(fetchedIssues.length);
+        }
+
+        // Build assignees map
+        const assigneeMap = new Map<string, AssigneeInfo>();
+        fetchedIssues.forEach((issue: Issue) => {
+          if (issue.assignee) {
+            if (typeof issue.assignee === "object" && issue.assignee.uid) {
+              assigneeMap.set(issue.assignee.uid, {
+                uid: issue.assignee.uid,
+                name: issue.assignee.name,
+                avatar: issue.assignee.avatar,
+              });
+            } else if (typeof issue.assignee === "string") {
+              if (!assigneeMap.has(issue.assignee)) {
+                assigneeMap.set(issue.assignee, {
+                  uid: issue.assignee,
+                  name: "",
+                  avatar: undefined,
+                });
+              }
+            }
+          }
+        });
+
+        // Fetch assignee information for UIDs that don't have full info
+        const assigneeUidsToFetch = Array.from(assigneeMap.values())
+          .filter(a => !a.name)
+          .map(a => a.uid);
+
+        if (assigneeUidsToFetch.length > 0) {
+          await Promise.all(
+            assigneeUidsToFetch.map(async (uid) => {
+              try {
+                const userResponse = await apiGet(`/api/user?uid=${uid}`, idToken);
+                const userData = await userResponse.json();
+                if (userData.success && userData.data) {
+                  assigneeMap.set(uid, {
+                    uid: userData.data.uid,
+                    name: userData.data.name,
+                    avatar: userData.data.avatar,
+                  });
+                }
+              } catch (err) {
+                console.error(`Error fetching assignee ${uid}:`, err);
+              }
+            })
+          );
+        }
+        
+        setAssignees(assigneeMap);
+      }
+    } catch (err) {
+      console.error("Error fetching board data:", err);
+      setError("Failed to load board data");
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [projectId, user]);
+
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -297,7 +395,27 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         return;
       }
 
+      // Check if moving to "Done" status - only admin and QA can move to Done
+      const targetStatus = statuses.find((status) => status._id === targetStatusId);
+      if (targetStatus && targetStatus.name.toLowerCase().trim() === 'done') {
+        if (!isAdmin && userRole !== 'qa') {
+          toast.error("Only admins and QA members can move issues to Done status");
+          const idToken = await user?.getIdToken();
+          if (idToken) {
+            const issuesRes = await apiGet(`/api/issues?projectId=${projectId}`, idToken);
+            const issuesData = await issuesRes.json();
+            if (issuesData.success) {
+              setIssues(issuesData.data);
+            }
+          }
+          return;
+        }
+      }
+
       setIsSaving(true);
+      // Store original issues state for potential rollback
+      const originalIssues = [...issues];
+      
       try {
         const idToken = await user?.getIdToken();
         if (!idToken) throw new Error("Unauthorized");
@@ -349,8 +467,11 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
 
         const data = await response.json();
 
-        if (!data.success) {
-          throw new Error(data.error || "Failed to move issue");
+        if (!response.ok || !data.success) {
+          // Revert optimistic update on error
+          setIssues(originalIssues);
+          const errorMessage = data.message || data.error || "Failed to move issue";
+          throw new Error(errorMessage);
         }
 
         // Update with server response
@@ -447,8 +568,34 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
     );
   }
 
+  const clearFilters = () => {
+    setSearchQuery("");
+    setPriorityFilter("all");
+    setStatusFilter("all");
+    setAssigneeFilter([]);
+  };
+
   return (
-    <div className="w-full">
+    <div className="w-full space-y-5">
+      {/* Search and Filter Bar */}
+      <IssuesFilterBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        priorityFilter={priorityFilter}
+        onPriorityChange={setPriorityFilter}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        statuses={statuses}
+        showStatusFilter={false}
+        assigneeFilter={assigneeFilter}
+        onAssigneeChange={setAssigneeFilter}
+        assignees={assignees}
+        onRefresh={fetchData}
+        loading={loading}
+        showClearFilters={true}
+        onClearFilters={clearFilters}
+      />
+
       <div className="mb-4">
         <div className="flex items-center justify-between">
           <div>
@@ -494,7 +641,6 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
                     projectId={projectId}
                     projectMembers={projectMembers}
                     getTypeIcon={getTypeIcon}
-                    getPriorityColor={getPriorityColor}
                     initialIssueId={initialIssueId}
                     onStatusUpdate={(updatedStatus) => {
                       setStatuses(statuses.map(s => 
@@ -563,10 +709,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         <DragOverlay>
           {activeIssue ? (
             <div className="rotate-3 opacity-90" style={{ width: '280px' }}>
-              <IssueCard 
-                issue={activeIssue} 
-                getPriorityColor={getPriorityColor}
-              />
+              <IssueCard issue={activeIssue} />
             </div>
           ) : null}
         </DragOverlay>

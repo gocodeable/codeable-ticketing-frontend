@@ -25,12 +25,12 @@ import { IssueViewMode } from "./IssueViewMode";
 import { IssueCommentsSection } from "./IssueCommentsSection";
 import { IssueDeleteDialog } from "./IssueDeleteDialog";
 import { useIssuePermissions } from "../hooks/useIssuePermissions";
+import { getPriorityColor } from "@/utils/issueUtils";
 
 interface IssueDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   issueId: string | null;
-  getPriorityColor: (priority: string) => string;
   isAdmin?: boolean;
   userRole?: "admin" | "developer" | "qa";
   projectMembers?: Array<{ uid: string; name: string; email: string; avatar?: string }>;
@@ -46,7 +46,6 @@ export function IssueDetailDialog({
   open,
   onOpenChange,
   issueId,
-  getPriorityColor,
   isAdmin = false,
   userRole,
   projectMembers = [],
@@ -462,7 +461,6 @@ export function IssueDetailDialog({
                 issue={issue as Issue}
                 isEditing={isEditing}
                 isSaving={isSaving}
-                getPriorityColor={getPriorityColor}
                 canEdit={canEditIssue()}
                 canDelete={canDeleteIssue()}
                 onEdit={handleEdit}

@@ -1,5 +1,5 @@
 import { Project } from "@/types/project";
-import { FileText, Edit } from "lucide-react";
+import { FileText } from "lucide-react";
 import { CalendarDays } from "lucide-react";
 import { Briefcase } from "lucide-react";
 import { Users } from "lucide-react";
@@ -10,15 +10,13 @@ import { ExternalLink } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 
 interface ProjectInfoProps {
   project: Project;
   isAdmin?: boolean;
-  onEdit?: () => void;
 }
 
-export default function ProjectInfo({ project, isAdmin, onEdit }: ProjectInfoProps) {
+export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
   // Get admin members from the members array
   const adminMembers = Array.isArray(project.members)
     ? project.members.filter((member: any) => {
@@ -34,26 +32,13 @@ export default function ProjectInfo({ project, isAdmin, onEdit }: ProjectInfoPro
 
   return (
     <div className="w-full bg-card rounded-xl border border-border/50 shadow-sm p-5 sm:p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20">
-            <FileText className="w-5 h-5 text-primary" />
-          </div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            Project Information
-          </h2>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20">
+          <FileText className="w-5 h-5 text-primary" />
         </div>
-        {isAdmin && onEdit && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onEdit}
-            className="gap-2"
-          >
-            <Edit className="w-4 h-4" />
-            <span className="hidden sm:inline">Edit</span>
-          </Button>
-        )}
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+          Project Information
+        </h2>
       </div>
 
       <div className="space-y-5">

@@ -3,17 +3,15 @@
 import { Issue } from "@/types/issue";
 import Image from "next/image";
 import { MessageCircle } from "lucide-react";
-import { DEFAULT_AVATAR } from "@/lib/constants";
+import { getPriorityColor, getInitials } from "@/utils/issueUtils";
 
 interface IssueCardProps {
   issue: Issue;
-  getPriorityColor: (priority: string) => string;
   onClick?: () => void;
 }
 
 export default function IssueCard({
   issue,
-  getPriorityColor,
   onClick,
 }: IssueCardProps) {
   return (
@@ -45,13 +43,21 @@ export default function IssueCard({
         {issue.assignee && typeof issue.assignee === "object" ? (
           <div className="flex items-center gap-1.5">
             <div className="relative h-5 w-5 rounded-full overflow-hidden ring-1 ring-background">
-              <Image
-                src={issue.assignee.avatar || DEFAULT_AVATAR}
-                alt={issue.assignee.name}
-                width={20}
-                height={20}
-                className="w-full h-full object-cover"
-              />
+              {issue.assignee.avatar ? (
+                <Image
+                  src={issue.assignee.avatar}
+                  alt={issue.assignee.name}
+                  width={20}
+                  height={20}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+                  <span className="text-[9px] font-semibold text-primary">
+                    {getInitials(issue.assignee.name)}
+                  </span>
+                </div>
+              )}
             </div>
             <span className="text-xs text-muted-foreground truncate max-w-[80px]">
               {issue.assignee.name}
