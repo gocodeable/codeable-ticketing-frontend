@@ -37,12 +37,13 @@ interface ProjectBoardProps {
   userRole?: "admin" | "developer" | "qa";
   projectMembers: ProjectMember[];
   initialIssueId?: string;
+  onIssuesCountChange?: (count: number) => void;
 }
 
 // Sortable Status Column Component
 
 
-export default function ProjectBoard({ projectId, isAdmin, userRole, projectMembers, initialIssueId }: ProjectBoardProps) {
+export default function ProjectBoard({ projectId, isAdmin, userRole, projectMembers, initialIssueId, onIssuesCountChange }: ProjectBoardProps) {
   const { user } = useAuth();
   const [statuses, setStatuses] = useState<WorkflowStatus[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -89,7 +90,11 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         const issuesData = await issuesRes.json();
 
         if (issuesData.success) {
-          setIssues(issuesData.data);
+          const fetchedIssues = issuesData.data || [];
+          setIssues(fetchedIssues);
+          if (onIssuesCountChange) {
+            onIssuesCountChange(fetchedIssues.length);
+          }
         }
       } catch (err) {
         console.error("Error fetching board data:", err);
@@ -510,7 +515,11 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
                     }}
                     onIssueCreated={(newIssue) => {
                       // Add the new issue to the issues list
-                      setIssues([...issues, newIssue]);
+                      const updatedIssues = [...issues, newIssue];
+                      setIssues(updatedIssues);
+                      if (onIssuesCountChange) {
+                        onIssuesCountChange(updatedIssues.length);
+                      }
                     }}
                     onIssueUpdated={(updatedIssue) => {
                       // Update the issue in the issues list

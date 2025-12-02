@@ -29,6 +29,7 @@ import ProjectBoard from "@/components/ProjectBoard";
 import ProjectSettings from "@/components/ProjectSettings";
 import { UpdateProjectSheet } from "@/components/UpdateProjectSheet";
 import { ProjectMembersModal } from "@/components/ProjectMembersModal";
+import IssuesTable from "@/components/IssuesTable";
 import { toast } from "sonner";
 
 // Separate component to handle search params (requires Suspense)
@@ -37,11 +38,13 @@ function ProjectBoardWithSearchParams({
   isAdmin,
   userRole,
   projectMembers,
+  onIssuesCountChange,
 }: {
   projectId: string;
   isAdmin: boolean;
   userRole?: "admin" | "developer" | "qa";
   projectMembers: Array<{ uid: string; name: string; email: string; avatar?: string; role?: "admin" | "developer" | "qa" | undefined }>;
+  onIssuesCountChange?: (count: number) => void;
 }) {
   const searchParams = useSearchParams();
   const initialIssueId = searchParams.get("issueId");
@@ -53,6 +56,7 @@ function ProjectBoardWithSearchParams({
       userRole={userRole}
       projectMembers={projectMembers}
       initialIssueId={initialIssueId || undefined}
+      onIssuesCountChange={onIssuesCountChange}
     />
   );
 }
@@ -71,6 +75,7 @@ export default function ProjectPage({
   const [error, setError] = useState<string | null>(null);
   const [isUpdateSheetOpen, setIsUpdateSheetOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [issueCount, setIssueCount] = useState<number | undefined>(undefined);
   const fetchProject = async () => {
     try {
       setIsLoading(true);
@@ -98,6 +103,7 @@ export default function ProjectPage({
 
       const data = await response.json();
       setProject(data.project);
+      setIssueCount(data.project.issueCount);
     } catch (err) {
       console.error("Error fetching project:", err);
       setError(
@@ -252,8 +258,8 @@ export default function ProjectPage({
                   <List className="w-4 h-4" />
                   <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
                     Issues{" "}
-                    {project.issueCount !== undefined &&
-                      `(${project.issueCount})`}
+                    {issueCount !== undefined &&
+                      `(${issueCount})`}
                   </p>
                 </TabsTrigger>
                 <TabsTrigger value="board" className="shrink-0 px-2 py-1">
@@ -288,9 +294,23 @@ export default function ProjectPage({
               </TabsContent>
               <TabsContent value="issues" className="mt-3 sm:mt-4">
                 <div className="w-full">
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">
+                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
                     Issues
                   </h2>
+                  <IssuesTable 
+                    projectId={id} 
+                    onIssuesCountChange={(count) => setIssueCount(count)}
+                    isAdmin={!!isAdmin}
+                    userRole={userRole}
+                    projectMembers={Array.isArray(project.members) ? project.members
+                      .filter((m: any) => typeof m === "object" && m !== null && m.uid)
+                      .map((m: any) => ({
+                        uid: m.uid,
+                        name: m.name || "",
+                        email: m.email || "",
+                        avatar: m.avatar,
+                      })) : []}
+                  />
                 </div>
               </TabsContent>
               <TabsContent value="board" className="mt-3 sm:mt-4">
@@ -306,6 +326,7 @@ export default function ProjectPage({
                       avatar: m.avatar,
                       role: m.role as "admin" | "developer" | "qa" | undefined,
                     })) : []}
+                    onIssuesCountChange={(count) => setIssueCount(count)}
                   />
                 </Suspense>
               </TabsContent>
