@@ -1,14 +1,15 @@
 "use client";
 
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Team as TeamType } from "@/types/team";
 import { EmptyComponent } from "@/components/Empty";
 import { Teams } from "@/components/Teams";
 import { TeamsSkeleton } from "@/components/TeamCardSkeleton";
 import { apiGet } from "@/lib/api/apiClient";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
@@ -20,6 +21,7 @@ export default function TeamsPage() {
   const { user } = useAuth();
   const [teams, setTeams] = useState<AllTeams>({ workingIn: [], myTeams: [] });
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchTeams = async () => {
     if (!user) return;
@@ -55,6 +57,21 @@ export default function TeamsPage() {
     fetchTeams();
   }, [user]);
 
+  const filteredTeams = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return teams;
+    }
+    const query = searchQuery.toLowerCase().trim();
+    return {
+      workingIn: teams.workingIn.filter((team) =>
+        team.name.toLowerCase().includes(query)
+      ),
+      myTeams: teams.myTeams.filter((team) =>
+        team.name.toLowerCase().includes(query)
+      ),
+    };
+  }, [teams, searchQuery]);
+
   const hasTeams = teams.workingIn?.length > 0 || teams.myTeams?.length > 0;
 
   return (
@@ -85,6 +102,25 @@ export default function TeamsPage() {
             </Link>
           </motion.div>
         )}
+        {hasTeams && (
+          <motion.div
+            className="w-full"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+          >
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                type="text"
+                placeholder="Search teams by name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-full max-w-md"
+              />
+            </div>
+          </motion.div>
+        )}
         {loading ? (
           <div className="w-full flex flex-col gap-y-12">
             <TeamsSkeleton count={3} type="workingIn" />
@@ -97,8 +133,8 @@ export default function TeamsPage() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <Teams type="workingIn" teams={teams.workingIn} />
-            <Teams type="myTeams" teams={teams.myTeams} />
+            <Teams type="workingIn" teams={filteredTeams.workingIn} />
+            <Teams type="myTeams" teams={filteredTeams.myTeams} />
           </motion.div>
         ) : (
           <div className="w-full overflow-hidden flex items-center justify-center min-h-[60vh]">
