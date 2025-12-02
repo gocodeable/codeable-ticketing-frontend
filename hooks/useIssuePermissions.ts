@@ -20,7 +20,8 @@ export function useIssuePermissions({
     if (!user || !issue) return false;
     if (isAdmin || userRole === "qa") return true;
     // Check if user is the reporter
-    return user.uid === issue.reporter;
+    const reporterUid = typeof issue.reporter === "object" && issue.reporter ? issue.reporter.uid : issue.reporter;
+    return user.uid === reporterUid;
   };
 
   const canDeleteIssue = (): boolean => {
