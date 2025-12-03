@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,9 +20,10 @@ import { Project } from "@/types/project";
 
 interface ProjectSettingsProps {
   project: Project;
+  onEdit?: () => void;
 }
 
-export default function ProjectSettings({ project }: ProjectSettingsProps) {
+export default function ProjectSettings({ project, onEdit }: ProjectSettingsProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
@@ -72,14 +73,36 @@ export default function ProjectSettings({ project }: ProjectSettingsProps) {
 
   return (
     <>
-      <div className="w-full bg-card rounded-lg border shadow-sm p-4 sm:p-6">
-        <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-6">
+      <div className="w-full bg-card rounded-xl border border-border/40 dark:border-border/70 shadow-sm p-5 sm:p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-5">
           Project Settings
         </h2>
 
-        <div className="space-y-6">
+        <div className="space-y-5">
+          {/* Update Project Section */}
+          {onEdit && (
+            <div className="space-y-3 pb-5 border-b border-border/40 dark:border-border/60">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-1">
+                  Update Project
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Update your project's image, name, description, and links
+                </p>
+              </div>
+              <Button
+                onClick={onEdit}
+                variant="outline"
+                className="gap-2 rounded-lg"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                Update Project
+              </Button>
+            </div>
+          )}
+
           {/* Danger Zone */}
-          <div className="border border-destructive/20 rounded-lg p-4 bg-destructive/5">
+          <div className="border border-destructive/30 rounded-lg p-4 bg-destructive/5">
             <h3 className="text-sm font-semibold text-destructive mb-3">
               Danger Zone
             </h3>

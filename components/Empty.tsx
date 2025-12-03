@@ -1,5 +1,4 @@
 import { FolderIcon, UsersIcon } from "lucide-react";
-import { ArrowUpRightIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -41,16 +40,6 @@ export function EmptyComponent({ type }: { type: "project" | "team" }) {
           </Button>
         </div>
       </EmptyContent>
-      <Button
-        variant="link"
-        asChild
-        className="text-muted-foreground"
-        size="sm"
-      >
-        <a href="#">
-          Learn More <ArrowUpRightIcon />
-        </a>
-      </Button>
     </Empty>
   );
 }

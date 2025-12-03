@@ -9,14 +9,12 @@ import { useRef, useEffect } from "react";
 
 interface SortableIssueCardProps {
   issue: Issue;
-  getPriorityColor: (priority: string) => string;
   disabled?: boolean;
   onClick?: () => void;
 }
 
 export default function SortableIssueCard({
   issue,
-  getPriorityColor,
   disabled = false,
   onClick,
 }: SortableIssueCardProps) {
@@ -108,7 +106,7 @@ export default function SortableIssueCard({
         onClick={handleCardClick}
         style={{ pointerEvents: isDragging ? "none" : "auto" }}
       >
-        <IssueCard issue={issue} getPriorityColor={getPriorityColor} />
+        <IssueCard issue={issue} />
       </div>
     </div>
   );

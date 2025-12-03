@@ -52,7 +52,7 @@ export function SideBar() {
       }
       const idToken = await user.getIdToken();
 
-      const response = await apiGet("/api/recents?type=projects&limit=3", idToken)
+      const response = await apiGet("/api/recents?type=projects&limit=5", idToken)
       const data = await response.json()
       if (data.success && Array.isArray(data.data)) {
         return data.data;
