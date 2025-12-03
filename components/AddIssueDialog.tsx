@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { UserSuggestion } from "@/components/UserSelector";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -47,6 +46,7 @@ import {
 import { format } from "date-fns";
 import { useDropzone } from "react-dropzone";
 import { uploadMediaToStorage } from "@/lib/firebase/uploadMedia";
+import { RichTextEditor } from "./RichTextEditor";
 
 interface AddIssueDialogProps {
   open: boolean;
@@ -385,14 +385,11 @@ export function AddIssueDialog({
             <Label htmlFor="description" className="text-sm font-semibold">
               Description
             </Label>
-            <Textarea
-              id="description"
-              placeholder="Describe the issue in detail..."
+            <RichTextEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
+              placeholder="Describe the issue in detail..."
               disabled={isSubmitting}
-              rows={4}
-              className="resize-none"
             />
           </div>
 
