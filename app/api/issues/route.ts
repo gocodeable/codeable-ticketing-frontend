@@ -4,6 +4,9 @@ export const GET = async (req: NextRequest) => {
   try {
     const searchParams = new URL(req.url).searchParams;
     const projectId = searchParams.get("projectId");
+    const limit = searchParams.get("limit");
+    const skip = searchParams.get("skip");
+    const table = searchParams.get("table");
     
     if (!projectId || projectId === "null" || projectId === "undefined") {
       return NextResponse.json(
@@ -20,7 +23,14 @@ export const GET = async (req: NextRequest) => {
       );
     }
 
-    const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/issues/project/${projectId}`;
+    // Build URL with pagination params only
+    const params = new URLSearchParams();
+    if (limit) params.append("limit", limit);
+    if (skip) params.append("skip", skip);
+    if (table) params.append("table", table);
+    const queryString = params.toString();
+    const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/issues/project/${projectId}${queryString ? `?${queryString}` : ""}`;
+    
     const response = await fetch(backendUrl, {
       method: "GET",
       headers: {
@@ -40,7 +50,11 @@ export const GET = async (req: NextRequest) => {
       );
     }
 
-    return NextResponse.json({ success: true, data: data.data });
+    return NextResponse.json({ 
+      success: true, 
+      data: data.data,
+      pagination: data.pagination 
+    });
   } catch (error) {
     console.error("Error fetching issues:", error);
     return NextResponse.json(

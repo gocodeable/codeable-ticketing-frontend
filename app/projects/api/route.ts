@@ -4,6 +4,8 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const uid = searchParams.get("uid");
+    const limit = searchParams.get("limit");
+    const skip = searchParams.get("skip");
 
     if (!uid) {
       return NextResponse.json(
@@ -20,7 +22,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/projects/user/${uid}`;
+    // Build URL with pagination params
+    const params = new URLSearchParams();
+    if (limit) params.append("limit", limit);
+    if (skip) params.append("skip", skip);
+    const queryString = params.toString();
+    const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/projects/user/${uid}${queryString ? `?${queryString}` : ""}`;
+    
     const response = await fetch(backendUrl, {
       method: "GET",
       headers: {
@@ -39,7 +47,11 @@ export async function GET(request: NextRequest) {
         { status: response.status }
       );
     }
-    return NextResponse.json({ success: true, data: data.data });
+    return NextResponse.json({ 
+      success: true, 
+      data: data.data,
+      pagination: data.pagination 
+    });
   } catch (error) {
     console.error("Error fetching projects:", error);
     return NextResponse.json(
