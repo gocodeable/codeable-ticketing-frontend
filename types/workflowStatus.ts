@@ -3,6 +3,7 @@ export interface WorkflowStatus {
   name: string;
   description?: string;
   orderIndex: number;
+  color?: string;
   projectId: string;
   createdAt?: string;
   updatedAt?: string;

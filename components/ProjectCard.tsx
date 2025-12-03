@@ -4,10 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon, Users } from "lucide-react";
 import { motion } from "framer-motion";
+import { getInitials } from "@/utils/issueUtils";
 
-const MAX_VISIBLE_AVATARS = 3;
-const getInitials = (name: string) =>
-    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+const MAX_VISIBLE_AVATARS = 5;
 
 interface ProjectCardProps {
     project: ProjectType;
@@ -45,7 +44,7 @@ export default function ProjectCard({ project, i }: ProjectCardProps) {
                             ) : (
                                 <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 dark:bg-primary/15 flex items-center justify-center">
                                     <span className="text-primary text-[11px] font-bold">
-                                        {project.code?.slice(0, 2) || "PR"}
+                                        {getInitials(project.title || project.code || "PR")}
                                     </span>
                                 </div>
                             )}
@@ -73,31 +72,31 @@ export default function ProjectCard({ project, i }: ProjectCardProps) {
                         <div className="flex items-center gap-2 pt-1.5 border-t border-border/30 dark:border-border/50">
                             {members.length > 0 ? (
                                 <>
-                                    <div className="flex -space-x-1.5">
+                                    <div className="flex items-center gap-0.5">
                                         {visibleMembers.map((member: any, index) => (
                                             <div
                                                 key={member.uid || member._id || index}
-                                                className="w-5 h-5 rounded-full ring-1.5 ring-background dark:ring-card overflow-hidden bg-primary/10 dark:bg-primary/15 flex items-center justify-center"
+                                                className="relative w-6 h-6 rounded-full ring-1.5 ring-background dark:ring-card overflow-hidden bg-primary/10 dark:bg-primary/15 flex items-center justify-center shrink-0"
                                                 style={{ zIndex: visibleMembers.length - index }}
                                             >
                                                 {member.avatar ? (
                                                     <Image
                                                         src={member.avatar}
                                                         alt={member.name || "User"}
-                                                        width={20}
-                                                        height={20}
+                                                        width={24}
+                                                        height={24}
                                                         className="w-full h-full object-cover"
                                                     />
                                                 ) : (
-                                                    <span className="text-[9px] font-semibold text-primary">
+                                                    <span className="text-[10px] font-semibold text-primary">
                                                         {getInitials(member.name || member.email || "U")}
                                                     </span>
                                                 )}
                                             </div>
                                         ))}
                                         {extraCount > 0 && (
-                                            <div className="w-5 h-5 rounded-full ring-1.5 ring-background dark:ring-card bg-muted flex items-center justify-center">
-                                                <span className="text-[9px] font-semibold text-muted-foreground">
+                                            <div className="relative w-6 h-6 rounded-full ring-1.5 ring-background dark:ring-card overflow-hidden bg-muted hover:bg-muted/80 flex items-center justify-center shrink-0">
+                                                <span className="text-[10px] font-semibold text-foreground">
                                                     +{extraCount}
                                                 </span>
                                             </div>
