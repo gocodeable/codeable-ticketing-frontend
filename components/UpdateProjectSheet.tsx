@@ -27,6 +27,7 @@ import { useImageSelection } from "@/hooks/useImageSelection";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import Loader from "@/components/Loader";
 import { Project } from "@/types/project";
+import { generateProjectCode } from "@/utils/generateProjectCode";
 
 const updateProjectSchema = z.object({
   title: z
@@ -120,7 +121,6 @@ export function UpdateProjectSheet({
       title: project.title,
       code: project.code,
       description: project.description,
-      img: project.img || "",
       figmaLink: project.figmaLink || "",
       swaggerLink: project.swaggerLink || "",
     },
@@ -133,7 +133,6 @@ export function UpdateProjectSheet({
         title: project.title,
         code: project.code,
         description: project.description,
-        img: project.img || "",
         figmaLink: project.figmaLink || "",
         swaggerLink: project.swaggerLink || "",
       });
@@ -206,7 +205,7 @@ export function UpdateProjectSheet({
             <Loader size="lg" hue={300} />
           </div>
         )}
-        
+
         <SheetHeader>
           <SheetTitle>Update Project</SheetTitle>
           <SheetDescription>
@@ -220,23 +219,18 @@ export function UpdateProjectSheet({
             className="space-y-6 mt-6"
           >
             {/* Project Image Section */}
-            <FormField
-              control={form.control}
-              name="img"
-              render={({ field }) => (
-                <ImageSelector
-                  imageSelection={imageSelection}
-                  urlField={field}
-                  shape="square"
-                  size="md"
-                  layout="horizontal"
-                  label="Project Icon"
-                  description="Upload a square image (max 5MB)"
-                  showUrlInput={true}
-                  disabled={loading}
-                />
-              )}
-            />
+            <div>
+              <ImageSelector
+                imageSelection={imageSelection}
+                shape="square"
+                size="md"
+                layout="horizontal"
+                label="Project Icon"
+                description="Upload a square image (max 5MB)"
+                showUrlInput={false}
+                disabled={loading}
+              />
+            </div>
 
             {/* Title Field */}
             <FormField
@@ -251,6 +245,12 @@ export function UpdateProjectSheet({
                       placeholder="Enter project title"
                       disabled={loading}
                       {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        // Auto-generate code from title
+                        const generatedCode = generateProjectCode(e.target.value);
+                        form.setValue("code", generatedCode);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
