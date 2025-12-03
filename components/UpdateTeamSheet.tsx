@@ -37,7 +37,6 @@ const updateTeamSchema = z.object({
     .string()
     .min(10, "Description must be at least 10 characters")
     .max(1000, "Description must be less than 1000 characters"),
-  img: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
 });
 
 type UpdateTeamFormData = z.infer<typeof updateTeamSchema>;
@@ -69,7 +68,6 @@ export function UpdateTeamSheet({
     defaultValues: {
       name: team.name,
       description: team.description,
-      img: team.img || "",
     },
   });
 
@@ -79,7 +77,6 @@ export function UpdateTeamSheet({
       form.reset({
         name: team.name,
         description: team.description,
-        img: team.img || "",
       });
       // Set the image preview if team has an image
       if (team.img) {
@@ -161,23 +158,18 @@ export function UpdateTeamSheet({
             className="space-y-6 mt-6"
           >
             {/* Team Image Section */}
-            <FormField
-              control={form.control}
-              name="img"
-              render={({ field }) => (
-                <ImageSelector
-                  imageSelection={imageSelection}
-                  urlField={field}
-                  shape="square"
-                  size="md"
-                  layout="horizontal"
-                  label="Team Icon"
-                  description="Upload a square image (max 5MB)"
-                  showUrlInput={true}
-                  disabled={loading}
-                />
-              )}
-            />
+            <div>
+              <ImageSelector
+                imageSelection={imageSelection}
+                shape="square"
+                size="md"
+                layout="horizontal"
+                label="Team Icon"
+                description="Upload a square image (max 5MB)"
+                showUrlInput={false}
+                disabled={loading}
+              />
+            </div>
 
             {/* Name Field */}
             <FormField
