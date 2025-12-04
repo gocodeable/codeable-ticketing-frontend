@@ -308,9 +308,79 @@ export default function TeamPage({
                       <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                         Description
                       </h3>
-                      <p className="text-sm text-foreground leading-relaxed">
-                        {team.description || "No description provided"}
-                      </p>
+                      {team.description ? (
+                        <div
+                          className="text-sm text-foreground leading-relaxed team-description-content"
+                          dangerouslySetInnerHTML={{ __html: team.description }}
+                        />
+                      ) : (
+                        <p className="text-sm text-foreground leading-relaxed">
+                          No description provided
+                        </p>
+                      )}
+                      <style jsx global>{`
+                        .team-description-content {
+                          word-wrap: break-word;
+                        }
+                        .team-description-content p {
+                          margin: 0.5rem 0;
+                          color: hsl(var(--foreground));
+                        }
+                        .team-description-content p:first-child {
+                          margin-top: 0;
+                        }
+                        .team-description-content p:last-child {
+                          margin-bottom: 0;
+                        }
+                        .team-description-content img {
+                          max-width: 100%;
+                          height: auto;
+                          border-radius: 0.375rem;
+                          margin: 0.5rem 0;
+                          cursor: pointer;
+                          transition: opacity 0.2s;
+                        }
+                        .team-description-content img:hover {
+                          opacity: 0.8;
+                        }
+                        .team-description-content ul,
+                        .team-description-content ol {
+                          margin: 0.5rem 0;
+                          padding-left: 1.5rem;
+                          color: hsl(var(--foreground));
+                        }
+                        .team-description-content ul li,
+                        .team-description-content ol li {
+                          color: hsl(var(--foreground));
+                        }
+                        .team-description-content ul li::marker,
+                        .team-description-content ol li::marker {
+                          color: hsl(var(--foreground));
+                        }
+                        .team-description-content a {
+                          color: hsl(var(--primary));
+                          text-decoration: underline;
+                        }
+                        .team-description-content a:hover {
+                          color: hsl(var(--primary) / 0.8);
+                        }
+                        .team-description-content h1,
+                        .team-description-content h2,
+                        .team-description-content h3 {
+                          margin: 1rem 0 0.5rem 0;
+                          font-weight: 600;
+                          color: hsl(var(--foreground));
+                        }
+                        .team-description-content h1 {
+                          font-size: 1.5rem;
+                        }
+                        .team-description-content h2 {
+                          font-size: 1.25rem;
+                        }
+                        .team-description-content h3 {
+                          font-size: 1.125rem;
+                        }
+                      `}</style>
                     </div>
                     <div className="border-t border-border/40 dark:border-border/60 pt-4">
                       <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">

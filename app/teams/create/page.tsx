@@ -10,14 +10,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+
 } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,8 +38,17 @@ const teamSchema = z.object({
     .max(255, "Name must be less than 255 characters"),
   description: z
     .string()
-    .min(10, "Description must be at least 10 characters")
-    .max(1000, "Description must be less than 1000 characters"),
+    .min(1, "Description is required")
+    .refine((val) => {
+      // Strip HTML tags and check text content length
+      const textContent = val.replace(/<[^>]*>/g, '').trim();
+      return textContent.length >= 10;
+    }, "Description must have at least 10 characters of text content")
+    .refine((val) => {
+      // Strip HTML tags and check text content length
+      const textContent = val.replace(/<[^>]*>/g, '').trim();
+      return textContent.length <= 5000;
+    }, "Description must be less than 5000 characters of text content"),
   img: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
 });
 
@@ -235,15 +242,16 @@ export default function CreateTeamPage() {
                             Description <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
-                            <Textarea
+                            <RichTextEditor
+                              value={field.value || ""}
+                              onChange={field.onChange}
                               placeholder="Describe what this team does and its main objectives..."
-                              className="min-h-[100px] resize-none rounded-lg"
                               disabled={loading}
-                              {...field}
+                              className="w-full"
                             />
                           </FormControl>
                           <FormDescription className="text-xs text-muted-foreground">
-                            At least 10 characters
+                            At least 10 characters of text content
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

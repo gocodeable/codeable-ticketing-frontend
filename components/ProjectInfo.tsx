@@ -61,9 +61,81 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
               Description
             </h3>
           </div>
-          <p className="text-sm sm:text-base text-muted-foreground pl-6 leading-relaxed">
-            {project.description || "No description provided"}
-          </p>
+          <div className="pl-6">
+            {project.description ? (
+              <div
+                className="text-sm sm:text-base text-foreground leading-relaxed project-description-content"
+                dangerouslySetInnerHTML={{ __html: project.description }}
+              />
+            ) : (
+              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                No description provided
+              </p>
+            )}
+            <style jsx global>{`
+              .project-description-content {
+                word-wrap: break-word;
+              }
+              .project-description-content p {
+                margin: 0.5rem 0;
+                color: hsl(var(--foreground));
+              }
+              .project-description-content p:first-child {
+                margin-top: 0;
+              }
+              .project-description-content p:last-child {
+                margin-bottom: 0;
+              }
+              .project-description-content img {
+                max-width: 100%;
+                height: auto;
+                border-radius: 0.375rem;
+                margin: 0.5rem 0;
+                cursor: pointer;
+                transition: opacity 0.2s;
+              }
+              .project-description-content img:hover {
+                opacity: 0.8;
+              }
+              .project-description-content ul,
+              .project-description-content ol {
+                margin: 0.5rem 0;
+                padding-left: 1.5rem;
+                color: hsl(var(--foreground));
+              }
+              .project-description-content ul li,
+              .project-description-content ol li {
+                color: hsl(var(--foreground));
+              }
+              .project-description-content ul li::marker,
+              .project-description-content ol li::marker {
+                color: hsl(var(--foreground));
+              }
+              .project-description-content a {
+                color: hsl(var(--primary));
+                text-decoration: underline;
+              }
+              .project-description-content a:hover {
+                color: hsl(var(--primary) / 0.8);
+              }
+              .project-description-content h1,
+              .project-description-content h2,
+              .project-description-content h3 {
+                margin: 1rem 0 0.5rem 0;
+                font-weight: 600;
+                color: hsl(var(--foreground));
+              }
+              .project-description-content h1 {
+                font-size: 1.5rem;
+              }
+              .project-description-content h2 {
+                font-size: 1.25rem;
+              }
+              .project-description-content h3 {
+                font-size: 1.125rem;
+              }
+            `}</style>
+          </div>
         </div>
 
         {/* External Links Section */}
