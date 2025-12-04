@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import { ImageSelector } from "@/components/ImageSelector";
 import { useImageSelection } from "@/hooks/useImageSelection";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -35,8 +36,17 @@ const updateTeamSchema = z.object({
     .max(255, "Name must be less than 255 characters"),
   description: z
     .string()
-    .min(10, "Description must be at least 10 characters")
-    .max(1000, "Description must be less than 1000 characters"),
+    .min(1, "Description is required")
+    .refine((val) => {
+      // Strip HTML tags and check text content length
+      const textContent = val.replace(/<[^>]*>/g, '').trim();
+      return textContent.length >= 10;
+    }, "Description must have at least 10 characters of text content")
+    .refine((val) => {
+      // Strip HTML tags and check text content length
+      const textContent = val.replace(/<[^>]*>/g, '').trim();
+      return textContent.length <= 5000;
+    }, "Description must be less than 5000 characters of text content"),
 });
 
 type UpdateTeamFormData = z.infer<typeof updateTeamSchema>;
@@ -199,11 +209,12 @@ export function UpdateTeamSheet({
                 <FormItem>
                   <FormLabel>Description *</FormLabel>
                   <FormControl>
-                    <Textarea
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
                       placeholder="Describe your team..."
-                      className="min-h-[120px] resize-y"
                       disabled={loading}
-                      {...field}
+                      className="w-full"
                     />
                   </FormControl>
                   <FormMessage />

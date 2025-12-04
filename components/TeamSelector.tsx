@@ -10,6 +10,30 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { UserSuggestion } from "./UserSelector";
 
+// Helper function to strip HTML tags and get plain text (explicitly removes images)
+const stripHtmlTags = (html: string): string => {
+    if (!html) return "";
+    // First, explicitly remove image tags (including self-closing and with attributes)
+    let text = html
+        .replace(/<img[^>]*>/gi, '') // Remove <img> tags (self-closing)
+        .replace(/<img[^>]*\/>/gi, '') // Remove <img /> tags
+        .replace(/<\/img>/gi, ''); // Remove closing </img> tags (if any)
+    
+    // Then remove all other HTML tags
+    text = text
+        .replace(/<[^>]*>/g, '') // Remove all remaining HTML tags
+        .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+        .replace(/&amp;/g, '&') // Replace &amp; with &
+        .replace(/&lt;/g, '<') // Replace &lt; with <
+        .replace(/&gt;/g, '>') // Replace &gt; with >
+        .replace(/&quot;/g, '"') // Replace &quot; with "
+        .replace(/&#39;/g, "'") // Replace &#39; with '
+        .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+        .trim();
+    
+    return text;
+};
+
 export interface TeamSuggestion {
   _id: string;
   name: string;
@@ -244,7 +268,7 @@ export function TeamSelector({
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {suggestion.members.length} members
-                    {suggestion.description && ` • ${suggestion.description}`}
+                    {suggestion.description && ` • ${stripHtmlTags(suggestion.description)}`}
                   </p>
                 </div>
               </button>
