@@ -21,11 +21,11 @@ import { UserSuggestion } from "@/components/UserSelector";
 // Import new components
 import { IssueDetailHeader } from "./IssueDetailHeader";
 import { IssueEditForm } from "./IssueEditForm";
-import { IssueViewMode } from "./IssueViewMode";
+import { IssueViewModeLeft, IssueViewModeRight } from "./IssueViewMode";
 import { IssueCommentsSection } from "./IssueCommentsSection";
 import { IssueDeleteDialog } from "./IssueDeleteDialog";
 import { useIssuePermissions } from "../hooks/useIssuePermissions";
-import { getPriorityColor } from "@/utils/issueUtils";
+import { IssueDetailDialogSkeleton } from "./IssueDetailDialogSkeleton";
 
 interface IssueDetailDialogProps {
   open: boolean;
@@ -441,40 +441,34 @@ export function IssueDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[98vw]! w-full h-[92vh] max-h-[92vh] overflow-hidden p-0 gap-0">
-          {loading ? (
-            <>
-              <DialogHeader className="px-6 sm:px-8 pt-6 pb-4 border-b border-border/40 dark:border-border/60 bg-muted/30">
-                <DialogTitle className="text-xl">Loading Issue</DialogTitle>
-              </DialogHeader>
-              <div className="flex items-center justify-center p-12">
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">Loading issue details...</p>
-                </div>
-              </div>
-            </>
-          ) : issue ? (
+        <DialogContent className="!max-w-[98vw] w-[98vw] h-[92vh] max-h-[92vh] overflow-hidden p-0 gap-0 flex flex-col">
+          <div className="relative w-full h-full flex flex-col overflow-hidden">
+            {loading ? (
+              <IssueDetailDialogSkeleton />
+            ) : issue ? (
             <>
               {/* Header */}
-              <IssueDetailHeader
-                issue={issue as Issue}
-                isEditing={isEditing}
-                isSaving={isSaving}
-                canEdit={canEditIssue()}
-                canDelete={canDeleteIssue()}
-                onEdit={handleEdit}
-                onCancelEdit={handleCancelEdit}
-                onSave={handleSaveEdit}
-                onDelete={handleDeleteClick}
-                editTitle={editTitle}
-              />
+              <div className="shrink-0">
+                <IssueDetailHeader
+                  issue={issue as Issue}
+                  isEditing={isEditing}
+                  isSaving={isSaving}
+                  canEdit={canEditIssue()}
+                  canDelete={canDeleteIssue()}
+                  onEdit={handleEdit}
+                  onCancelEdit={handleCancelEdit}
+                  onSave={handleSaveEdit}
+                  onDelete={handleDeleteClick}
+                  onClose={() => onOpenChange(false)}
+                  editTitle={editTitle}
+                />
+              </div>
 
               {/* Two-Column Layout */}
-              <div className="flex-1 overflow-hidden flex">
-                {/* Left Column - Issue Details */}
-                <div className="flex-1 overflow-y-auto border-r border-border/40 dark:border-border/60">
-                  <div className="px-6 sm:px-8 py-6">
+              <div className="flex-1 min-h-0 overflow-hidden flex">
+                {/* Left Column - Description, Attachments, and Comments */}
+                <div className="flex-1 min-h-0 overflow-y-auto border-r border-border/40 dark:border-border/60">
+                  <div className="px-6 sm:px-8 py-6 space-y-6 min-h-full">
                     {isEditing ? (
                       <IssueEditForm
                         editTitle={editTitle}
@@ -506,22 +500,36 @@ export function IssueDetailDialog({
                         assigneeInputRef={assigneeInputRef as React.RefObject<HTMLInputElement>}
                       />
                     ) : (
-                      <IssueViewMode
-                        issue={issue as Issue}
-                        downloadingAttachments={downloadingAttachments}
-                        onDownload={handleDownload}
-                      />
+                      <>
+                        <IssueViewModeLeft
+                          issue={issue as Issue}
+                          downloadingAttachments={downloadingAttachments}
+                          onDownload={handleDownload}
+                        />
+                        {/* Comments Section */}
+                        <div>
+                          <IssueCommentsSection
+                            issueId={issue._id}
+                            comments={issue.comments}
+                            commentCount={issue.commentCount}
+                            downloadingAttachments={downloadingAttachments}
+                            onDownload={handleDownload}
+                            onCommentAdded={fetchIssue}
+                          />
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
 
-                {/* Right Column - Comments */}
-                <IssueCommentsSection
-                  comments={issue.comments}
-                  commentCount={issue.commentCount}
-                  downloadingAttachments={downloadingAttachments}
-                  onDownload={handleDownload}
-                />
+                {/* Right Column - Issue Details (Assignee, Reporter, Dates, etc.) */}
+                <div className="w-[350px] min-w-[300px] min-h-0 overflow-y-auto bg-muted/10">
+                  <div className="px-6 sm:px-8 py-6 min-h-full">
+                    {!isEditing && (
+                      <IssueViewModeRight issue={issue as Issue} />
+                    )}
+                  </div>
+                </div>
               </div>
             </>
           ) : (
@@ -534,6 +542,7 @@ export function IssueDetailDialog({
               </DialogHeader>
             </>
           )}
+          </div>
         </DialogContent>
       </Dialog>
 

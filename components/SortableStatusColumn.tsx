@@ -370,6 +370,17 @@ export default function SortableStatusColumn({
         )}
       </div>
 
+      <div className="sticky top-0 z-10 bg-background border-b border-border/40 dark:border-border/60 px-3 py-2">
+        <Button
+          variant="outline"
+          className="w-full cursor-pointer border-dashed hover:border-primary/50 hover:bg-accent/50 gap-2 text-muted-foreground hover:text-primary"
+          onClick={() => setShowAddIssueDialog(true)}
+        >
+          <Plus className="w-4 h-4" />
+          Add Issue
+        </Button>
+      </div>
+
       {/* Issues List - Droppable area for cross-column dragging */}
       <StatusDroppable 
         statusId={status._id}
@@ -389,16 +400,6 @@ export default function SortableStatusColumn({
               />
             ))}
           </SortableContext>
-
-          {/* Add Issue Button */}
-          <Button
-            variant="outline"
-            className="w-full cursor-pointer border-dashed hover:border-primary/50 hover:bg-accent/50 gap-2 text-muted-foreground hover:text-primary"
-            onClick={() => setShowAddIssueDialog(true)}
-          >
-            <Plus className="w-4 h-4" />
-            Add Issue
-          </Button>
         </div>
       </StatusDroppable>
 
