@@ -17,6 +17,7 @@ interface IssueDetailHeaderProps {
   onCancelEdit: () => void;
   onSave: () => void;
   onDelete: () => void;
+  onClose: () => void;
   editTitle: string;
 }
 
@@ -30,6 +31,7 @@ export function IssueDetailHeader({
   onCancelEdit,
   onSave,
   onDelete,
+  onClose,
   editTitle,
 }: IssueDetailHeaderProps) {
   return (
@@ -90,6 +92,14 @@ export function IssueDetailHeader({
           </div>
           {!isEditing && (
             <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                className="gap-2 rounded-lg"
+              >
+                <span className="hidden sm:inline">Close</span>
+              </Button>
               {canEdit && (
                 <Button
                   variant="outline"
