@@ -8,7 +8,8 @@ import { Clock, User, Star } from "lucide-react"
 import { useAuth } from "@/lib/auth/AuthProvider"
 import { TabItem } from "@/components/TabItem"
 import { apiGet } from "@/lib/api/apiClient"
-import Loader from "@/components/Loader"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Item, ItemContent, ItemHeader, ItemTitle } from "@/components/ui/item"
 
 export function ForYouTabs() {
     const [tabsData, setTabsData] = useState<TabsData>({
@@ -60,12 +61,111 @@ export function ForYouTabs() {
         fetchTabsData()
     }, [user])
 
+    const TabItemSkeleton = () => (
+        <Item
+            variant="outline"
+            className="border-none rounded-xl"
+        >
+            <ItemContent>
+                <ItemHeader>
+                    <div className="flex items-start justify-between gap-2 w-full">
+                        <div className="flex-1 min-w-0 space-y-2">
+                            <Skeleton className="h-5 w-3/4" />
+                            <Skeleton className="h-3 w-20" />
+                        </div>
+                        <Skeleton className="h-5 w-16 rounded-md shrink-0" />
+                    </div>
+                </ItemHeader>
+                <div className="flex items-center justify-between gap-2 text-sm">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <Skeleton className="w-4 h-4 shrink-0" />
+                        <Skeleton className="h-4 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-8 shrink-0" />
+                </div>
+            </ItemContent>
+        </Item>
+    )
+
+    const TabsSkeleton = () => (
+        <div className="w-full">
+            <Tabs defaultValue="worked-on" className="w-full">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-col">
+                        <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Your Work</h2>
+                        <p className="text-sm text-muted-foreground">Track your tasks and projects</p>
+                    </div>
+                    <TabsList className="bg-muted/50 dark:bg-muted/20 border border-border/40 h-11 p-1 rounded-xl">
+                        <TabsTrigger
+                            value="worked-on"
+                            className="flex items-center gap-2 px-4 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all duration-200"
+                        >
+                            <Clock className="w-4 h-4" />
+                            <span className="font-medium text-sm hidden sm:inline">Worked on</span>
+                            <span className="font-medium text-sm sm:hidden">Recent</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="assigned"
+                            className="flex items-center gap-2 px-4 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all duration-200"
+                        >
+                            <User className="w-4 h-4" />
+                            <span className="font-medium text-sm hidden sm:inline">Assigned</span>
+                            <span className="font-medium text-sm sm:hidden">Mine</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="starred"
+                            className="flex items-center gap-2 px-4 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all duration-200"
+                        >
+                            <Star className="w-4 h-4" />
+                            <span className="font-medium text-sm">Starred</span>
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
+
+                <TabsContent value="worked-on" className="mt-0">
+                    <div className="bg-card dark:bg-card/50 rounded-2xl border border-border/40 p-2">
+                        <ItemGroup className="gap-0">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <Fragment key={i}>
+                                    <TabItemSkeleton />
+                                    {i < 5 && <ItemSeparator />}
+                                </Fragment>
+                            ))}
+                        </ItemGroup>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="assigned" className="mt-0">
+                    <div className="bg-card dark:bg-card/50 rounded-2xl border border-border/40 p-2">
+                        <ItemGroup className="gap-0">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <Fragment key={i}>
+                                    <TabItemSkeleton />
+                                    {i < 5 && <ItemSeparator />}
+                                </Fragment>
+                            ))}
+                        </ItemGroup>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="starred" className="mt-0">
+                    <div className="bg-card dark:bg-card/50 rounded-2xl border border-border/40 p-2">
+                        <ItemGroup className="gap-0">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <Fragment key={i}>
+                                    <TabItemSkeleton />
+                                    {i < 5 && <ItemSeparator />}
+                                </Fragment>
+                            ))}
+                        </ItemGroup>
+                    </div>
+                </TabsContent>
+            </Tabs>
+        </div>
+    )
+
     if (isLoading) {
-        return (
-            <div className="w-full text-center py-16 bg-card dark:bg-card/50 rounded-2xl border border-border/40">
-                <Loader size="md" hue={300} />
-            </div>
-        )
+        return <TabsSkeleton />
     }
 
     return (
