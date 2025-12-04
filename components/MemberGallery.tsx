@@ -75,7 +75,7 @@ export default function MemberGallery({
 
   const scroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
-      const scrollAmount = 400;
+      const scrollAmount = 320; // Reduced to match smaller card size
       const newScrollLeft =
         direction === "left"
           ? scrollContainerRef.current.scrollLeft - scrollAmount
@@ -104,10 +104,10 @@ export default function MemberGallery({
         {showLeftArrow && (
           <button
             onClick={() => scroll("left")}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-background/90 hover:bg-background border border-border rounded-full p-3 shadow-lg transition-all duration-300 hover:scale-110"
+            className="absolute left-1 top-1/2 -translate-y-1/2 z-20 bg-background/90 hover:bg-background border border-border rounded-full p-2 shadow-lg transition-all duration-300 hover:scale-110"
             aria-label="Scroll left"
           >
-            <ChevronLeft className="w-6 h-6 text-foreground" />
+            <ChevronLeft className="w-5 h-5 text-foreground" />
           </button>
         )}
 
@@ -115,10 +115,10 @@ export default function MemberGallery({
         {showRightArrow && (
           <button
             onClick={() => scroll("right")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-background/90 hover:bg-background border border-border rounded-full p-3 shadow-lg transition-all duration-300 hover:scale-110"
+            className="absolute right-1 top-1/2 -translate-y-1/2 z-20 bg-background/90 hover:bg-background border border-border rounded-full p-2 shadow-lg transition-all duration-300 hover:scale-110"
             aria-label="Scroll right"
           >
-            <ChevronRight className="w-6 h-6 text-foreground" />
+            <ChevronRight className="w-5 h-5 text-foreground" />
           </button>
         )}
 
@@ -126,16 +126,16 @@ export default function MemberGallery({
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex gap-6 overflow-x-auto scroll-smooth scrollbar-hide"
+          className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide"
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",
-            paddingTop: "3rem",
-            paddingBottom: "3rem",
-            paddingLeft: "2rem",
-            paddingRight: "2rem",
-            marginTop: "-3rem",
-            marginBottom: "-3rem",
+            paddingTop: "2rem",
+            paddingBottom: "2rem",
+            paddingLeft: "1.5rem",
+            paddingRight: "1.5rem",
+            marginTop: "-2rem",
+            marginBottom: "-2rem",
           }}
         >
           {members.map((member, index) => (
@@ -148,13 +148,13 @@ export default function MemberGallery({
                   ? "scale-95 opacity-70"
                   : "scale-100"
               }`}
-              style={{ width: "250px" }}
+              style={{ width: "200px" }}
               onClick={() => handleMemberClick(member.id)}
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
               {/* Card */}
-              <div className="relative bg-card rounded-2xl overflow-hidden shadow-lg border border-border hover:border-primary transition-all duration-300">
+              <div className="relative bg-card rounded-xl overflow-hidden shadow-lg border border-border hover:border-primary transition-all duration-300">
                 {/* Avatar Container */}
                 <div className="relative w-full aspect-square bg-linear-to-br from-primary/20 to-purple-500/20 flex items-center justify-center overflow-hidden">
                   {member.avatar ? (
@@ -181,14 +181,14 @@ export default function MemberGallery({
                 </div>
 
                 {/* Member Info */}
-                <div className="p-4 bg-card">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <h3 className="font-semibold text-lg text-foreground truncate">
+                <div className="p-3 bg-card">
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <h3 className="font-semibold text-base text-foreground truncate flex-1">
                       {member.name}
                     </h3>
                     {shouldShowBadge(member) && (
                       <span
-                        className={`shrink-0 text-xs px-2 py-1 rounded-full border flex items-center gap-1 ${getRoleColor(
+                        className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${getRoleColor(
                           showOnlyAdminBadge ? "admin" : member.role
                         )}`}
                       >
@@ -198,17 +198,17 @@ export default function MemberGallery({
                     )}
                   </div>
                   {member.email && (
-                    <p className="text-sm text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
                       {member.email}
                     </p>
                   )}
                 </div>
 
                 {/* Hover Effect - Arrow */}
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="bg-primary text-primary-foreground rounded-full p-2">
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="bg-primary text-primary-foreground rounded-full p-1.5">
                     <svg
-                      className="w-4 h-4"
+                      className="w-3.5 h-3.5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"

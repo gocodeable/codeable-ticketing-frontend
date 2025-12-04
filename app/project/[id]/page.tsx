@@ -14,13 +14,15 @@ import {
   Settings,
   Crown,
   Edit,
+  Pin,
+  PinOff,
 } from "lucide-react";
 import { Project } from "@/types/project";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { ProjectPageSkeleton } from "@/components/ProjectPageSkeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiGet } from "@/lib/api/apiClient";
+import { apiGet, apiPost, apiDelete } from "@/lib/api/apiClient";
 import { Members } from "@/components/Members";
 import ProjectInfo from "@/components/ProjectInfo";
 import ProjectBoard from "@/components/ProjectBoard";
@@ -74,6 +76,8 @@ export default function ProjectPage({
   const [isUpdateSheetOpen, setIsUpdateSheetOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [issueCount, setIssueCount] = useState<number | undefined>(undefined);
+  const [isPinned, setIsPinned] = useState(false);
+  const [isTogglingPin, setIsTogglingPin] = useState(false);
   const fetchProject = async () => {
     try {
       setIsLoading(true);
@@ -116,6 +120,78 @@ export default function ProjectPage({
   useEffect(() => {
     fetchProject();
   }, [id, user]);
+
+  // Check pin status when project is loaded
+  useEffect(() => {
+    const checkPinStatus = async () => {
+      if (!id || !user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/pinned-projects/${id}/status`;
+        const response = await apiGet(apiUrl, idToken);
+
+        if (response.ok) {
+          const data = await response.json();
+          setIsPinned(data.data?.isPinned || false);
+        }
+      } catch (err) {
+        console.error("Error checking pin status:", err);
+      }
+    };
+
+    if (project) {
+      checkPinStatus();
+    }
+  }, [id, user, project]);
+
+  const handleTogglePin = async () => {
+    if (!id || !user || isTogglingPin) return;
+
+    try {
+      setIsTogglingPin(true);
+      const idToken = await user.getIdToken();
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/pinned-projects`;
+
+      if (isPinned) {
+        // Unpin the project
+        const response = await apiDelete(
+          `${apiUrl}/${id}`,
+          idToken
+        );
+
+        if (response.ok) {
+          setIsPinned(false);
+          toast.success("Project unpinned");
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to unpin project");
+        }
+      } else {
+        // Pin the project
+        const response = await apiPost(
+          apiUrl,
+          { projectId: id },
+          idToken
+        );
+
+        if (response.ok) {
+          setIsPinned(true);
+          toast.success("Project pinned");
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to pin project");
+        }
+      }
+    } catch (err) {
+      console.error("Error toggling pin:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to toggle pin status"
+      );
+    } finally {
+      setIsTogglingPin(false);
+    }
+  };
 
   const handleUpdateSuccess = () => {
     toast.success("Project updated successfully");
@@ -234,6 +310,26 @@ export default function ProjectPage({
                 </div>
               </div>
             </div>
+            <Button
+              variant={isPinned ? "default" : "outline"}
+              size="sm"
+              onClick={handleTogglePin}
+              disabled={isTogglingPin}
+              className="shrink-0"
+              title={isPinned ? "Unpin project" : "Pin project"}
+            >
+              {isPinned ? (
+                <>
+                  <PinOff className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Unpin</span>
+                </>
+              ) : (
+                <>
+                  <Pin className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Pin</span>
+                </>
+              )}
+            </Button>
           </div>
         </motion.div>
 
@@ -366,6 +462,7 @@ export default function ProjectPage({
                           avatar: m.avatar,
                           role: m.role,
                         }))}
+                        adminList={Array.isArray(project.admin) ? project.admin : []}
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center py-12 text-center">
