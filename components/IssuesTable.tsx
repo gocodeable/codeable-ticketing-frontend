@@ -29,6 +29,7 @@ import {
   getReporterUid,
   getAssigneeUid,
 } from "@/utils/issueUtils";
+import { PriorityIcon } from "@/components/PriorityIcon";
 
 const INITIAL_LIMIT = 10;
 const LOAD_MORE_LIMIT = 10;
@@ -653,11 +654,11 @@ export default function IssuesTable({
                     <TableCell className="py-4">
                       <span
                         className={cn(
-                          "inline-flex items-center text-xs px-2.5 py-1.5 rounded-md border font-semibold uppercase tracking-wide",
+                          "inline-flex items-center justify-center px-2.5 py-1.5 rounded-md border",
                           getPriorityColor(issue.priority || "medium")
                         )}
                       >
-                        {issue.priority || "medium"}
+                        <PriorityIcon priority={issue.priority || "medium"} />
                       </span>
                     </TableCell>
                     <TableCell className="py-4">

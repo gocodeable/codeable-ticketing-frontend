@@ -372,11 +372,11 @@ export default function ProfilePage({
             {/* Name Field */}
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-medium">
-                Name <span className="text-destructive">*</span>
+                Full Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
-                placeholder="Enter your name"
+                placeholder="Enter your full name"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })

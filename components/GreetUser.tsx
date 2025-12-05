@@ -29,23 +29,23 @@ export function GreetUser() {
       <div className="absolute top-0 right-0 w-72 h-72 bg-primary/10 dark:bg-primary/20 rounded-full blur-3xl opacity-50" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 dark:bg-accent/20 rounded-full blur-3xl opacity-30" />
 
-      <div className="relative p-8 md:p-10 lg:p-12">
-        <div className="flex flex-col gap-5">
+      <div className="relative p-5 md:p-6 lg:p-7">
+        <div className="flex flex-col gap-3">
           {/* Date badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 w-fit backdrop-blur-sm">
-            <Sparkles className="w-4 h-4 text-primary dark:text-primary/90" />
-            <span className="text-sm font-semibold text-primary dark:text-primary/90 tracking-wide">{displayDate}</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 w-fit backdrop-blur-sm">
+            <Sparkles className="w-3.5 h-3.5 text-primary dark:text-primary/90" />
+            <span className="text-xs font-semibold text-primary dark:text-primary/90 tracking-wide">{displayDate}</span>
           </div>
 
           {/* Greeting */}
-          <div className="space-y-3">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
+          <div className="space-y-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
               {greeting},{" "}
               <span className="bg-linear-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
                 {displayName}
               </span>
             </h1>
-            <p className="text-base sm:text-lg text-muted-foreground font-medium max-w-2xl">
+            <p className="text-sm sm:text-base text-muted-foreground font-medium max-w-2xl">
               Ready to tackle your tasks and make today productive?
             </p>
           </div>

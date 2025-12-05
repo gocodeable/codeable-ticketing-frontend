@@ -15,6 +15,7 @@ import { Search, X, Check, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/utils/issueUtils";
+import { PriorityIcon } from "@/components/PriorityIcon";
 
 interface AssigneeInfo {
   uid: string;
@@ -134,37 +135,46 @@ export default function IssuesFilterBar({
       {/* Priority Filter */}
       <Select value={priorityFilter} onValueChange={onPriorityChange}>
         <SelectTrigger className="w-full sm:w-[160px] h-10 bg-background border-border/60 dark:border-border/40 shadow-sm">
-          <SelectValue placeholder="All Priorities" />
+          <SelectValue placeholder="All Priorities">
+            {priorityFilter === "all" ? (
+              "All Priorities"
+            ) : (
+              <span className="flex items-center gap-2 capitalize">
+                <PriorityIcon priority={priorityFilter} />
+                {priorityFilter}
+              </span>
+            )}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Priorities</SelectItem>
           <SelectItem value="highest">
             <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <PriorityIcon priority="highest" className="text-red-500" />
               Highest
             </span>
           </SelectItem>
           <SelectItem value="high">
             <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-orange-500" />
+              <PriorityIcon priority="high" className="text-orange-500" />
               High
             </span>
           </SelectItem>
           <SelectItem value="medium">
             <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-yellow-500" />
+              <PriorityIcon priority="medium" className="text-yellow-600 dark:text-yellow-500" />
               Medium
             </span>
           </SelectItem>
           <SelectItem value="low">
             <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <PriorityIcon priority="low" className="text-blue-500" />
               Low
             </span>
           </SelectItem>
           <SelectItem value="lowest">
             <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-gray-400" />
+              <PriorityIcon priority="lowest" className="text-gray-500" />
               Lowest
             </span>
           </SelectItem>

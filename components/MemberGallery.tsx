@@ -180,47 +180,29 @@ export default function MemberGallery({
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
                 </div>
 
+                {shouldShowBadge(member) && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <span
+                      className={`text-xs px-1.5 py-0.5 rounded-full border flex items-center gap-1 shadow-sm backdrop-blur-sm ${getRoleColor(
+                        showOnlyAdminBadge ? "admin" : member.role
+                      )}`}
+                    >
+                      {getRoleIcon(showOnlyAdminBadge ? "admin" : member.role)}
+                      {getRoleLabel(showOnlyAdminBadge ? "admin" : member.role)}
+                    </span>
+                  </div>
+                )}
+
                 {/* Member Info */}
                 <div className="p-3 bg-card">
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <h3 className="font-semibold text-base text-foreground truncate flex-1">
-                      {member.name}
-                    </h3>
-                    {shouldShowBadge(member) && (
-                      <span
-                        className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${getRoleColor(
-                          showOnlyAdminBadge ? "admin" : member.role
-                        )}`}
-                      >
-                        {getRoleIcon(showOnlyAdminBadge ? "admin" : member.role)}
-                        {getRoleLabel(showOnlyAdminBadge ? "admin" : member.role)}
-                      </span>
-                    )}
-                  </div>
+                  <h3 className="font-semibold text-base text-foreground truncate mb-1.5">
+                    {member.name}
+                  </h3>
                   {member.email && (
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    <p className="text-xs text-muted-foreground truncate">
                       {member.email}
                     </p>
                   )}
-                </div>
-
-                {/* Hover Effect - Arrow */}
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="bg-primary text-primary-foreground rounded-full p-1.5">
-                    <svg
-                      className="w-3.5 h-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M14 5l7 7m0 0l-7 7m7-7H3"
-                      />
-                    </svg>
-                  </div>
                 </div>
               </div>
             </div>

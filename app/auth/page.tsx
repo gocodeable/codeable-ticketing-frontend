@@ -19,7 +19,8 @@ export default function AuthPage() {
     }
   }, [user, loading, authOperationInProgress, router])
 
-  if (loading || authOperationInProgress) {
+  // Only show spinner for initial auth state check, not during login/signup operations
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <AuthPageSpinner />

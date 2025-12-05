@@ -6,6 +6,7 @@ import { Issue } from "@/types/issue";
 import { Pencil, Trash2, X, Check, Loader2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTypeColor, getPriorityColor } from "../utils/issueUtils";
+import { PriorityIcon } from "@/components/PriorityIcon";
 
 interface IssueDetailHeaderProps {
   issue: Issue;
@@ -63,11 +64,11 @@ export function IssueDetailHeader({
                   )}
                   <span
                     className={cn(
-                      "text-xs font-medium px-2.5 py-1 rounded-md border",
+                      "inline-flex items-center font-medium px-2.5 py-1 rounded-md border",
                       getPriorityColor(issue.priority || "medium")
                     )}
                   >
-                    {(issue.priority || "medium").toUpperCase()}
+                    <PriorityIcon priority={issue.priority || "medium"} />
                   </span>
                 </div>
                 <DialogTitle className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 text-foreground">
