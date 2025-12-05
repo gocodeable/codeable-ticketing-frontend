@@ -12,6 +12,30 @@ interface TeamCardProps {
 
 const MAX_VISIBLE_AVATARS = 5
 
+// Helper function to strip HTML tags and get plain text (explicitly removes images)
+const stripHtmlTags = (html: string): string => {
+    if (!html) return "";
+    // First, explicitly remove image tags (including self-closing and with attributes)
+    let text = html
+        .replace(/<img[^>]*>/gi, '') // Remove <img> tags (self-closing)
+        .replace(/<img[^>]*\/>/gi, '') // Remove <img /> tags
+        .replace(/<\/img>/gi, ''); // Remove closing </img> tags (if any)
+    
+    // Then remove all other HTML tags
+    text = text
+        .replace(/<[^>]*>/g, '') // Remove all remaining HTML tags
+        .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+        .replace(/&amp;/g, '&') // Replace &amp; with &
+        .replace(/&lt;/g, '<') // Replace &lt; with <
+        .replace(/&gt;/g, '>') // Replace &gt; with >
+        .replace(/&quot;/g, '"') // Replace &quot; with "
+        .replace(/&#39;/g, "'") // Replace &#39; with '
+        .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+        .trim();
+    
+    return text;
+};
+
 export default function TeamCard({ team, i }: TeamCardProps) {
     const members = team.members || []
     const visibleMembers = members.slice(0, MAX_VISIBLE_AVATARS)
@@ -50,7 +74,7 @@ export default function TeamCard({ team, i }: TeamCardProps) {
                                     {team.name}
                                 </h3>
                                 <p className="text-xs text-muted-foreground line-clamp-2">
-                                    {team.description}
+                                    {team.description ? stripHtmlTags(team.description) : "No description"}
                                 </p>
                             </div>
                         </div>
