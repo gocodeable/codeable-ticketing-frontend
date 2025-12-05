@@ -13,6 +13,8 @@ export interface Comment {
   authorId: string | CommentAuthor;
   message: string;
   attachments?: Attachment[];
+  parentCommentId?: string | null;
+  replies?: Comment[];
   author?: CommentAuthor;
   createdAt?: string;
   updatedAt?: string;

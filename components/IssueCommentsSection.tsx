@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Comment } from "@/types/comment";
-import { MessageCircle, File, Download, Loader2, Play, Upload, Trash2, X, Paperclip, Edit2 } from "lucide-react";
+import { MessageCircle, File, Download, Loader2, Play, Upload, Trash2, X, Paperclip, Edit2, Reply } from "lucide-react";
 import Image from "next/image";
 import { DEFAULT_AVATAR } from "@/lib/constants";
 import { format } from "date-fns";
@@ -57,6 +57,18 @@ export function IssueCommentsSection({
   const [deleteCommentId, setDeleteCommentId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [replyAttachments, setReplyAttachments] = useState<
+    Array<{
+      file: File;
+      url?: string;
+      uploading: boolean;
+      error?: string;
+    }>
+  >([]);
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [showReplyAttachments, setShowReplyAttachments] = useState(false);
   const commentContentRef = useRef<HTMLDivElement>(null);
 
   const handleMediaClick = (attachment: { link: string; fileName: string }) => {
@@ -278,6 +290,78 @@ export function IssueCommentsSection({
     }
   };
 
+  const handleReplyToComment = (commentId: string) => {
+    setReplyingToCommentId(commentId);
+    setReplyMessage("");
+    setReplyAttachments([]);
+    setShowReplyAttachments(false);
+  };
+
+  const handleCancelReply = () => {
+    setReplyingToCommentId(null);
+    setReplyMessage("");
+    setReplyAttachments([]);
+    setShowReplyAttachments(false);
+  };
+
+  const handleSubmitReply = async (parentCommentId: string) => {
+    const textContent = replyMessage.replace(/<[^>]*>/g, "").trim();
+    
+    if (!textContent && replyAttachments.length === 0) {
+      toast.error("Please enter a reply or attach a file");
+      return;
+    }
+
+    if (!user) {
+      toast.error("You must be logged in to reply");
+      return;
+    }
+
+    setIsSubmittingReply(true);
+
+    try {
+      const idToken = await user.getIdToken();
+
+      const attachments = replyAttachments
+        .filter((att) => att.url && !att.error)
+        .map((att) => ({
+          link: att.url!,
+          fileName: att.file.name,
+        }));
+
+      const response = await apiPost(
+        "/api/comments",
+        {
+          issueId,
+          message: replyMessage.trim() || " ",
+          attachments,
+          parentCommentId,
+        },
+        idToken
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("Reply added successfully");
+        setReplyingToCommentId(null);
+        setReplyMessage("");
+        setReplyAttachments([]);
+        setShowReplyAttachments(false);
+        if (onCommentAdded) {
+          onCommentAdded();
+        }
+      } else {
+        toast.error(data.error || "Failed to add reply");
+      }
+    } catch (error) {
+      console.error("Error adding reply:", error);
+      toast.error("Failed to add reply");
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  };
+
   const handleDeleteComment = (commentId: string) => {
     if (!user) {
       toast.error("You must be logged in to delete comments");
@@ -473,7 +557,7 @@ export function IssueCommentsSection({
                             >
                               <X className="w-3 h-3" />
                             </Button>
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-1.5">
+                            <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-1.5">
                               <p className="text-[10px] text-white truncate font-medium leading-tight">
                                 {attachment.file.name}
                               </p>
@@ -533,12 +617,14 @@ export function IssueCommentsSection({
             </div>
           </form>
           {comments && comments.length > 0 ? (
-            <div className="space-y-3">
-              {comments.map((comment) => (
-                <div
-                  key={comment._id}
-                  className="p-4 rounded-lg border border-border/40 dark:border-border/60 bg-muted/30"
-                >
+            <div className="space-y-4">
+              {comments.filter(c => !c.parentCommentId).map((comment) => {
+                const replyCount = comments.filter(c => c.parentCommentId === comment._id).length;
+                return (
+                <div key={comment._id} className="space-y-0">
+                  {/* Main Comment - More prominent styling */}
+                  <div className="p-4 rounded-lg border-2 border-border/50 dark:border-border/70 bg-card shadow-sm">
+                
                   <div className="flex items-start gap-3 mb-3">
                     {(() => {
                       const author =
@@ -733,7 +819,7 @@ export function IssueCommentsSection({
                                           {isImage ? 'View' : 'Play'}
                                         </div>
                                       </div>
-                                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-1.5">
+                                      <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-1.5">
                                         <p className="text-[10px] text-white truncate font-medium leading-tight">
                                           {attachment.fileName}
                                         </p>
@@ -798,10 +884,302 @@ export function IssueCommentsSection({
                       })()}
                     </div>
                       )}
+                      {/* Reply Button with count */}
+                      {!editingCommentId && (
+                        <div className="ml-12 mt-3 flex items-center gap-3">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                            onClick={() => handleReplyToComment(comment._id)}
+                            disabled={replyingToCommentId === comment._id}
+                          >
+                            <Reply className="h-3 w-3 mr-1" />
+                            Reply
+                          </Button>
+                          {replyCount > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
+                  </div>
+
+                  {/* Reply Form */}
+                  {replyingToCommentId === comment._id && (
+                    <div className="ml-12 mt-3 p-3 rounded-lg border border-border/40 dark:border-border/60 bg-background">
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <RichTextEditor
+                            value={replyMessage}
+                            onChange={setReplyMessage}
+                            placeholder="Write a reply..."
+                            disabled={isSubmittingReply}
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCancelReply}
+                            disabled={isSubmittingReply}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleSubmitReply(comment._id)}
+                            disabled={isSubmittingReply || !replyMessage.replace(/<[^>]*>/g, "").trim()}
+                          >
+                            {isSubmittingReply ? "Replying..." : "Reply"}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Nested Replies - Enhanced Visual Hierarchy */}
+                  {replyCount > 0 && (
+                    <div className="relative">
+                      {/* Visual Thread Connector */}
+                      <div className="absolute left-[42px] top-0 bottom-0 w-0.5 bg-linear-to-b from-primary/40 via-primary/20 to-transparent" />
+                      
+                      <div className="ml-12 mt-0 pt-3 space-y-3 pl-6 relative">
+                        {/* Replies Header */}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                          <div className="h-px flex-1 bg-border" />
+                          <span className="px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                            {replyCount} {replyCount === 1 ? 'Reply' : 'Replies'}
+                          </span>
+                          <div className="h-px flex-1 bg-border" />
+                        </div>
+
+                        {comments.filter(c => c.parentCommentId === comment._id).map((reply, index) => {
+                          const parentAuthor = comment.author || (typeof comment.authorId === "object" ? comment.authorId : null);
+                          const isLastReply = index === replyCount - 1;
+                          return (
+                          <div key={reply._id} className="relative">
+                            {/* Thread connector line to reply */}
+                            <div className="absolute -left-6 top-5 w-6 h-0.5 bg-primary/30" />
+                            
+                            <div
+                              className="p-3 rounded-lg border border-primary/20 dark:border-primary/30 bg-primary/5 dark:bg-primary/5 hover:border-primary/40 transition-colors"
+                            >
+                              {/* Reply Context Badge - More prominent */}
+                              <div className="mb-2 flex items-center gap-2 pb-2 border-b border-border/30">
+                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
+                                  <Reply className="h-3 w-3 text-primary" />
+                                  <span className="text-xs font-medium text-primary">
+                                    Reply to
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="relative h-5 w-5 rounded-full overflow-hidden ring-1 ring-primary/30">
+                                    <Image
+                                      src={parentAuthor?.avatar || DEFAULT_AVATAR}
+                                      alt={parentAuthor?.name || "User"}
+                                      width={20}
+                                      height={20}
+                                      className="rounded-full object-cover"
+                                    />
+                                  </div>
+                                  <span className="text-xs font-semibold text-foreground">
+                                    {parentAuthor?.name || "Unknown User"}
+                                  </span>
+                                </div>
+                              </div>
+
+                          <div className="flex items-start gap-3 mb-2">
+                            {(() => {
+                              const author =
+                                reply.author ||
+                                (typeof reply.authorId === "object"
+                                  ? reply.authorId
+                                  : null);
+                              const isOwner = user && author && 'uid' in author && author.uid === user.uid;
+                              return author ? (
+                                <>
+                                  <div className="relative h-8 w-8 rounded-full overflow-hidden ring-2 ring-background shrink-0">
+                                    <Image
+                                      src={author.avatar || DEFAULT_AVATAR}
+                                      alt={author.name || "User"}
+                                      width={32}
+                                      height={32}
+                                      className="rounded-full object-cover"
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold">
+                                      {author.name || "Unknown User"}
+                                    </p>
+                                    {reply.createdAt && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {format(new Date(reply.createdAt), "PPP 'at' p")}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {isOwner && (
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                        onClick={() => handleEditComment(reply)}
+                                        title="Edit reply"
+                                        disabled={editingCommentId === reply._id}
+                                      >
+                                        <Edit2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                        onClick={() => handleDeleteComment(reply._id)}
+                                        title="Delete reply"
+                                        disabled={editingCommentId === reply._id}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </>
+                              ) : null;
+                            })()}
+                          </div>
+                          
+                          {editingCommentId === reply._id ? (
+                            <EditCommentForm
+                              comment={reply}
+                              onSave={handleEditSave}
+                              onCancel={handleEditCancel}
+                            />
+                          ) : (
+                            <>
+                              <div
+                                className="text-sm text-foreground leading-relaxed ml-11 rich-text-content"
+                                dangerouslySetInnerHTML={{ __html: reply.message }}
+                              />
+                              {reply.attachments && reply.attachments.length > 0 && (
+                                <div className="mt-2 ml-11 space-y-2">
+                                  {(() => {
+                                    const mediaFiles = reply.attachments.filter(att => isImageFile(att.fileName) || isVideoFile(att.fileName));
+                                    const nonMediaFiles = reply.attachments.filter(att => !isImageFile(att.fileName) && !isVideoFile(att.fileName));
+                                    
+                                    return (
+                                      <>
+                                        {mediaFiles.length > 0 && (
+                                          <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 gap-1.5">
+                                            {mediaFiles.map((attachment, index) => {
+                                              const attachmentId = `${reply._id}-media-${index}`;
+                                              const isDownloading = downloadingAttachments.has(attachmentId);
+                                              const isImage = isImageFile(attachment.fileName);
+
+                                              return (
+                                                <div
+                                                  key={index}
+                                                  className="relative group rounded-lg border border-border/30 bg-muted/20 overflow-hidden cursor-pointer hover:border-primary/50 transition-all aspect-square"
+                                                  onClick={() => handleMediaClick(attachment)}
+                                                >
+                                                  {isImage ? (
+                                                    <Image
+                                                      src={attachment.link}
+                                                      alt={attachment.fileName}
+                                                      fill
+                                                      className="object-cover"
+                                                      unoptimized
+                                                    />
+                                                  ) : (
+                                                    <>
+                                                      <video
+                                                        src={attachment.link}
+                                                        className="w-full h-full object-cover"
+                                                        muted
+                                                        playsInline
+                                                      />
+                                                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                                        <Play className="w-4 h-4 text-white" />
+                                                      </div>
+                                                    </>
+                                                  )}
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="absolute top-1 right-1 h-5 w-5 bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      onDownload(attachment, attachmentId);
+                                                    }}
+                                                    disabled={isDownloading}
+                                                  >
+                                                    {isDownloading ? (
+                                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                                    ) : (
+                                                      <Download className="w-3 h-3" />
+                                                    )}
+                                                  </Button>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+
+                                        {nonMediaFiles.length > 0 && (
+                                          <div className="space-y-1">
+                                            {nonMediaFiles.map((attachment, index) => {
+                                              const attachmentId = `${reply._id}-file-${index}`;
+                                              const isDownloading = downloadingAttachments.has(attachmentId);
+                                              return (
+                                                <div
+                                                  key={index}
+                                                  className="flex items-center gap-2 p-2 rounded-lg border border-border/30 bg-background/50"
+                                                >
+                                                  <File className="h-3 w-3 text-muted-foreground shrink-0" />
+                                                  <span className="text-xs truncate flex-1 font-medium">
+                                                    {attachment.fileName}
+                                                  </span>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => onDownload(attachment, attachmentId)}
+                                                    disabled={isDownloading}
+                                                    className="h-6 px-2 rounded-md shrink-0"
+                                                  >
+                                                    {isDownloading ? (
+                                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                                    ) : (
+                                                      <Download className="w-3 h-3" />
+                                                    )}
+                                                  </Button>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              )}
+                            </>
+                          )}
+                            </div>
+                          </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
+              );
+              })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">No comments yet</p>
