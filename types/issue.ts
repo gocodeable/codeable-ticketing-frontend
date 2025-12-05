@@ -36,4 +36,5 @@ export interface Issue {
   position?: number;
   createdAt?: string;
   updatedAt?: string;
+  isStarred?: boolean;
 }

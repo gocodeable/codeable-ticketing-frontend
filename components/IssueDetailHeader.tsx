@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Issue } from "@/types/issue";
-import { Pencil, Trash2, X, Check, Loader2 } from "lucide-react";
+import { Pencil, Trash2, X, Check, Loader2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTypeColor, getPriorityColor } from "../utils/issueUtils";
 
@@ -19,6 +19,9 @@ interface IssueDetailHeaderProps {
   onDelete: () => void;
   onClose: () => void;
   editTitle: string;
+  isStarred?: boolean;
+  togglingStar?: boolean;
+  onToggleStar?: () => void;
 }
 
 export function IssueDetailHeader({
@@ -33,6 +36,9 @@ export function IssueDetailHeader({
   onDelete,
   onClose,
   editTitle,
+  isStarred = false,
+  togglingStar = false,
+  onToggleStar,
 }: IssueDetailHeaderProps) {
   return (
     <div className="relative bg-gradient-to-br from-muted/50 via-background to-muted/30 border-b border-border/40 dark:border-border/60">
@@ -92,6 +98,29 @@ export function IssueDetailHeader({
           </div>
           {!isEditing && (
             <div className="flex items-center gap-2 shrink-0">
+              {onToggleStar && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onToggleStar}
+                  disabled={togglingStar}
+                  className="h-9 w-9 rounded-lg"
+                  title={isStarred ? "Unstar issue" : "Star issue"}
+                >
+                  {togglingStar ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <Star
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        isStarred
+                          ? "fill-yellow-500 text-yellow-500"
+                          : "text-muted-foreground hover:text-yellow-500"
+                      )}
+                    />
+                  )}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"

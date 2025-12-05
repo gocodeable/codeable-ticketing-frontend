@@ -11,9 +11,8 @@ import {
 import { Issue, Attachment } from "@/types/issue";
 import { Comment } from "@/types/comment";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { apiGet, apiPatch, apiDelete } from "@/lib/api/apiClient";
+import { apiGet, apiPatch, apiDelete, apiPost } from "@/lib/api/apiClient";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { uploadMediaToStorage } from "@/lib/firebase/uploadMedia";
 import { UserSuggestion } from "@/components/UserSelector";
@@ -59,6 +58,8 @@ export function IssueDetailDialog({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isStarred, setIsStarred] = useState(false);
+  const [togglingStar, setTogglingStar] = useState(false);
   
   // Edit form state
   const [editTitle, setEditTitle] = useState("");
@@ -92,10 +93,12 @@ export function IssueDetailDialog({
   useEffect(() => {
     if (open && issueId && user) {
       fetchIssue();
+      fetchStarStatus();
       setIsEditing(false);
     } else {
       setIssue(null);
       setIsEditing(false);
+      setIsStarred(false);
     }
   }, [open, issueId, user]);
 
@@ -145,6 +148,70 @@ export function IssueDetailDialog({
       onOpenChange(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStarStatus = async () => {
+    if (!issueId || !user) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await apiGet(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/starred-issues/${issueId}/status`,
+        idToken
+      );
+      const data = await response.json();
+
+      if (data.success) {
+        setIsStarred(data.data?.isStarred || false);
+      }
+    } catch (error) {
+      console.error("Error fetching star status:", error);
+      // Don't show error toast, just silently fail
+    }
+  };
+
+  const handleToggleStar = async () => {
+    if (!user || !issueId || togglingStar) return;
+
+    setTogglingStar(true);
+
+    try {
+      const idToken = await user.getIdToken();
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/starred-issues`;
+
+      if (isStarred) {
+        // Unstar the issue
+        const response = await apiDelete(`${apiUrl}/${issueId}`, idToken);
+        if (response.ok) {
+          setIsStarred(false);
+          toast.success("Issue unstarred");
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to unstar issue");
+        }
+      } else {
+        // Star the issue
+        const response = await apiPost(
+          apiUrl,
+          { issueId },
+          idToken
+        );
+        if (response.ok) {
+          setIsStarred(true);
+          toast.success("Issue starred");
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to star issue");
+        }
+      }
+    } catch (err) {
+      console.error("Error toggling star:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to toggle star status"
+      );
+    } finally {
+      setTogglingStar(false);
     }
   };
 
@@ -461,6 +528,9 @@ export function IssueDetailDialog({
                   onDelete={handleDeleteClick}
                   onClose={() => onOpenChange(false)}
                   editTitle={editTitle}
+                  isStarred={isStarred}
+                  togglingStar={togglingStar}
+                  onToggleStar={handleToggleStar}
                 />
               </div>
 
