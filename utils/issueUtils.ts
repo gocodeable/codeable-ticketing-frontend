@@ -44,6 +44,42 @@ export const getPriorityColor = (priority: string): string => {
   }
 };
 
+export const getPriorityIconName = (priority: string): "ChevronsUp" | "ChevronUp" | "Equal" | "ChevronDown" | "ChevronsDown" => {
+  const p = priority || "medium";
+  switch (p.toLowerCase()) {
+    case "highest":
+      return "ChevronsUp";
+    case "high":
+      return "ChevronUp";
+    case "medium":
+      return "Equal";
+    case "low":
+      return "ChevronDown";
+    case "lowest":
+      return "ChevronsDown";
+    default:
+      return "Equal";
+  }
+};
+
+export const getPriorityLabel = (priority: string): string => {
+  const p = priority || "medium";
+  switch (p.toLowerCase()) {
+    case "highest":
+      return "Highest";
+    case "high":
+      return "High";
+    case "medium":
+      return "Medium";
+    case "low":
+      return "Low";
+    case "lowest":
+      return "Lowest";
+    default:
+      return "Medium";
+  }
+};
+
 export const getStatusColor = (statusColor?: string): string => {
   const color = statusColor || "gray";
   switch (color.toLowerCase()) {

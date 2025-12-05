@@ -3,6 +3,8 @@ import { Badge } from "./ui/badge"
 import type { TabItem as TabItemType } from "@/types/tabitem"
 import { KanbanIcon, MessageSquare } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { getPriorityColor } from "@/utils/issueUtils"
+import { PriorityIcon } from "@/components/PriorityIcon"
 
 interface TabItemProps {
     item: TabItemType
@@ -10,29 +12,6 @@ interface TabItemProps {
 
 export function TabItem({ item }: TabItemProps) {
     const router = useRouter()
-
-    const priorityConfig = {
-        low: {
-            className: "bg-slate-50 text-slate-700 dark:bg-slate-900/50 dark:text-slate-400 border-slate-200 dark:border-slate-800/50",
-            label: "Low"
-        },
-        medium: {
-            className: "bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400 border-orange-200 dark:border-orange-800/50",
-            label: "Medium"
-        },
-        high: {
-            className: "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 border-rose-200 dark:border-rose-800/50",
-            label: "High"
-        },
-        highest: {
-            className: "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border-red-200 dark:border-red-800/50",
-            label: "Highest"
-        },
-        lowest: {
-            className: "bg-slate-50 text-slate-700 dark:bg-slate-900/50 dark:text-slate-400 border-slate-200 dark:border-slate-800/50",
-            label: "Lowest"
-        },
-    }
 
     const handleClick = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -66,8 +45,8 @@ export function TabItem({ item }: TabItemProps) {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                             {item.priority && (
-                                <Badge className={`${priorityConfig[item.priority as keyof typeof priorityConfig]?.className || priorityConfig.medium.className} text-xs font-semibold border`}>
-                                    {priorityConfig[item.priority as keyof typeof priorityConfig]?.label || item.priority}
+                                <Badge className={`${getPriorityColor(item.priority)} inline-flex items-center font-semibold border`}>
+                                    <PriorityIcon priority={item.priority} className="w-3.5 h-3.5" />
                                 </Badge>
                             )}
                         </div>

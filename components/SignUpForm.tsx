@@ -106,7 +106,13 @@ export function SignUpForm() {
         disabled={isLoading}
         className="w-full h-12 font-medium border-border hover:bg-secondary/50"
       >
-        <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
+        {isLoading ? (
+          <svg className="animate-spin mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+          </svg>
+        ) : (
+          <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
           <path
             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
             fill="#4285F4"
@@ -124,7 +130,8 @@ export function SignUpForm() {
             fill="#EA4335"
           />
         </svg>
-        Continue with Google
+        )}
+        {isLoading ? "Creating account..." : "Continue with Google"}
       </Button>
 
       <div className="relative">
@@ -160,10 +167,10 @@ export function SignUpForm() {
             name="username"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium">Username</FormLabel>
+                <FormLabel className="text-sm font-medium">Full Name</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="johndoe"
+                    placeholder="John Doe"
                     className="h-12"
                     {...field}
                   />

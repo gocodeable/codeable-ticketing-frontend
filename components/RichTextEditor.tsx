@@ -29,7 +29,7 @@ const ImageWithUploadStatus = Image.extend({
 import { uploadMediaToStorage } from "@/lib/firebase/uploadMedia";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { toast } from "sonner";
-import { useEffect, useRef } from "react";
+  import { useEffect, useRef, useState } from "react";
 import { 
   Bold, 
   Italic, 
@@ -64,6 +64,7 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const { user } = useAuth();
   const previousImageUrlsRef = useRef<Set<string>>(new Set());
+  const [, setForceUpdate] = useState(0);
 
   // Extract image URLs from HTML content
   const extractImageUrls = (html: string): Set<string> => {
@@ -139,6 +140,10 @@ export function RichTextEditor({
       previousImageUrlsRef.current = currentImageUrls;
       
       onChange(currentHtml);
+    },
+    onTransaction: () => {
+      // Force toolbar re-render on any editor transaction (including mark toggles)
+      setForceUpdate(prev => prev + 1);
     },
     editable: !disabled,
     immediatelyRender: false,
@@ -289,7 +294,7 @@ export function RichTextEditor({
           size="sm"
           onClick={() => editor.chain().focus().toggleBold().run()}
           disabled={!editor.can().chain().focus().toggleBold().run()}
-          className={editor.isActive("bold") ? "bg-muted" : ""}
+          className={editor.isActive("bold") ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
           title="Bold"
         >
           <Bold className="h-4 w-4" />
@@ -300,7 +305,7 @@ export function RichTextEditor({
           size="sm"
           onClick={() => editor.chain().focus().toggleItalic().run()}
           disabled={!editor.can().chain().focus().toggleItalic().run()}
-          className={editor.isActive("italic") ? "bg-muted" : ""}
+          className={editor.isActive("italic") ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
           title="Italic"
         >
           <Italic className="h-4 w-4" />
@@ -311,7 +316,7 @@ export function RichTextEditor({
           size="sm"
           onClick={() => editor.chain().focus().toggleStrike().run()}
           disabled={!editor.can().chain().focus().toggleStrike().run()}
-          className={editor.isActive("strike") ? "bg-muted" : ""}
+          className={editor.isActive("strike") ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
           title="Strikethrough"
         >
           <Strikethrough className="h-4 w-4" />
@@ -322,7 +327,7 @@ export function RichTextEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={editor.isActive("heading", { level: 1 }) ? "bg-muted" : ""}
+          className={editor.isActive("heading", { level: 1 }) ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
           title="Heading 1"
         >
           <Heading1 className="h-4 w-4" />
@@ -332,7 +337,7 @@ export function RichTextEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={editor.isActive("heading", { level: 2 }) ? "bg-muted" : ""}
+          className={editor.isActive("heading", { level: 2 }) ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
           title="Heading 2"
         >
           <Heading2 className="h-4 w-4" />
@@ -342,7 +347,7 @@ export function RichTextEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={editor.isActive("heading", { level: 3 }) ? "bg-muted" : ""}
+          className={editor.isActive("heading", { level: 3 }) ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
           title="Heading 3"
         >
           <Heading3 className="h-4 w-4" />
@@ -353,7 +358,7 @@ export function RichTextEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={editor.isActive("bulletList") ? "bg-muted" : ""}
+          className={editor.isActive("bulletList") ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
           title="Bullet List"
         >
           <List className="h-4 w-4" />
@@ -363,7 +368,7 @@ export function RichTextEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={editor.isActive("orderedList") ? "bg-muted" : ""}
+          className={editor.isActive("orderedList") ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
           title="Numbered List"
         >
           <ListOrdered className="h-4 w-4" />
