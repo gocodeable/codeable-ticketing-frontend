@@ -386,7 +386,7 @@ export default function SortableStatusColumn({
         statusId={status._id}
         disabled={status.name.toLowerCase() === 'done' && !isAdmin && userRole !== 'qa'}
       >
-        <div className="p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-400px)] overflow-y-auto overflow-x-visible">
+        <div className="p-3 space-y-3 min-h-[200px] overflow-x-visible">
           <SortableContext
             items={localIssues.map((issue) => issue._id)}
             strategy={verticalListSortingStrategy}
