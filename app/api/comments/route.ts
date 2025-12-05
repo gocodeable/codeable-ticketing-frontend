@@ -11,7 +11,9 @@ export const POST = async (req: NextRequest) => {
     }
 
     const body = await req.json();
-    const { issueId, message, attachments } = body;
+    const { issueId, message, attachments, parentCommentId } = body;
+
+    console.log('API Route received:', { issueId, hasMessage: !!message, parentCommentId });
 
     if (!issueId || !message) {
       return NextResponse.json(
@@ -27,7 +29,7 @@ export const POST = async (req: NextRequest) => {
         Authorization: `Bearer ${idToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ message, attachments }),
+      body: JSON.stringify({ message, attachments, parentCommentId }),
     });
 
     const data = await response.json();
