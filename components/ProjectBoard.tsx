@@ -68,7 +68,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
+        distance: 10, // Increased distance to prevent accidental dialog opening when grabbing
       },
     }),
     useSensor(KeyboardSensor, {

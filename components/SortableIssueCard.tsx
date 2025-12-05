@@ -38,11 +38,11 @@ export default function SortableIssueCard({
     } else if (wasDraggingRef.current) {
       // Just finished dragging - record time
       dragEndTimeRef.current = Date.now();
-      // Reset after delay
+      // Reset after delay (increased to 400ms to prevent accidental clicks)
       const timer = setTimeout(() => {
         wasDraggingRef.current = false;
         dragEndTimeRef.current = null;
-      }, 300);
+      }, 400);
       return () => clearTimeout(timer);
     }
   }, [isDragging]);
@@ -65,12 +65,12 @@ export default function SortableIssueCard({
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't open if:
     // 1. Currently dragging
-    // 2. Just finished dragging (within 300ms)
+    // 2. Just finished dragging (within 400ms)
     // 3. Click came from drag handle area
     const target = e.target as HTMLElement;
     const clickedDragHandle = target.closest("[data-drag-handle]");
     const justFinishedDragging = dragEndTimeRef.current
-      ? Date.now() - dragEndTimeRef.current < 300
+      ? Date.now() - dragEndTimeRef.current < 400
       : false;
 
     if (
