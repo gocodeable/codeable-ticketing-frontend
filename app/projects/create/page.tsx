@@ -10,8 +10,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import {
   Card,
   CardContent,
@@ -58,8 +58,17 @@ const projectSchema = z.object({
     .regex(/^[A-Z][A-Z0-9]*$/, "Code must start with a letter and contain only uppercase letters and numbers"),
   description: z
     .string()
-    .min(10, "Description must be at least 10 characters")
-    .max(1000, "Description must be less than 1000 characters"),
+    .min(1, "Description is required")
+    .refine((val) => {
+      // Strip HTML tags and check text content length
+      const textContent = val.replace(/<[^>]*>/g, '').trim();
+      return textContent.length >= 10;
+    }, "Description must have at least 10 characters of text content")
+    .refine((val) => {
+      // Strip HTML tags and check text content length
+      const textContent = val.replace(/<[^>]*>/g, '').trim();
+      return textContent.length <= 5000;
+    }, "Description must be less than 5000 characters of text content"),
   img: z
     .string()
     .optional()
@@ -394,11 +403,12 @@ export default function CreateProjectPage() {
                           <FormItem>
                             <FormLabel>Description <span className="text-destructive">*</span></FormLabel>
                             <FormControl>
-                              <Textarea
+                              <RichTextEditor
+                                value={field.value || ""}
+                                onChange={field.onChange}
                                 placeholder="Describe your project goals and objectives..."
-                                className="min-h-[120px] resize-none rounded-lg"
-                                {...field}
                                 disabled={loading}
+                                className="w-full"
                               />
                             </FormControl>
                             <FormMessage />
