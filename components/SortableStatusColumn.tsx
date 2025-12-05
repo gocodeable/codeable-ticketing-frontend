@@ -29,6 +29,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { apiPatch, apiDelete } from "@/lib/api/apiClient";
 import { toast } from "sonner";
 import { getStatusColor } from "@/utils/issueUtils";
+import { useRouter, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -99,6 +100,8 @@ export default function SortableStatusColumn({
   initialIssueId?: string;
 }) {
   const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(status.name);
   const [editDescription, setEditDescription] = useState(
@@ -421,7 +424,12 @@ export default function SortableStatusColumn({
       <IssueDetailDialog
         open={selectedIssueId !== null}
         onOpenChange={(open) => {
-          if (!open) setSelectedIssueId(null);
+          if (!open) {
+            setSelectedIssueId(null);
+            if (pathname) {
+              router.replace(pathname, { scroll: false });
+            }
+          }
         }}
         issueId={selectedIssueId}
         isAdmin={isAdmin}
