@@ -1,4 +1,4 @@
-import { User, Folder, Users, MoreHorizontal, Clock } from "lucide-react"
+import { User, Folder, Users, Clock } from "lucide-react"
 
 import {
   Sidebar,
@@ -178,24 +178,6 @@ export function SideBar() {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-
-        <SidebarGroup className="mt-auto">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className="h-10 px-3 rounded-lg font-medium hover:bg-primary/10 dark:hover:bg-primary/10 hover:text-primary transition-all duration-200"
-                >
-                  <Link href="/more" className="flex items-center gap-3">
-                    <MoreHorizontal className="w-[18px] h-[18px]" />
-                    <span className="text-sm">More</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   )
