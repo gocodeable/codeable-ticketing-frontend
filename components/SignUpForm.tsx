@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { Eye, EyeOff } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -42,6 +43,8 @@ export function SignUpForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const { setAuthOperationInProgress } = useAuth()
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -103,7 +106,13 @@ export function SignUpForm() {
         disabled={isLoading}
         className="w-full h-12 font-medium border-border hover:bg-secondary/50"
       >
-        <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
+        {isLoading ? (
+          <svg className="animate-spin mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+          </svg>
+        ) : (
+          <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
           <path
             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
             fill="#4285F4"
@@ -121,7 +130,8 @@ export function SignUpForm() {
             fill="#EA4335"
           />
         </svg>
-        Continue with Google
+        )}
+        {isLoading ? "Creating account..." : "Continue with Google"}
       </Button>
 
       <div className="relative">
@@ -157,10 +167,10 @@ export function SignUpForm() {
             name="username"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium">Username</FormLabel>
+                <FormLabel className="text-sm font-medium">Full Name</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="johndoe"
+                    placeholder="John Doe"
                     className="h-12"
                     {...field}
                   />
@@ -194,12 +204,26 @@ export function SignUpForm() {
               <FormItem>
                 <FormLabel className="text-sm font-medium">Password</FormLabel>
                 <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    className="h-12"
-                    {...field}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="h-12 pr-10"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </FormControl>
                 <FormDescription className="text-xs text-muted-foreground">
                   Must be at least 6 characters
@@ -215,12 +239,26 @@ export function SignUpForm() {
               <FormItem>
                 <FormLabel className="text-sm font-medium">Confirm password</FormLabel>
                 <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    className="h-12"
-                    {...field}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="h-12 pr-10"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>

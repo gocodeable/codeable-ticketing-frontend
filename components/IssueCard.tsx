@@ -4,6 +4,7 @@ import { Issue } from "@/types/issue";
 import Image from "next/image";
 import { MessageCircle } from "lucide-react";
 import { getPriorityColor, getInitials } from "@/utils/issueUtils";
+import { PriorityIcon } from "@/components/PriorityIcon";
 
 interface IssueCardProps {
   issue: Issue;
@@ -26,11 +27,11 @@ export default function IssueCard({
               {issue.issueCode}
             </span>
             <span
-              className={`text-xs px-2 py-0.5 rounded-full border ${getPriorityColor(
+              className={`inline-flex items-center px-2 py-0.5 rounded-full border ${getPriorityColor(
                 issue.priority
               )}`}
             >
-              {issue.priority || "medium"}
+              <PriorityIcon priority={issue.priority || "medium"} className="w-3.5 h-3.5" />
             </span>
           </div>
           <h4 className="text-sm font-medium text-foreground line-clamp-2 group-hover:text-primary transition-colors">

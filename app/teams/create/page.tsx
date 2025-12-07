@@ -38,13 +38,15 @@ const teamSchema = z.object({
     .max(255, "Name must be less than 255 characters"),
   description: z
     .string()
-    .min(1, "Description is required")
+    .optional()
     .refine((val) => {
+      if (!val || val.trim() === '') return true;
       // Strip HTML tags and check text content length
       const textContent = val.replace(/<[^>]*>/g, '').trim();
       return textContent.length >= 10;
     }, "Description must have at least 10 characters of text content")
     .refine((val) => {
+      if (!val || val.trim() === '') return true;
       // Strip HTML tags and check text content length
       const textContent = val.replace(/<[^>]*>/g, '').trim();
       return textContent.length <= 5000;
@@ -80,13 +82,6 @@ export default function CreateTeamPage() {
     setLoading(true);
     setError(null);
     setSuccess(false);
-
-    // Validate that at least one member is selected
-    if (selectedUsers.length === 0) {
-      setError("Please add at least one team member");
-      setLoading(false);
-      return;
-    }
 
     try {
       const idToken = await user?.getIdToken();
@@ -239,7 +234,7 @@ export default function CreateTeamPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-sm font-medium text-foreground">
-                            Description <span className="text-destructive">*</span>
+                            Description
                           </FormLabel>
                           <FormControl>
                             <RichTextEditor
@@ -265,10 +260,10 @@ export default function CreateTeamPage() {
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <h3 className="text-base font-semibold text-foreground">
-                        Team Members <span className="text-destructive">*</span>
+                        Team Members
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        Add people to your team
+                        Add people to your team (optional)
                       </p>
                     </div>
                     <UserSelector
@@ -277,14 +272,6 @@ export default function CreateTeamPage() {
                       disabled={loading}
                       placeholder="Search by name or email..."
                     />
-                    <FormDescription className="text-xs text-muted-foreground">
-                      At least one member is required
-                    </FormDescription>
-                    {selectedUsers.length === 0 && error && (
-                      <p className="text-sm font-medium text-destructive">
-                        Please add at least one team member
-                      </p>
-                    )}
                   </div>
 
                   {/* Error Message */}

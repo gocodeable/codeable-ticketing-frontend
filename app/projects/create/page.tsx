@@ -58,13 +58,15 @@ const projectSchema = z.object({
     .regex(/^[A-Z][A-Z0-9]*$/, "Code must start with a letter and contain only uppercase letters and numbers"),
   description: z
     .string()
-    .min(1, "Description is required")
+    .optional()
     .refine((val) => {
+      if (!val || val.trim() === '') return true;
       // Strip HTML tags and check text content length
       const textContent = val.replace(/<[^>]*>/g, '').trim();
       return textContent.length >= 10;
     }, "Description must have at least 10 characters of text content")
     .refine((val) => {
+      if (!val || val.trim() === '') return true;
       // Strip HTML tags and check text content length
       const textContent = val.replace(/<[^>]*>/g, '').trim();
       return textContent.length <= 5000;
@@ -187,13 +189,6 @@ export default function CreateProjectPage() {
     setLoading(true);
     setError(null);
     setSuccess(false);
-
-    // Validate that at least one member is selected
-    if (selectedUsers.length === 0) {
-      setError("Please add at least one project member");
-      setLoading(false);
-      return;
-    }
 
     try {
       const idToken = await user?.getIdToken();
@@ -401,7 +396,7 @@ export default function CreateProjectPage() {
                         name="description"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Description <span className="text-destructive">*</span></FormLabel>
+                            <FormLabel>Description</FormLabel>
                             <FormControl>
                               <RichTextEditor
                                 value={field.value || ""}
@@ -492,8 +487,8 @@ export default function CreateProjectPage() {
                     {/* Team Members Section */}
                     <div className="space-y-3.5">
                       <div className="space-y-1">
-                        <h3 className="text-sm font-semibold text-foreground">Team Members <span className="text-destructive">*</span></h3>
-                        <p className="text-xs text-muted-foreground">Add people to your project</p>
+                        <h3 className="text-sm font-semibold text-foreground">Team Members</h3>
+                        <p className="text-xs text-muted-foreground">Add people to your project (optional)</p>
                       </div>
 
                       <Tabs defaultValue="members" className="w-full">

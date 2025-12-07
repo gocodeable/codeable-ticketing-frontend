@@ -127,10 +127,10 @@
 
   /* Placeholder styles */
   ::placeholder {
-    @apply text-muted-foreground/40;
+    @apply text-muted-foreground/50;
   }
 
   .dark ::placeholder {
-    @apply text-muted-foreground/50;
+    @apply text-muted-foreground/70;
   }
 }
