@@ -177,6 +177,7 @@ export function Header() {
                           notification.type === 'issue_assigned' && "bg-blue-500/10 text-blue-500",
                           notification.type === 'issue_updated' && "bg-amber-500/10 text-amber-500",
                           notification.type === 'issue_comment' && "bg-green-500/10 text-green-500",
+                          notification.type === 'comment_reply' && "bg-cyan-500/10 text-cyan-500",
                           notification.type === 'issue_status_changed' && "bg-purple-500/10 text-purple-500"
                         )}>
                           <Bell className="w-5 h-5" />
