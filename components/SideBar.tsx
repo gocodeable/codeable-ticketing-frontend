@@ -1,4 +1,4 @@
-import { User, Folder, Users, MoreHorizontal, Clock } from "lucide-react"
+import { User, Folder, Users, Clock, Pin } from "lucide-react"
 
 import {
   Sidebar,
@@ -45,6 +45,8 @@ export function SideBar() {
   const { state } = useSidebar()
   const { user } = useAuth()
   const [recentProjects, setRecentProjects] = useState<RecentsType[]>([])
+  const [pinnedProjects, setPinnedProjects] = useState<any[]>([])
+  
   const fetchRecentProjects = async (): Promise<RecentsType[]> => {
     try {
       if (!user) {
@@ -64,8 +66,29 @@ export function SideBar() {
     }
   };
 
+  const fetchPinnedProjects = async (): Promise<any[]> => {
+    try {
+      if (!user) {
+        return [];
+      }
+      const idToken = await user.getIdToken();
+
+      const response = await apiGet("/api/pinned-projects", idToken)
+      const data = await response.json()
+      if (data.success && Array.isArray(data.data)) {
+        // Limit to 5 projects
+        return data.data.slice(0, 5);
+      }
+      return [];
+    } catch (error) {
+      console.error("Error fetching pinned projects:", error);
+      return [];
+    }
+  };
+
   useEffect(() => {
     fetchRecentProjects().then((data) => setRecentProjects(data))
+    fetchPinnedProjects().then((data) => setPinnedProjects(data))
   }, [user])
 
   return (
@@ -131,6 +154,59 @@ export function SideBar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {pinnedProjects && pinnedProjects.length > 0 && (
+          <SidebarGroup className="mt-6">
+            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2 flex items-center gap-2">
+              <Pin className="w-3 h-3" />
+              Pinned Projects
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {pinnedProjects.map((pinnedItem, i) => {
+                  const project = pinnedItem.project || pinnedItem;
+                  if (!project || !project._id) return null;
+                  
+                  return (
+                    <motion.div
+                      key={project._id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: 0.1 + i * 0.05 }}
+                    >
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={`/project/${project._id}` === pathname}
+                          className="h-10 px-3 rounded-lg font-medium hover:bg-primary/10 dark:hover:bg-primary/10 hover:text-primary transition-all duration-200 data-[active=true]:bg-primary/10 dark:data-[active=true]:bg-primary/20 data-[active=true]:text-primary dark:data-[active=true]:text-primary data-[active=true]:shadow-sm"
+                        >
+                          <Link href={`/project/${project._id}`} className="flex items-center gap-3">
+                            {project.img ? (
+                              <Image
+                                src={project.img}
+                                alt={project.title || 'Project'}
+                                width={18}
+                                height={18}
+                                className="w-[18px] h-[18px] rounded-md object-cover ring-1 ring-border/20"
+                              />
+                            ) : (
+                              <div className="w-[18px] h-[18px] bg-linear-to-br from-primary/20 to-primary/10 rounded-md flex items-center justify-center ring-1 ring-primary/20">
+                                <span className="text-primary font-bold text-[9px]">
+                                  {project.code?.slice(0, 2) || (project.title ? project.title.slice(0, 2).toUpperCase() : "PR")}
+                                </span>
+                              </div>
+                            )}
+                            <span className="truncate text-sm">{project.title || 'Untitled'}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </motion.div>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {recentProjects && recentProjects.length > 0 && (
           <SidebarGroup className="mt-6">
             <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2 flex items-center gap-2">
@@ -178,24 +254,6 @@ export function SideBar() {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-
-        <SidebarGroup className="mt-auto">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  className="h-10 px-3 rounded-lg font-medium hover:bg-primary/10 dark:hover:bg-primary/10 hover:text-primary transition-all duration-200"
-                >
-                  <Link href="/more" className="flex items-center gap-3">
-                    <MoreHorizontal className="w-[18px] h-[18px]" />
-                    <span className="text-sm">More</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   )

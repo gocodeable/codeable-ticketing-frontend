@@ -25,8 +25,9 @@ import Image from "next/image";
 import { DEFAULT_AVATAR } from "@/lib/constants";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { formatFileSize } from "../utils/issueUtils";
+import { formatFileSize, getPriorityColor } from "../utils/issueUtils";
 import { isImageFile, isVideoFile } from "@/utils/mediaUtils";
+import { PriorityIcon } from "@/components/PriorityIcon";
 import { useState } from "react";
 import { MediaViewerDialog } from "./MediaViewerDialog";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -218,36 +219,43 @@ export function IssueEditForm({
             disabled={isSaving}
           >
             <SelectTrigger id="edit-priority" className="h-11">
-              <SelectValue />
+              <SelectValue placeholder="Select priority">
+                {editPriority ? (
+                  <span className="flex items-center gap-2 capitalize">
+                    <PriorityIcon priority={editPriority} />
+                    {editPriority}
+                  </span>
+                ) : null}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="highest">
                 <span className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-600" />
+                  <PriorityIcon priority="highest" className="text-red-600" />
                   Highest
                 </span>
               </SelectItem>
               <SelectItem value="high">
                 <span className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-orange-500" />
+                  <PriorityIcon priority="high" className="text-orange-500" />
                   High
                 </span>
               </SelectItem>
               <SelectItem value="medium">
                 <span className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                  <PriorityIcon priority="medium" className="text-yellow-600 dark:text-yellow-500" />
                   Medium
                 </span>
               </SelectItem>
               <SelectItem value="low">
                 <span className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-400" />
+                  <PriorityIcon priority="low" className="text-blue-500" />
                   Low
                 </span>
               </SelectItem>
               <SelectItem value="lowest">
                 <span className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-gray-400" />
+                  <PriorityIcon priority="lowest" className="text-gray-500" />
                   Lowest
                 </span>
               </SelectItem>

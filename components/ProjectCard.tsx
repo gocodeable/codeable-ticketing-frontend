@@ -2,7 +2,7 @@ import { Card, CardContent } from "./ui/card";
 import { Project as ProjectType } from "@/types/project";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRightIcon, Users, X } from "lucide-react";
+import { ArrowRightIcon, Users, PinOff } from "lucide-react";
 import { motion } from "framer-motion";
 import { getInitials } from "@/utils/issueUtils";
 import { Button } from "./ui/button";
@@ -55,25 +55,25 @@ export default function ProjectCard({ project, i, isPinned = false, onUnpin }: P
 
     return (
         <motion.div
-            className="w-full"
+            className="w-full relative group"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, ease: "easeOut", delay: 0.03 * i }}
         >
+            {/* Unpin Button - Positioned on top of the card corner */}
+            {isPinned && onUnpin && (
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1 left-1 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-7 w-7 rounded-full bg-background hover:bg-destructive/20 hover:text-destructive border border-border shadow-md"
+                    onClick={handleUnpin}
+                    title="Unpin project"
+                >
+                    <PinOff className="h-4 w-4" />
+                </Button>
+            )}
             <Link href={`/project/${project._id}`} className="block">
-                <Card className="group relative overflow-hidden rounded-lg border border-border/40 dark:border-border/70 bg-card hover:border-primary/50 dark:hover:border-primary/60 hover:shadow-md dark:hover:shadow-primary/5 transition-all duration-200">
-                    {/* Unpin Button - Only shows on pinned projects */}
-                    {isPinned && onUnpin && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute top-1 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-6 w-6 rounded-full bg-background/90 hover:bg-destructive/10 hover:text-destructive border border-border/50 shadow-sm"
-                            onClick={handleUnpin}
-                            title="Unpin project"
-                        >
-                            <X className="h-3.5 w-3.5" />
-                        </Button>
-                    )}
+                <Card className="relative overflow-hidden rounded-lg border border-border/40 dark:border-border/70 bg-card group-hover:border-primary/50 dark:group-hover:border-primary/60 group-hover:shadow-md dark:group-hover:shadow-primary/5 transition-all duration-200">
                     <CardContent className="px-3">
                         {/* Header Row */}
                         <div className="flex items-center gap-2 mb-2">
