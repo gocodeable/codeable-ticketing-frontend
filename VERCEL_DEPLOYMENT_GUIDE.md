@@ -12,8 +12,6 @@
 - ✅ `tsconfig.json` - TypeScript configuration valid
 - ✅ `package.json` - All dependencies listed
 
----
-
 ## 🚀 Deployment Steps
 
 ### 1. Push Code to GitHub/GitLab/Bitbucket
