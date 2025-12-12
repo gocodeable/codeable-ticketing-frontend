@@ -10,8 +10,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/pinned-projects`;
-    const response = await fetch(backendUrl, {
+    const { searchParams } = new URL(request.url);
+    const limit = searchParams.get("limit");
+
+    const backendUrl = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/pinned-projects`);
+    if (limit) {
+      backendUrl.searchParams.set("limit", limit);
+    }
+
+    const response = await fetch(backendUrl.toString(), {
       method: "GET",
       headers: {
         Authorization: `Bearer ${idToken}`,
