@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, UserCircle, Moon, Sun, Monitor, Bell, Check, X } from "lucide-react"
 import { useAuth } from "@/lib/auth/AuthProvider"
@@ -22,6 +23,7 @@ import { useNotifications } from "@/lib/hooks/useNotifications"
 import { formatDistanceToNow } from "date-fns"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
+import Image from "next/image"
 
 export function Header() {
   const auth = useAuth()
@@ -30,6 +32,11 @@ export function Header() {
   const { theme, setTheme } = useTheme()
   const { state } = useSidebar()
   const { notifications, unreadCount, loading, loadingMore, hasMore, markAsRead, markAllAsRead, deleteNotification, loadMore } = useNotifications()
+  const [imageError, setImageError] = useState(false)
+
+  useEffect(() => {
+    setImageError(false)
+  }, [user?.photoURL])
 
   const handleLogout = async () => {
     try {
@@ -40,10 +47,19 @@ export function Header() {
     }
   }
 
-  const getInitials = (email: string | null | undefined) => {
-    if (!email) return "U"
-    const parts = email.split("@")[0]
-    return parts.charAt(0).toUpperCase()
+  const getInitials = (displayName: string | null | undefined, email?: string | null) => {
+    if (displayName) {
+      const words = displayName.trim().split(/\s+/)
+      if (words.length >= 2) {
+        return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase()
+      } else if (words.length === 1 && words[0].length > 0) {
+        return words[0].charAt(0).toUpperCase()
+      }
+    }
+    if (email) {
+      return email.split("@")[0].charAt(0).toUpperCase()
+    }
+    return "U"
   }
 
   return (
@@ -289,18 +305,44 @@ export function Header() {
               size="icon"
               className="rounded-lg shrink-0 hover:bg-primary/10 dark:hover:bg-primary/10 transition-all duration-200 h-10 w-10"
             >
-              <div className="flex items-center justify-center size-8 rounded-lg bg-linear-to-br from-primary to-primary/80 text-primary-foreground text-sm font-semibold shadow-md dark:shadow-primary/20">
-                {getInitials(user?.email || undefined)}
-              </div>
+              {user?.photoURL && !imageError ? (
+                <div className="relative size-8 rounded-lg overflow-hidden ring-2 ring-border/40 dark:ring-border/60">
+                  <Image
+                    src={user.photoURL}
+                    alt="Profile"
+                    width={32}
+                    height={32}
+                    className="w-full h-full object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center size-8 rounded-lg bg-linear-to-br from-primary to-primary/80 text-primary-foreground text-sm font-semibold shadow-md dark:shadow-primary/20">
+                  {getInitials(user?.displayName || undefined, user?.email || undefined)}
+                </div>
+              )}
               <span className="sr-only">Account menu</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuLabel>
               <div className="flex items-center gap-3 py-1">
-                <div className="flex items-center justify-center size-10 rounded-lg bg-linear-to-br from-primary to-primary/80 text-primary-foreground text-sm font-semibold">
-                  {getInitials(user?.email || undefined)}
-                </div>
+                {user?.photoURL && !imageError ? (
+                  <div className="relative size-10 rounded-lg overflow-hidden ring-2 ring-border/40 dark:ring-border/60">
+                    <Image
+                      src={user.photoURL}
+                      alt="Profile"
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-cover"
+                      onError={() => setImageError(true)}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center size-10 rounded-lg bg-linear-to-br from-primary to-primary/80 text-primary-foreground text-sm font-semibold">
+                    {getInitials(user?.displayName || undefined, user?.email || undefined)}
+                  </div>
+                )}
                 <div className="flex flex-col">
                   <p className="text-sm font-semibold leading-none mb-1">
                     {user?.displayName || "User"}
