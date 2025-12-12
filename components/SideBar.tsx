@@ -73,11 +73,10 @@ export function SideBar() {
       }
       const idToken = await user.getIdToken();
 
-      const response = await apiGet("/api/pinned-projects", idToken)
+      const response = await apiGet("/api/pinned-projects?limit=5", idToken)
       const data = await response.json()
       if (data.success && Array.isArray(data.data)) {
-        // Limit to 5 projects
-        return data.data.slice(0, 5);
+        return data.data;
       }
       return [];
     } catch (error) {
