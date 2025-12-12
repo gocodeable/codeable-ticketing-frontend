@@ -40,6 +40,7 @@ import { ImageSelector } from "@/components/ImageSelector";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProfileCard from "@/components/ProfileCard";
+import { updateProfile } from "firebase/auth";
 
 // Default avatar image path
 const DEFAULT_AVATAR = "/user.jpg";
@@ -136,6 +137,19 @@ export default function ProfilePage({
       const data = await response.json();
       if (data.success) {
         setUserData(data.data);
+        
+        // Update Firebase user profile (displayName and photoURL)
+        if (user) {
+          try {
+            await updateProfile(user, {
+              displayName: formData.name,
+              photoURL: avatarToSave || undefined,
+            });
+          } catch (firebaseError) {
+            console.error("Error updating Firebase profile:", firebaseError);
+          }
+        }
+        
         setIsSheetOpen(false);
         toast.success("Profile updated successfully!");
       }
