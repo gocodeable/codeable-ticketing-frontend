@@ -21,7 +21,18 @@ export function Recents() {
             const data = await response.json()
 
             if (data.success && Array.isArray(data.data)) {
-                setRecents(data.data);
+                // Ensure lastAccessed is properly converted to Date objects if they come as strings
+                const processedRecents = data.data.map((recent: any) => ({
+                    ...recent,
+                    lastAccessed: recent.lastAccessed 
+                        ? (typeof recent.lastAccessed === 'string' 
+                            ? new Date(recent.lastAccessed) 
+                            : recent.lastAccessed instanceof Date 
+                                ? recent.lastAccessed 
+                                : new Date(recent.lastAccessed))
+                        : undefined
+                }));
+                setRecents(processedRecents);
             } else {
                 console.error("Invalid data received:", data);
                 setRecents([]);

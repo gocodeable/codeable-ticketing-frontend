@@ -16,8 +16,6 @@ export function RecentsCarousel({ recents }: { recents: Recents[] }) {
         e.preventDefault();
         e.stopPropagation();
         
-        console.log("handleIssueClick called", { issueId, projectId, event: e });
-        
         if (!projectId) {
             console.error("Project ID not found for issue:", issueId, "Recent data:", { issueId, projectId });
             return;
@@ -47,7 +45,6 @@ export function RecentsCarousel({ recents }: { recents: Recents[] }) {
                                 <button
                                     type="button"
                                     onClick={(e) => {
-                                        console.log("Issue clicked!", recent);
                                         e.preventDefault();
                                         e.stopPropagation();
                                         handleIssueClick(e, recent.resourceId, recent.projectId);

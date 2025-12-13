@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Trash2 } from "lucide-react";
 import { Issue } from "@/types/issue";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -34,11 +33,9 @@ export function IssueDeleteDialog({
 }: IssueDeleteDialogProps) {
   const { user } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteConfirmName, setDeleteConfirmName] = useState("");
 
   const handleDeleteDialogClose = () => {
     if (!isDeleting) {
-      setDeleteConfirmName("");
       onOpenChange(false);
       if (onClose) {
         onClose();
@@ -48,11 +45,6 @@ export function IssueDeleteDialog({
 
   const handleDeleteIssue = async () => {
     if (!user || !issue) return;
-
-    if (deleteConfirmName !== issue.title) {
-      toast.error("Issue title does not match");
-      return;
-    }
 
     setIsDeleting(true);
     try {
@@ -83,7 +75,6 @@ export function IssueDeleteDialog({
           const data = await response.json();
           if (data.success) {
             toast.success("Issue deleted successfully");
-            setDeleteConfirmName("");
             onOpenChange(false);
             if (onIssueDeleted) {
               onIssueDeleted(issue._id);
@@ -97,7 +88,6 @@ export function IssueDeleteDialog({
         } else {
           // No JSON content, but status is ok, assume success
           toast.success("Issue deleted successfully");
-          setDeleteConfirmName("");
           onOpenChange(false);
           if (onIssueDeleted) {
             onIssueDeleted(issue._id);
@@ -110,7 +100,6 @@ export function IssueDeleteDialog({
         // If JSON parsing fails but status is ok, assume success
         console.warn("Could not parse response as JSON, but status is ok:", parseError);
         toast.success("Issue deleted successfully");
-        setDeleteConfirmName("");
         onOpenChange(false);
         if (onIssueDeleted) {
           onIssueDeleted(issue._id);
@@ -126,7 +115,6 @@ export function IssueDeleteDialog({
       );
     } finally {
       setIsDeleting(false);
-      setDeleteConfirmName("");
     }
   };
 
@@ -143,22 +131,6 @@ export function IssueDeleteDialog({
             attachments.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">
-              Please type{" "}
-              <span className="font-bold text-foreground">{issue?.title}</span>{" "}
-              to confirm:
-            </p>
-            <Input
-              value={deleteConfirmName}
-              onChange={(e) => setDeleteConfirmName(e.target.value)}
-              placeholder="Enter issue title"
-              disabled={isDeleting}
-              className="w-full"
-            />
-          </div>
-        </div>
         <DialogFooter>
           <Button
             variant="outline"
@@ -170,7 +142,7 @@ export function IssueDeleteDialog({
           <Button
             variant="destructive"
             onClick={handleDeleteIssue}
-            disabled={isDeleting || deleteConfirmName !== issue?.title}
+            disabled={isDeleting}
             className="gap-2"
           >
             {isDeleting ? (
