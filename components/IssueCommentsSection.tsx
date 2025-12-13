@@ -732,10 +732,18 @@ export function IssueCommentsSection({
                       margin: 0.5rem 0;
                       padding-left: 1.5rem;
                       color: hsl(var(--foreground));
+                      list-style-position: outside;
+                    }
+                    .rich-text-content ul {
+                      list-style-type: disc;
+                    }
+                    .rich-text-content ol {
+                      list-style-type: decimal;
                     }
                     .rich-text-content ul li,
                     .rich-text-content ol li {
                       color: hsl(var(--foreground));
+                      display: list-item;
                     }
                     .rich-text-content ul li::marker,
                     .rich-text-content ol li::marker {

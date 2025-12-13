@@ -6,6 +6,7 @@ import { apiPatch, apiDelete } from "@/lib/api/apiClient";
 import { Notification } from "@/types/notification";
 import { firestore } from "@/lib/firebase/firestore";
 import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { toast } from "sonner";
 
 const NOTIFICATIONS_PER_PAGE = 8;
 
@@ -173,28 +174,47 @@ export function useNotifications() {
     async (notificationId: string) => {
       if (!user) return;
 
+      // Store original state for rollback
+      const originalNotifications = notifications;
+      const originalUnreadCount = unreadCount;
+
+      // Optimistically update UI first
+      const notification = notifications.find((n) => n._id === notificationId);
+      setNotifications((prev) => prev.filter((n) => n._id !== notificationId));
+      if (notification && !notification.read) {
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+
       try {
         const idToken = await user.getIdToken();
         const response = await apiDelete(
           `/api/notifications/${notificationId}`,
           idToken
         );
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete notification: ${response.status}`);
+        }
+
         const data = await response.json();
 
-        if (data.success) {
-          // Update local state
-          setNotifications((prev) => prev.filter((n) => n._id !== notificationId));
-          // Update unread count if it was unread
-          const notification = notifications.find((n) => n._id === notificationId);
-          if (notification && !notification.read) {
-            setUnreadCount((prev) => Math.max(0, prev - 1));
-          }
+        if (!data.success) {
+          throw new Error(data.error || data.message || "Failed to delete notification");
         }
+
+        // Success - the Firestore listener will update the state automatically
+        // but we've already optimistically updated it, so we're good
       } catch (err) {
         console.error("Error deleting notification:", err);
+        // Revert optimistic update on error
+        setNotifications(originalNotifications);
+        setUnreadCount(originalUnreadCount);
+        
+        // Show error toast
+        toast.error(err instanceof Error ? err.message : "Failed to delete notification");
       }
     },
-    [user, notifications]
+    [user, notifications, unreadCount]
   );
 
   return {

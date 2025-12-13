@@ -348,10 +348,18 @@ export default function TeamPage({
                           margin: 0.5rem 0;
                           padding-left: 1.5rem;
                           color: hsl(var(--foreground));
+                          list-style-position: outside;
+                        }
+                        .team-description-content ul {
+                          list-style-type: disc;
+                        }
+                        .team-description-content ol {
+                          list-style-type: decimal;
                         }
                         .team-description-content ul li,
                         .team-description-content ol li {
                           color: hsl(var(--foreground));
+                          display: list-item;
                         }
                         .team-description-content ul li::marker,
                         .team-description-content ol li::marker {
