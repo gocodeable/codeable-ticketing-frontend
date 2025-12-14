@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, UserCircle, Moon, Sun, Monitor, Bell, Check, X } from "lucide-react"
+import { LogOut, UserCircle, Moon, Sun, Monitor, Bell, Check, X, UserPlus, FileEdit, MessageSquare, Reply, GitBranch } from "lucide-react"
 import { useAuth } from "@/lib/auth/AuthProvider"
 import { useTheme } from "next-themes"
 import { logout } from "@/lib/firebase/logout"
@@ -33,6 +33,11 @@ export function Header() {
   const { state } = useSidebar()
   const { notifications, unreadCount, loading, loadingMore, hasMore, markAsRead, markAllAsRead, deleteNotification, loadMore } = useNotifications()
   const [imageError, setImageError] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     setImageError(false)
@@ -62,6 +67,23 @@ export function Header() {
     return "U"
   }
 
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'issue_assigned':
+        return UserPlus
+      case 'issue_updated':
+        return FileEdit
+      case 'issue_comment':
+        return MessageSquare
+      case 'comment_reply':
+        return Reply
+      case 'issue_status_changed':
+        return GitBranch
+      default:
+        return Bell
+    }
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 backdrop-blur-xl bg-background/80 dark:bg-background/60 supports-[backdrop-filter]:bg-background/60">
       <motion.div
@@ -77,9 +99,13 @@ export function Header() {
             state === "collapsed" ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none"
           }`}
         >
-          <div className="flex items-center justify-center size-8 rounded-lg bg-linear-to-br from-primary/90 to-primary text-primary-foreground font-bold text-sm shadow-md dark:shadow-primary/20">
-            CT
-          </div>
+          <Image
+            src={mounted && theme === "dark" ? "/logo-white.svg" : "/logo-blue.svg"}
+            alt="Codeable Tickets Logo"
+            width={32}
+            height={32}
+            className="size-8 rounded-lg"
+          />
           <span className="font-bold text-base hidden sm:inline-block tracking-tight">
             Codeable Tickets
           </span>
@@ -129,7 +155,7 @@ export function Header() {
                   className="h-8 text-xs hover:bg-primary/10 gap-1.5"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  Clear all
+                  Read all
                 </Button>
               )}
             </div>
@@ -188,16 +214,21 @@ export function Header() {
 
                       <div className="flex gap-3">
                         {/* Icon based on notification type */}
-                        <div className={cn(
-                          "shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
-                          notification.type === 'issue_assigned' && "bg-blue-500/10 text-blue-500",
-                          notification.type === 'issue_updated' && "bg-amber-500/10 text-amber-500",
-                          notification.type === 'issue_comment' && "bg-green-500/10 text-green-500",
-                          notification.type === 'comment_reply' && "bg-cyan-500/10 text-cyan-500",
-                          notification.type === 'issue_status_changed' && "bg-purple-500/10 text-purple-500"
-                        )}>
-                          <Bell className="w-5 h-5" />
-                        </div>
+                        {(() => {
+                          const IconComponent = getNotificationIcon(notification.type)
+                          return (
+                            <div className={cn(
+                              "shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
+                              notification.type === 'issue_assigned' && "bg-blue-500/10 text-blue-500",
+                              notification.type === 'issue_updated' && "bg-amber-500/10 text-amber-500",
+                              notification.type === 'issue_comment' && "bg-green-500/10 text-green-500",
+                              notification.type === 'comment_reply' && "bg-cyan-500/10 text-cyan-500",
+                              notification.type === 'issue_status_changed' && "bg-purple-500/10 text-purple-500"
+                            )}>
+                              <IconComponent className="w-5 h-5" />
+                            </div>
+                          )
+                        })()}
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">

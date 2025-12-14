@@ -25,7 +25,8 @@ import {
   File,
   Trash2,
 } from "lucide-react";
-import { ProjectMember } from "@/types/project";
+import { ProjectMember, MemberRole } from "@/types/project";
+import { Badge } from "@/components/ui/badge";
 import { Issue } from "@/types/issue";
 import Image from "next/image";
 import { DEFAULT_AVATAR } from "@/lib/constants";
@@ -335,17 +336,49 @@ export function AddIssueDialog({
     onOpenChange(false);
   };
 
-  // Convert project members to user suggestions format
-  const memberSuggestions: UserSuggestion[] = projectMembers.map((member) => ({
+  // Local interface that extends UserSuggestion with role
+  interface MemberSuggestion extends UserSuggestion {
+    role?: MemberRole;
+  }
+
+  // Convert project members to user suggestions format with role
+  const memberSuggestions: MemberSuggestion[] = projectMembers.map((member) => ({
     uid: member.uid,
     name: member.name,
     email: member.email,
     avatar: member.avatar,
+    role: member.role,
   }));
 
-  // Filter members based on search query
+  // Helper function to get role badge variant and className
+  const getRoleBadgeProps = (role?: MemberRole) => {
+    switch (role) {
+      case "admin":
+        return {
+          variant: "outline" as const,
+          className: "border-yellow-300 dark:border-yellow-700 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300",
+        };
+      case "developer":
+        return {
+          variant: "default" as const,
+          className: "",
+        };
+      case "qa":
+        return {
+          variant: "secondary" as const,
+          className: "",
+        };
+      default:
+        return {
+          variant: "outline" as const,
+          className: "",
+        };
+    }
+  };
+
+  // Filter members based on search query - show all if no query
   const filteredMembers = memberSuggestions.filter((member) => {
-    if (!assigneeSearchQuery.trim()) return false;
+    if (!assigneeSearchQuery.trim()) return true; // Show all members when no search query
     const query = assigneeSearchQuery.toLowerCase();
     return (
       member.name.toLowerCase().includes(query) ||
@@ -355,7 +388,7 @@ export function AddIssueDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-[700px]! w-[95vw] max-h-[90vh] overflow-y-auto p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
           <DialogTitle className="text-xl font-bold tracking-tight">
             Create New Issue
@@ -569,21 +602,20 @@ export function AddIssueDialog({
                     <Input
                       ref={assigneeInputRef}
                       type="text"
-                      placeholder="Search members..."
+                      placeholder="Select or search members..."
                       value={assigneeSearchQuery}
                       onChange={(e) => {
                         setAssigneeSearchQuery(e.target.value);
-                        setShowAssigneeSuggestions(
-                          e.target.value.trim().length > 0
-                        );
+                        setShowAssigneeSuggestions(true); // Keep dropdown open while searching
                       }}
                       onFocus={() => {
-                        if (assigneeSearchQuery.trim().length > 0) {
-                          setShowAssigneeSuggestions(true);
-                        }
+                        setShowAssigneeSuggestions(true); // Open dropdown on focus
+                      }}
+                      onClick={() => {
+                        setShowAssigneeSuggestions(true); // Open dropdown on click
                       }}
                       disabled={isSubmitting}
-                      className="pl-9 h-11"
+                      className="pl-9 h-11 cursor-pointer"
                     />
                   </div>
 
@@ -599,7 +631,7 @@ export function AddIssueDialog({
                             setAssigneeSearchQuery("");
                             setShowAssigneeSuggestions(false);
                           }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left border-b border-border last:border-0"
+                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left border-b border-border last:border-0 relative"
                         >
                           <div className="shrink-0 relative h-8 w-8 rounded-full overflow-hidden ring-2 ring-border">
                             <Image
@@ -618,6 +650,20 @@ export function AddIssueDialog({
                               {member.email}
                             </p>
                           </div>
+                          {member.role && (() => {
+                            const { variant, className: roleClassName } = getRoleBadgeProps(member.role);
+                            return (
+                              <Badge
+                                variant={variant}
+                                className={cn(
+                                  "absolute top-2 right-2 text-[10px] px-1.5 py-0.5 capitalize shrink-0",
+                                  roleClassName
+                                )}
+                              >
+                                {member.role}
+                              </Badge>
+                            );
+                          })()}
                         </button>
                       ))}
                     </div>
@@ -630,6 +676,15 @@ export function AddIssueDialog({
                       <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg p-4 text-center text-sm text-muted-foreground">
                         No members found matching &quot;{assigneeSearchQuery}
                         &quot;
+                      </div>
+                    )}
+
+                  {/* Show message when dropdown is open but no members available */}
+                  {showAssigneeSuggestions &&
+                    assigneeSearchQuery.trim().length === 0 &&
+                    filteredMembers.length === 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg p-4 text-center text-sm text-muted-foreground">
+                        No members available
                       </div>
                     )}
                 </div>
