@@ -136,10 +136,18 @@ export function IssueViewModeLeft({
                   margin: 0.5rem 0;
                   padding-left: 1.5rem;
                   color: hsl(var(--foreground));
+                  list-style-position: outside;
+                }
+                .issue-description-content ul {
+                  list-style-type: disc;
+                }
+                .issue-description-content ol {
+                  list-style-type: decimal;
                 }
                 .issue-description-content ul li,
                 .issue-description-content ol li {
                   color: hsl(var(--foreground));
+                  display: list-item;
                 }
                 .issue-description-content ul li::marker,
                 .issue-description-content ol li::marker {

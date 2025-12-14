@@ -7,7 +7,7 @@ import { apiGet, apiPatch } from "@/lib/api/apiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Loader2 } from "lucide-react";
 import IssuesFilterBar from "@/components/IssuesFilterBar";
-import { getAssigneeUid, getStatusId } from "@/utils/issueUtils";
+import { getAssigneeUid, getStatusId, filterIssues } from "@/utils/issueUtils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   DndContext,
@@ -64,6 +64,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string[]>([]);
+  const [dueDateFilter, setDueDateFilter] = useState<Date | undefined>(undefined);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -77,57 +78,18 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   );
 
 
-  // Filter issues based on search, priority, status, and assignee
+  // Filter issues based on search, priority, status, assignee, and due date
   const filteredIssues = useMemo(() => {
-    let filtered = [...issues];
-
-    // Filter by search query (title or code)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        (issue) =>
-          issue.title.toLowerCase().includes(query) ||
-          (issue.issueCode?.toLowerCase().includes(query) ?? false)
-      );
-    }
-
-    // Filter by priority
-    if (priorityFilter !== "all") {
-      filtered = filtered.filter(
-        (issue) => (issue.priority || "medium") === priorityFilter
-      );
-    }
-
-    // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((issue) => {
-        const statusId = getStatusId(issue);
-        return statusId === statusFilter;
-      });
-    }
-
-    // Filter by assignee
-    if (assigneeFilter.length > 0) {
-      filtered = filtered.filter((issue) => {
-        const assigneeUid = getAssigneeUid(issue.assignee);
-        const isUnassigned = !issue.assignee;
-        
-        // If "unassigned" is selected and issue is unassigned, include it
-        if (assigneeFilter.includes("unassigned") && isUnassigned) {
-          return true;
-        }
-        
-        // If assignee UID is in the selected filters, include it
-        if (assigneeUid && assigneeFilter.includes(assigneeUid)) {
-          return true;
-        }
-        
-        return false;
-      });
-    }
-
-    return filtered;
-  }, [issues, searchQuery, priorityFilter, statusFilter, assigneeFilter]);
+    return filterIssues({
+      issues,
+      searchQuery,
+      priorityFilter,
+      statusFilter,
+      assigneeFilter,
+      dueDateFilter,
+      statuses,
+    });
+  }, [issues, searchQuery, priorityFilter, statusFilter, assigneeFilter, dueDateFilter, statuses]);
 
   const getIssuesByStatus = (statusId: string) => {
     return filteredIssues
@@ -573,6 +535,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
     setPriorityFilter("all");
     setStatusFilter("all");
     setAssigneeFilter([]);
+    setDueDateFilter(undefined);
   };
 
   return (
@@ -590,6 +553,8 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         assigneeFilter={assigneeFilter}
         onAssigneeChange={setAssigneeFilter}
         assignees={assignees}
+        dueDateFilter={dueDateFilter}
+        onDueDateChange={setDueDateFilter}
         onRefresh={fetchData}
         loading={loading}
         showClearFilters={true}

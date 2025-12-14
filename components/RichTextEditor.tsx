@@ -65,6 +65,13 @@ export function RichTextEditor({
   const { user } = useAuth();
   const previousImageUrlsRef = useRef<Set<string>>(new Set());
   const [, setForceUpdate] = useState(0);
+  
+  // Track upload operations: blob URL -> { file, firebaseUrl }
+  interface UploadOperation {
+    file: File;
+    firebaseUrl?: string;
+  }
+  const uploadOperationsRef = useRef<Map<string, UploadOperation>>(new Map());
 
   // Extract image URLs from HTML content
   const extractImageUrls = (html: string): Set<string> => {
@@ -141,9 +148,204 @@ export function RichTextEditor({
       
       onChange(currentHtml);
     },
-    onTransaction: () => {
-      // Force toolbar re-render on any editor transaction (including mark toggles)
-      setForceUpdate(prev => prev + 1);
+    onTransaction: ({ transaction, editor }) => {
+      // Detect undo/redo operations
+      const isUndo = transaction.getMeta('uiEvent') === 'undo';
+      const isRedo = transaction.getMeta('uiEvent') === 'redo';
+      
+      if (isRedo) {
+        // On redo, check if any blob URLs were restored
+        requestAnimationFrame(() => {
+          if (!editor || editor.isDestroyed) return;
+          
+          const { tr } = editor.state;
+          let hasChanges = false;
+          
+          tr.doc.descendants((node, pos) => {
+            if (node.type.name === 'image') {
+              const imageUrl = node.attrs.src;
+              
+              // If it's a blob URL, check if we have an operation for it
+              if (imageUrl && imageUrl.startsWith('blob:')) {
+                const operation = uploadOperationsRef.current.get(imageUrl);
+                
+                if (operation) {
+                  // If the image was already uploaded, delete it from Firebase and re-upload
+                  if (operation.firebaseUrl) {
+                    // Delete the old Firebase URL
+                    deleteImageFromStorage(operation.firebaseUrl).catch((error) => {
+                      console.error("Error deleting old image on redo:", error);
+                    });
+                    
+                    // Clear the Firebase URL and re-upload
+                    const oldFirebaseUrl = operation.firebaseUrl;
+                    operation.firebaseUrl = undefined;
+                    
+                    // Mark as uploading
+                    tr.setNodeMarkup(pos, undefined, { 
+                      ...node.attrs, 
+                      'data-uploading': 'true'
+                    });
+                    tr.setMeta('addToHistory', false);
+                    hasChanges = true;
+                    
+                    // Re-upload in background
+                    (async () => {
+                      try {
+                        if (!user) return;
+                        const idToken = await user.getIdToken();
+                        const newFirebaseUrl = await uploadMediaToStorage(operation.file, "attachments", idToken);
+                        
+                        // Update operation with new Firebase URL
+                        operation.firebaseUrl = newFirebaseUrl;
+                        
+                        // Check if blob URL still exists in editor
+                        if (!editor || editor.isDestroyed) return;
+                        let blobUrlExists = false;
+                        editor.state.doc.descendants((node) => {
+                          if (node.type.name === 'image' && node.attrs.src === imageUrl) {
+                            blobUrlExists = true;
+                          }
+                        });
+                        
+                        if (blobUrlExists) {
+                          // Replace blob URL with new Firebase URL
+                          const { tr: replaceTr } = editor.state;
+                          let found = false;
+                          
+                          replaceTr.doc.descendants((node, pos) => {
+                            if (node.type.name === 'image' && node.attrs.src === imageUrl && !found) {
+                              replaceTr.setNodeMarkup(pos, undefined, { 
+                                ...node.attrs, 
+                                src: newFirebaseUrl,
+                                'data-uploading': null
+                              });
+                              replaceTr.setMeta('addToHistory', false);
+                              found = true;
+                            }
+                          });
+                          
+                          if (found) {
+                            editor.view.dispatch(replaceTr);
+                            // Clean up blob URL
+                            URL.revokeObjectURL(imageUrl);
+                            uploadOperationsRef.current.delete(imageUrl);
+                          }
+                        }
+                      } catch (error) {
+                        console.error("Error re-uploading image on redo:", error);
+                        // Remove the broken image
+                        if (editor && !editor.isDestroyed) {
+                          const { tr: errorTr } = editor.state;
+                          let found = false;
+                          
+                          errorTr.doc.descendants((node, pos) => {
+                            if (node.type.name === 'image' && node.attrs.src === imageUrl && !found) {
+                              errorTr.delete(pos, pos + node.nodeSize);
+                              errorTr.setMeta('addToHistory', false);
+                              found = true;
+                            }
+                          });
+                          
+                          if (found) {
+                            editor.view.dispatch(errorTr);
+                          }
+                        }
+                        // Clean up
+                        URL.revokeObjectURL(imageUrl);
+                        uploadOperationsRef.current.delete(imageUrl);
+                      }
+                    })();
+                  } else {
+                    // Upload was cancelled, restart it
+                    const { file } = operation;
+                    
+                    // Mark as uploading
+                    tr.setNodeMarkup(pos, undefined, { 
+                      ...node.attrs, 
+                      'data-uploading': 'true'
+                    });
+                    tr.setMeta('addToHistory', false);
+                    hasChanges = true;
+                    
+                    // Restart upload in background
+                    (async () => {
+                      try {
+                        if (!user) return;
+                        const idToken = await user.getIdToken();
+                        const firebaseUrl = await uploadMediaToStorage(file, "attachments", idToken);
+                        
+                        // Update operation
+                        operation.firebaseUrl = firebaseUrl;
+                        
+                        // Check if blob URL still exists in editor
+                        if (!editor || editor.isDestroyed) return;
+                        let blobUrlExists = false;
+                        editor.state.doc.descendants((node) => {
+                          if (node.type.name === 'image' && node.attrs.src === imageUrl) {
+                            blobUrlExists = true;
+                          }
+                        });
+                        
+                        if (blobUrlExists) {
+                          // Replace blob URL with Firebase URL
+                          const { tr: replaceTr } = editor.state;
+                          let found = false;
+                          
+                          replaceTr.doc.descendants((node, pos) => {
+                            if (node.type.name === 'image' && node.attrs.src === imageUrl && !found) {
+                              replaceTr.setNodeMarkup(pos, undefined, { 
+                                ...node.attrs, 
+                                src: firebaseUrl,
+                                'data-uploading': null
+                              });
+                              replaceTr.setMeta('addToHistory', false);
+                              found = true;
+                            }
+                          });
+                          
+                          if (found) {
+                            editor.view.dispatch(replaceTr);
+                            // Clean up blob URL
+                            URL.revokeObjectURL(imageUrl);
+                            uploadOperationsRef.current.delete(imageUrl);
+                          }
+                        }
+                      } catch (error) {
+                        console.error("Error re-uploading image on redo:", error);
+                        // Remove the broken image
+                        if (editor && !editor.isDestroyed) {
+                          const { tr: errorTr } = editor.state;
+                          let found = false;
+                          
+                          errorTr.doc.descendants((node, pos) => {
+                            if (node.type.name === 'image' && node.attrs.src === imageUrl && !found) {
+                              errorTr.delete(pos, pos + node.nodeSize);
+                              errorTr.setMeta('addToHistory', false);
+                              found = true;
+                            }
+                          });
+                          
+                          if (found) {
+                            editor.view.dispatch(errorTr);
+                          }
+                        }
+                        // Clean up
+                        URL.revokeObjectURL(imageUrl);
+                        uploadOperationsRef.current.delete(imageUrl);
+                      }
+                    })();
+                  }
+                }
+              }
+            }
+          });
+          
+          if (hasChanges) {
+            editor.view.dispatch(tr);
+          }
+        });
+      }
     },
     editable: !disabled,
     immediatelyRender: false,
@@ -197,6 +399,9 @@ export function RichTextEditor({
       // Create a temporary blob URL to show image immediately
       const tempBlobUrl = URL.createObjectURL(file);
       
+      // Store the upload operation
+      uploadOperationsRef.current.set(tempBlobUrl, { file });
+      
       // Insert image immediately with blob URL
       editor.chain().focus().setImage({ src: tempBlobUrl }).run();
       
@@ -211,6 +416,7 @@ export function RichTextEditor({
               ...node.attrs, 
               'data-uploading': 'true'
             });
+            tr.setMeta('addToHistory', false);
             found = true;
           }
         });
@@ -224,6 +430,12 @@ export function RichTextEditor({
         const idToken = await user.getIdToken();
         const imageUrl = await uploadMediaToStorage(file, "attachments", idToken);
 
+        // Update the upload operation with Firebase URL
+        const operation = uploadOperationsRef.current.get(tempBlobUrl);
+        if (operation) {
+          operation.firebaseUrl = imageUrl;
+        }
+
         // Find and replace all images with the temp blob URL with the Firebase URL
         const { tr } = editor.state;
         let found = false;
@@ -235,6 +447,7 @@ export function RichTextEditor({
               src: imageUrl,
               'data-uploading': null
             });
+            tr.setMeta('addToHistory', false);
             found = true;
           }
         });
@@ -245,6 +458,7 @@ export function RichTextEditor({
         
         // Clean up the blob URL
         URL.revokeObjectURL(tempBlobUrl);
+        uploadOperationsRef.current.delete(tempBlobUrl);
         
         toast.success("Image uploaded successfully");
       } catch (error) {
@@ -263,8 +477,9 @@ export function RichTextEditor({
           editor.view.dispatch(tr);
         }
         
-        // Clean up the blob URL
+        // Clean up the blob URL and operation
         URL.revokeObjectURL(tempBlobUrl);
+        uploadOperationsRef.current.delete(tempBlobUrl);
         
         const errorMessage =
           error instanceof Error ? error.message : "Failed to upload image";
@@ -294,7 +509,7 @@ export function RichTextEditor({
           size="sm"
           onClick={() => editor.chain().focus().toggleBold().run()}
           disabled={!editor.can().chain().focus().toggleBold().run()}
-          className={editor.isActive("bold") ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
+          className={editor.isActive("bold") ? "bg-muted" : ""}
           title="Bold"
         >
           <Bold className="h-4 w-4" />
@@ -305,7 +520,7 @@ export function RichTextEditor({
           size="sm"
           onClick={() => editor.chain().focus().toggleItalic().run()}
           disabled={!editor.can().chain().focus().toggleItalic().run()}
-          className={editor.isActive("italic") ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
+          className={editor.isActive("italic") ? "bg-muted" : ""}
           title="Italic"
         >
           <Italic className="h-4 w-4" />
@@ -316,7 +531,7 @@ export function RichTextEditor({
           size="sm"
           onClick={() => editor.chain().focus().toggleStrike().run()}
           disabled={!editor.can().chain().focus().toggleStrike().run()}
-          className={editor.isActive("strike") ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
+          className={editor.isActive("strike") ? "bg-muted" : ""}
           title="Strikethrough"
         >
           <Strikethrough className="h-4 w-4" />
@@ -327,7 +542,7 @@ export function RichTextEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={editor.isActive("heading", { level: 1 }) ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
+          className={editor.isActive("heading", { level: 1 }) ? "bg-muted" : ""}
           title="Heading 1"
         >
           <Heading1 className="h-4 w-4" />
@@ -337,7 +552,7 @@ export function RichTextEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={editor.isActive("heading", { level: 2 }) ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
+          className={editor.isActive("heading", { level: 2 }) ? "bg-muted" : ""}
           title="Heading 2"
         >
           <Heading2 className="h-4 w-4" />
@@ -347,7 +562,7 @@ export function RichTextEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={editor.isActive("heading", { level: 3 }) ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
+          className={editor.isActive("heading", { level: 3 }) ? "bg-muted" : ""}
           title="Heading 3"
         >
           <Heading3 className="h-4 w-4" />
@@ -358,7 +573,7 @@ export function RichTextEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={editor.isActive("bulletList") ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
+          className={editor.isActive("bulletList") ? "bg-muted" : ""}
           title="Bullet List"
         >
           <List className="h-4 w-4" />
@@ -368,7 +583,7 @@ export function RichTextEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={editor.isActive("orderedList") ? "bg-primary/20 dark:bg-primary/30 text-primary" : ""}
+          className={editor.isActive("orderedList") ? "bg-muted" : ""}
           title="Numbered List"
         >
           <ListOrdered className="h-4 w-4" />
@@ -486,10 +701,18 @@ export function RichTextEditor({
           padding-left: 1.5rem;
           margin: 0.5rem 0;
           color: hsl(var(--foreground));
+          list-style-position: outside;
+        }
+        .rich-text-editor .ProseMirror ul {
+          list-style-type: disc;
+        }
+        .rich-text-editor .ProseMirror ol {
+          list-style-type: decimal;
         }
         .rich-text-editor .ProseMirror ul li,
         .rich-text-editor .ProseMirror ol li {
           color: hsl(var(--foreground));
+          display: list-item;
         }
         .rich-text-editor .ProseMirror ul li::marker,
         .rich-text-editor .ProseMirror ol li::marker {

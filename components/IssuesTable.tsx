@@ -28,6 +28,7 @@ import {
   getStatusId,
   getReporterUid,
   getAssigneeUid,
+  filterIssues,
 } from "@/utils/issueUtils";
 import { PriorityIcon } from "@/components/PriorityIcon";
 
@@ -83,6 +84,7 @@ export default function IssuesTable({
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string[]>([]);
+  const [dueDateFilter, setDueDateFilter] = useState<Date | undefined>(undefined);
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
   const skipRef = useRef(0);
@@ -306,7 +308,8 @@ export default function IssuesTable({
       searchQuery.trim() !== "" ||
       priorityFilter !== "all" ||
       statusFilter !== "all" ||
-      assigneeFilter.length > 0;
+      assigneeFilter.length > 0 ||
+      dueDateFilter !== undefined;
 
     const fetchAllIssuesForFilters = async () => {
       if (!user || !projectId || !hasActiveFilters) {
@@ -345,6 +348,7 @@ export default function IssuesTable({
     priorityFilter,
     statusFilter,
     assigneeFilter,
+    dueDateFilter,
     user,
     projectId,
   ]);
@@ -355,7 +359,8 @@ export default function IssuesTable({
       searchQuery.trim() !== "" ||
       priorityFilter !== "all" ||
       statusFilter !== "all" ||
-      assigneeFilter.length > 0;
+      assigneeFilter.length > 0 ||
+      dueDateFilter !== undefined;
 
     // Don't set up observer if filters are active or already loading
     if (hasActiveFilters || loading || loadingMore || !hasMore) {
@@ -395,6 +400,7 @@ export default function IssuesTable({
     priorityFilter,
     statusFilter,
     assigneeFilter,
+    dueDateFilter,
     fetchIssues,
   ]);
 
@@ -406,73 +412,37 @@ export default function IssuesTable({
     return reporters.get(reporterUid) || null;
   };
 
-  // Filter issues based on search query, priority, status, and assignee (frontend filtering)
+  // Filter issues based on search query, priority, status, assignee, and due date (frontend filtering)
   const filteredIssues = useMemo(() => {
     // Use allIssuesForFilters when filters are active, otherwise use paginated issues
     const hasActiveFilters =
       searchQuery.trim() !== "" ||
       priorityFilter !== "all" ||
       statusFilter !== "all" ||
-      assigneeFilter.length > 0;
+      assigneeFilter.length > 0 ||
+      dueDateFilter !== undefined;
 
     const issuesToFilter =
       hasActiveFilters && allIssuesForFilters.length > 0
         ? allIssuesForFilters
         : issues;
-    let filtered = [...issuesToFilter];
 
-    // Filter by search query (title or code)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        (issue) =>
-          issue.title.toLowerCase().includes(query) ||
-          (issue.issueCode?.toLowerCase().includes(query) ?? false)
-      );
-    }
-
-    // Filter by priority
-    if (priorityFilter !== "all") {
-      filtered = filtered.filter(
-        (issue) => (issue.priority || "medium") === priorityFilter
-      );
-    }
-
-    // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((issue) => {
-        const statusId = getStatusId(issue);
-        return statusId === statusFilter;
-      });
-    }
-
-    // Filter by assignee
-    if (assigneeFilter.length > 0) {
-      filtered = filtered.filter((issue) => {
-        const assigneeUid = getAssigneeUid(issue.assignee);
-        const isUnassigned = !issue.assignee;
-
-        // If "unassigned" is selected and issue is unassigned, include it
-        if (assigneeFilter.includes("unassigned") && isUnassigned) {
-          return true;
-        }
-
-        // If assignee UID is in the selected filters, include it
-        if (assigneeUid && assigneeFilter.includes(assigneeUid)) {
-          return true;
-        }
-
-        return false;
-      });
-    }
-
-    return filtered;
+    return filterIssues({
+      issues: issuesToFilter,
+      searchQuery,
+      priorityFilter,
+      statusFilter,
+      assigneeFilter,
+      dueDateFilter,
+      statuses,
+    });
   }, [
     issues,
     searchQuery,
     priorityFilter,
     statusFilter,
     assigneeFilter,
+    dueDateFilter,
     statuses,
     allIssuesForFilters,
   ]);
@@ -482,13 +452,15 @@ export default function IssuesTable({
     setPriorityFilter("all");
     setStatusFilter("all");
     setAssigneeFilter([]);
+    setDueDateFilter(undefined);
   };
 
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     priorityFilter !== "all" ||
     statusFilter !== "all" ||
-    assigneeFilter.length > 0;
+    assigneeFilter.length > 0 ||
+    dueDateFilter !== undefined;
 
   if (loading) {
     return (
@@ -548,6 +520,8 @@ export default function IssuesTable({
         assigneeFilter={assigneeFilter}
         onAssigneeChange={setAssigneeFilter}
         assignees={assignees}
+        dueDateFilter={dueDateFilter}
+        onDueDateChange={setDueDateFilter}
         onRefresh={fetchIssues}
         loading={loading}
         showClearFilters={true}

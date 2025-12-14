@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { login, loginWithGoogle } from "@/lib/firebase/login"
 import { useAuth } from "@/lib/auth/AuthProvider"
+import Link from "next/link"
 
 const formSchema = z.object({
   email: z.string().email({
@@ -181,12 +182,12 @@ export function LoginForm() {
               <FormItem>
                 <div className="flex items-center justify-between">
                   <FormLabel className="text-sm font-medium">Password</FormLabel>
-                  <button
-                    type="button"
+                  <Link
+                    href="/auth/forgot"
                     className="text-xs text-muted-foreground hover:text-primary dark:hover:text-primary/90 transition-colors"
                   >
                     Forgot password?
-                  </button>
+                  </Link>
                 </div>
                 <FormControl>
                   <div className="relative">
