@@ -1,9 +1,19 @@
 import { useAuth } from "@/lib/auth/AuthProvider"
 import { Sparkles } from "lucide-react"
+import Image from "next/image"
+import { useTheme } from "next-themes"
+import { useState, useEffect } from "react"
 
 export function GreetUser() {
   const auth = useAuth()
   const user = auth?.user
+  const { theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   if (!user) {
     return null
   }
@@ -28,6 +38,32 @@ export function GreetUser() {
       {/* Ambient glow effects */}
       <div className="absolute top-0 right-0 w-72 h-72 bg-primary/10 dark:bg-primary/20 rounded-full blur-3xl opacity-50" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 dark:bg-accent/20 rounded-full blur-3xl opacity-30" />
+
+      {/* Logo decoration - skewed and cut from corners */}
+      <div className="absolute -right-8 top-1/2 -translate-y-1/2 w-80 h-80 opacity-30 dark:opacity-20 pointer-events-none">
+        <div 
+          className="relative w-full h-full transform rotate-12 skew-y-3 scale-110"
+          style={{
+            maskImage: 'radial-gradient(ellipse 80% 80% at center, black 40%, transparent 100%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at center, black 40%, transparent 100%)',
+          }}
+        >
+          <Image
+            src={mounted && theme === "dark" ? "/logo-white.svg" : "/logo-blue.svg"}
+            alt=""
+            width={320}
+            height={320}
+            className="w-full h-full object-contain"
+            style={{
+              filter: theme === "dark" 
+                ? 'drop-shadow(0 0 30px rgba(255, 255, 255, 0.2)) brightness(1.1)'
+                : 'drop-shadow(0 0 30px rgba(59, 130, 246, 0.4)) brightness(1.1)',
+            }}
+          />
+          {/* Soft fade overlay on right edge */}
+          <div className="absolute inset-0 bg-linear-to-l from-card/60 via-card/20 to-transparent pointer-events-none" />
+        </div>
+      </div>
 
       <div className="relative p-5 md:p-6 lg:p-7">
         <div className="flex flex-col gap-3">

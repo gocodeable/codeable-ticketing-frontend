@@ -20,6 +20,7 @@ import { Recents as RecentsType } from "@/types/recents"
 import { motion } from "framer-motion"
 import { apiGet } from "@/lib/api/apiClient"
 import Image from "next/image"
+import { useTheme } from "next-themes"
 
 // Menu items
 const items = [
@@ -44,8 +45,14 @@ export function SideBar() {
   const pathname = usePathname()
   const { state } = useSidebar()
   const { user } = useAuth()
+  const { theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
   const [recentProjects, setRecentProjects] = useState<RecentsType[]>([])
   const [pinnedProjects, setPinnedProjects] = useState<any[]>([])
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   const fetchRecentProjects = async (): Promise<RecentsType[]> => {
     try {
@@ -101,9 +108,13 @@ export function SideBar() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <div className="flex items-center justify-center size-9 rounded-xl bg-linear-to-br from-primary/90 to-primary text-primary-foreground font-bold text-sm shadow-lg dark:shadow-primary/20">
-            CT
-          </div>
+          <Image
+            src={mounted && theme === "dark" ? "/logo-white.svg" : "/logo-blue.svg"}
+            alt="Codeable Tickets Logo"
+            width={36}
+            height={36}
+            className="size-9 rounded-xl"
+          />
           <div className="flex flex-col">
             <span className="font-bold text-base tracking-tight">
               Codeable Tickets
