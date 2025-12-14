@@ -11,11 +11,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Image from "next/image";
-import { Search, X, Check, RefreshCw, Loader2 } from "lucide-react";
+import { Search, X, Check, RefreshCw, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/utils/issueUtils";
 import { PriorityIcon } from "@/components/PriorityIcon";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
 
 interface AssigneeInfo {
   uid: string;
@@ -43,6 +50,10 @@ interface IssuesFilterBarProps {
   onAssigneeChange: (assignees: string[]) => void;
   assignees: Map<string, AssigneeInfo>;
   
+  // Due Date
+  dueDateFilter?: Date | undefined;
+  onDueDateChange?: (date: Date | undefined) => void;
+  
   // Refresh
   onRefresh: () => void;
   loading?: boolean;
@@ -64,6 +75,8 @@ export default function IssuesFilterBar({
   assigneeFilter,
   onAssigneeChange,
   assignees,
+  dueDateFilter,
+  onDueDateChange,
   onRefresh,
   loading = false,
   showClearFilters = false,
@@ -106,7 +119,7 @@ export default function IssuesFilterBar({
     }
   }, [showAssigneeDropdown]);
 
-  const hasActiveFilters = searchQuery.trim() !== "" || priorityFilter !== "all" || (showStatusFilter && statusFilter !== "all") || assigneeFilter.length > 0;
+  const hasActiveFilters = searchQuery.trim() !== "" || priorityFilter !== "all" || (showStatusFilter && statusFilter !== "all") || assigneeFilter.length > 0 || dueDateFilter !== undefined;
 
   return (
     <div className="w-full flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-muted/30 dark:bg-muted/20 rounded-xl p-4 border border-border/40 dark:border-border/60">
@@ -196,6 +209,49 @@ export default function IssuesFilterBar({
             ))}
           </SelectContent>
         </Select>
+      )}
+
+      {/* Due Date Filter */}
+      {onDueDateChange && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full sm:w-[180px] h-10 justify-start text-left font-normal bg-background border-border/60 dark:border-border/40 shadow-sm",
+                !dueDateFilter && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dueDateFilter ? (
+                format(dueDateFilter, "PPP")
+              ) : (
+                <span>Due Date</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dueDateFilter}
+              onSelect={onDueDateChange}
+              initialFocus
+            />
+            {dueDateFilter && (
+              <div className="p-3 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => onDueDateChange(undefined)}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Clear Date
+                </Button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
       )}
 
       {/* Assignee Filter */}

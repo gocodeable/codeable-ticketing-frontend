@@ -30,7 +30,8 @@ export function useIssuePermissions({
     // Only admin or reporter can delete
     if (isAdmin) return true;
     // Check if user is the reporter
-    return user.uid === issue.reporter;
+    const reporterUid = typeof issue.reporter === "object" && issue.reporter ? issue.reporter.uid : issue.reporter;
+    return user.uid === reporterUid;
   };
 
   return {

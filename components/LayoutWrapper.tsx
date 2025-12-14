@@ -8,7 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuthPage = pathname === "/auth";
+  const isAuthPage = pathname.startsWith("/auth");
 
   if (isAuthPage) {
     return <>{children}</>;

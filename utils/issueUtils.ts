@@ -180,3 +180,110 @@ export const getInitials = (name: string): string => {
   return (words[0][0] + words[1][0]).toUpperCase();
 };
 
+/**
+ * Filter issues based on search query, priority, status, assignee, and due date
+ */
+export interface FilterIssuesParams {
+  issues: Issue[];
+  searchQuery: string;
+  priorityFilter: string;
+  statusFilter: string;
+  assigneeFilter: string[];
+  dueDateFilter?: Date | undefined;
+  statuses: WorkflowStatus[];
+}
+
+export const filterIssues = ({
+  issues,
+  searchQuery,
+  priorityFilter,
+  statusFilter,
+  assigneeFilter,
+  dueDateFilter,
+  statuses,
+}: FilterIssuesParams): Issue[] => {
+  let filtered = [...issues];
+
+  // Filter by search query (title or code)
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase().trim();
+    filtered = filtered.filter(
+      (issue) =>
+        issue.title.toLowerCase().includes(query) ||
+        (issue.issueCode?.toLowerCase().includes(query) ?? false)
+    );
+  }
+
+  // Filter by priority
+  if (priorityFilter !== "all") {
+    filtered = filtered.filter(
+      (issue) => (issue.priority || "medium") === priorityFilter
+    );
+  }
+
+  // Filter by status
+  if (statusFilter !== "all") {
+    filtered = filtered.filter((issue) => {
+      const statusId = getStatusId(issue);
+      return statusId === statusFilter;
+    });
+  }
+
+  // Filter by assignee
+  if (assigneeFilter.length > 0) {
+    filtered = filtered.filter((issue) => {
+      const assigneeUid = getAssigneeUid(issue.assignee);
+      const isUnassigned = !issue.assignee;
+
+      // If "unassigned" is selected and issue is unassigned, include it
+      if (assigneeFilter.includes("unassigned") && isUnassigned) {
+        return true;
+      }
+
+      // If assignee UID is in the selected filters, include it
+      if (assigneeUid && assigneeFilter.includes(assigneeUid)) {
+        return true;
+      }
+
+      return false;
+    });
+  }
+
+  // Filter by due date
+  if (dueDateFilter) {
+    filtered = filtered.filter((issue) => {
+      if (!issue.estimatedCompletionDate) return false;
+
+      try {
+        // Parse the issue due date
+        const issueDueDate = new Date(issue.estimatedCompletionDate);
+
+        // Check if date is valid
+        if (isNaN(issueDueDate.getTime())) return false;
+
+        // Get date components in local timezone
+        const issueYear = issueDueDate.getFullYear();
+        const issueMonth = issueDueDate.getMonth();
+        const issueDay = issueDueDate.getDate();
+
+        // Get filter date components
+        const filterYear = dueDateFilter.getFullYear();
+        const filterMonth = dueDateFilter.getMonth();
+        const filterDay = dueDateFilter.getDate();
+
+        // Compare date components
+        return (
+          issueYear === filterYear &&
+          issueMonth === filterMonth &&
+          issueDay === filterDay
+        );
+      } catch (error) {
+        console.error("Error comparing dates:", error);
+        return false;
+      }
+    });
+  }
+
+  return filtered;
+};
+

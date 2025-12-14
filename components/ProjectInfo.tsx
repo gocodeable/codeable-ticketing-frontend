@@ -102,10 +102,18 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
                 margin: 0.5rem 0;
                 padding-left: 1.5rem;
                 color: hsl(var(--foreground));
+                list-style-position: outside;
+              }
+              .project-description-content ul {
+                list-style-type: disc;
+              }
+              .project-description-content ol {
+                list-style-type: decimal;
               }
               .project-description-content ul li,
               .project-description-content ol li {
                 color: hsl(var(--foreground));
+                display: list-item;
               }
               .project-description-content ul li::marker,
               .project-description-content ol li::marker {
