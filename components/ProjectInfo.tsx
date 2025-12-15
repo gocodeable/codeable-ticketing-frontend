@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Project } from "@/types/project";
 import { FileText } from "lucide-react";
 import { CalendarDays } from "lucide-react";
@@ -7,9 +10,17 @@ import { List } from "lucide-react";
 import { Crown } from "lucide-react";
 import { Code } from "lucide-react";
 import { ExternalLink } from "lucide-react";
+import { BarChart3, PieChart as PieChartIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { IssueStatusPieChart } from "@/components/IssueStatusPieChart";
+import { IssuePriorityBarChart } from "@/components/IssuePriorityBarChart";
+import { WorkloadDistribution } from "@/components/WorkloadDistribution";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { apiGet } from "@/lib/api/apiClient";
+import { Issue } from "@/types/issue";
+import { WorkflowStatus } from "@/types/workflowStatus";
 
 interface ProjectInfoProps {
   project: Project;
@@ -17,6 +28,66 @@ interface ProjectInfoProps {
 }
 
 export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
+  const { user } = useAuth();
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [statuses, setStatuses] = useState<WorkflowStatus[]>([]);
+  const [loadingCharts, setLoadingCharts] = useState(true);
+
+  // Fetch issues data
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchChartData = async () => {
+      if (!user || !project._id) return;
+
+      try {
+        setLoadingCharts(true);
+        const idToken = await user.getIdToken();
+
+        // Fetch workflow statuses and issues in parallel
+        const [statusesRes, issuesRes] = await Promise.all([
+          apiGet(`/api/workflow-statuses/${project._id}`, idToken),
+          apiGet(`/api/issues?projectId=${project._id}&limit=1000&skip=0`, idToken),
+        ]);
+
+        const [statusesData, issuesData] = await Promise.all([
+          statusesRes.json(),
+          issuesRes.json(),
+        ]);
+
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+
+        if (statusesData.success) {
+          setStatuses(statusesData.data || []);
+        } else {
+          setStatuses([]);
+        }
+
+        if (issuesData.success) {
+          setIssues(issuesData.data || []);
+        } else {
+          setIssues([]);
+        }
+      } catch (err) {
+        console.error("Error fetching chart data:", err);
+        if (isMounted) {
+          setStatuses([]);
+          setIssues([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingCharts(false);
+        }
+      }
+    };
+
+    fetchChartData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [project._id, user]);
   // Get admin members from the members array
   const adminMembers = Array.isArray(project.members)
     ? project.members.filter((member: any) => {
@@ -42,6 +113,31 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
       </div>
 
       <div className="space-y-5">
+        {/* Analytics Section - Side by Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Issues by Status Pie Chart */}
+          <div className="rounded-lg bg-muted/30 p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <PieChartIcon className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">
+                Issues by Status
+              </h3>
+            </div>
+            <IssueStatusPieChart issues={issues} statuses={statuses} loading={loadingCharts} />
+          </div>
+
+          {/* Issues by Priority Bar Chart */}
+          <div className="rounded-lg bg-muted/30 p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">
+                Issues by Priority
+              </h3>
+            </div>
+            <IssuePriorityBarChart issues={issues} loading={loadingCharts} />
+          </div>
+        </div>
+
         <div className="rounded-lg bg-muted/30 p-4">
           <div className="flex items-center gap-2 mb-2">
             <Code className="w-4 h-4 text-primary" />
@@ -297,62 +393,72 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
           </div>
         </div>
 
-        {/* Project Admins Section */}
-        <div className="rounded-lg bg-muted/30 p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Crown className="w-4 h-4 text-yellow-500" />
-              <h3 className="text-sm font-semibold text-foreground">
-                Project Admins
-              </h3>
+        {/* Workload Distribution and Project Admins - Side by Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Workload Distribution Section */}
+          <WorkloadDistribution 
+            issues={issues} 
+            members={project.members} 
+            loading={loadingCharts} 
+          />
+
+          {/* Project Admins Section */}
+          <div className="rounded-lg bg-muted/30 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Crown className="w-4 h-4 text-yellow-500" />
+                <h3 className="text-sm font-semibold text-foreground">
+                  Project Admins
+                </h3>
+              </div>
+              {adminMembers.length > 0 && (
+                <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+                  {adminMembers.length} admin{adminMembers.length !== 1 ? "s" : ""}
+                </span>
+              )}
             </div>
-            {adminMembers.length > 0 && (
-              <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
-                {adminMembers.length} admin{adminMembers.length !== 1 ? "s" : ""}
-              </span>
+            {adminMembers.length > 0 ? (
+              <div className="space-y-2">
+                {adminMembers.map((member: any, index: number) => (
+                  <Link
+                    key={typeof member === 'string' ? member : member.uid || index}
+                    href={`/profile/${typeof member === 'string' ? member : member.uid}`}
+                    className="flex items-center gap-3 hover:bg-accent rounded-lg p-2.5 -ml-1 transition-all w-full group"
+                  >
+                    <Avatar className="w-10 h-10 ring-2 ring-yellow-500/30 shadow-sm">
+                      <AvatarImage
+                        src={typeof member === 'string' ? '' : member.avatar || ''}
+                        alt={typeof member === 'string' ? 'Admin' : member.name}
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 font-medium">
+                        {typeof member === 'string' ? (
+                          <Crown className="w-4 h-4" />
+                        ) : (
+                          getInitials(member.name)
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                        {typeof member === 'string' ? 'Admin User' : member.name}
+                      </span>
+                      {typeof member !== 'string' && member.email && (
+                        <span className="text-xs text-muted-foreground truncate">
+                          {member.email}
+                        </span>
+                      )}
+                    </div>
+                    <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No admins assigned
+              </p>
             )}
           </div>
-          {adminMembers.length > 0 ? (
-            <div className="space-y-2">
-              {adminMembers.map((member: any, index: number) => (
-                <Link
-                  key={typeof member === 'string' ? member : member.uid || index}
-                  href={`/profile/${typeof member === 'string' ? member : member.uid}`}
-                  className="flex items-center gap-3 hover:bg-accent rounded-lg p-2.5 -ml-1 transition-all w-full group"
-                >
-                  <Avatar className="w-10 h-10 ring-2 ring-yellow-500/30 shadow-sm">
-                    <AvatarImage
-                      src={typeof member === 'string' ? '' : member.avatar || ''}
-                      alt={typeof member === 'string' ? 'Admin' : member.name}
-                      className="object-cover"
-                    />
-                    <AvatarFallback className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 font-medium">
-                      {typeof member === 'string' ? (
-                        <Crown className="w-4 h-4" />
-                      ) : (
-                        getInitials(member.name)
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
-                      {typeof member === 'string' ? 'Admin User' : member.name}
-                    </span>
-                    {typeof member !== 'string' && member.email && (
-                      <span className="text-xs text-muted-foreground truncate">
-                        {member.email}
-                      </span>
-                    )}
-                  </div>
-                  <Crown className="w-4 h-4 text-yellow-500 shrink-0" />
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No admins assigned
-            </p>
-          )}
         </div>
       </div>
     </div>
