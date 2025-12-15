@@ -15,7 +15,7 @@ import {
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth/AuthProvider"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Recents as RecentsType } from "@/types/recents"
 import { motion } from "framer-motion"
 import { apiGet } from "@/lib/api/apiClient"
@@ -92,10 +92,46 @@ export function SideBar() {
     }
   };
 
-  useEffect(() => {
-    fetchRecentProjects().then((data) => setRecentProjects(data))
-    fetchPinnedProjects().then((data) => setPinnedProjects(data))
+  const refreshSidebar = useCallback(() => {
+    if (user) {
+      fetchRecentProjects().then((data) => setRecentProjects(data))
+      fetchPinnedProjects().then((data) => setPinnedProjects(data))
+    }
   }, [user])
+
+  useEffect(() => {
+    refreshSidebar()
+  }, [user, refreshSidebar])
+
+  // Listen for project pin/unpin events
+  useEffect(() => {
+    const handleProjectPinned = () => {
+      refreshSidebar()
+    }
+
+    const handleProjectUnpinned = () => {
+      refreshSidebar()
+    }
+
+    window.addEventListener('project-pinned', handleProjectPinned)
+    window.addEventListener('project-unpinned', handleProjectUnpinned)
+
+    return () => {
+      window.removeEventListener('project-pinned', handleProjectPinned)
+      window.removeEventListener('project-unpinned', handleProjectUnpinned)
+    }
+  }, [refreshSidebar])
+
+  // Refresh when navigating to a project page (project opened)
+  useEffect(() => {
+    if (pathname?.startsWith('/project/') && pathname !== '/projects') {
+      // Small delay to ensure backend has updated activity
+      const timer = setTimeout(() => {
+        refreshSidebar()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [pathname, refreshSidebar])
 
   return (
     <Sidebar className="border-r border-border/40 dark:bg-card/30 dark:backdrop-blur-xl">
@@ -111,9 +147,9 @@ export function SideBar() {
           <Image
             src={mounted && theme === "dark" ? "/logo-white.svg" : "/logo-blue.svg"}
             alt="Codeable Tickets Logo"
-            width={36}
-            height={36}
-            className="size-9 rounded-xl"
+            width={32}
+            height={32}
+            className="size-7 rounded-lg"
           />
           <div className="flex flex-col">
             <span className="font-bold text-base tracking-tight">

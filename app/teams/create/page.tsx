@@ -29,6 +29,20 @@ import Loader from "@/components/Loader";
 import z from "zod";
 import { apiPost } from "@/lib/api/apiClient";
 import { UserSelector, UserSuggestion } from "@/components/UserSelector";
+import { MemberRole } from "@/types/project";
+import { getRoleColor, getRoleLabel } from "@/utils/roleUtils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { DEFAULT_AVATAR } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import { Crown, Server, Monitor, Palette, Bug, UserX, Briefcase } from "lucide-react";
+import Image from "next/image";
 
 const teamSchema = z.object({
   id: z.string().optional(),
@@ -62,7 +76,12 @@ export default function CreateTeamPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [selectedUsers, setSelectedUsers] = useState<UserSuggestion[]>([]);
+  
+  interface UserWithRole extends UserSuggestion {
+    role: MemberRole;
+  }
+  
+  const [selectedUsers, setSelectedUsers] = useState<UserWithRole[]>([]);
 
   const imageSelection = useImageSelection({
     maxSizeMB: 5,
@@ -78,19 +97,57 @@ export default function CreateTeamPage() {
     },
   });
 
+  // Handle individual user selection - add with default role
+  const handleUsersChange = (users: UserSuggestion[]) => {
+    const usersWithRoles: UserWithRole[] = users.map((user) => {
+      // If user already exists, keep their role, otherwise default to unassigned
+      const existing = selectedUsers.find((u) => u.uid === user.uid);
+      return {
+        ...user,
+        role: existing?.role || ("unassigned" as MemberRole),
+      };
+    });
+    setSelectedUsers(usersWithRoles);
+  };
+
+  // Handle role change for a user
+  const handleRoleChange = (uid: string, newRole: MemberRole) => {
+    setSelectedUsers((prev) =>
+      prev.map((user) => (user.uid === uid ? { ...user, role: newRole } : user))
+    );
+  };
+
   const onSubmit = async (data: TeamFormData) => {
+    // Set loading state immediately for better UX
     setLoading(true);
     setError(null);
     setSuccess(false);
 
     try {
+      // Prepare data while getting token
+      const memberUids = selectedUsers.map((u) => u.uid);
+      const memberRoles = selectedUsers.map((u) => ({
+        uid: u.uid,
+        role: u.role,
+      }));
+
+      // Ensure creator is admin
+      if (user?.uid) {
+        const creatorRoleIndex = memberRoles.findIndex((mr) => mr.uid === user.uid);
+        if (creatorRoleIndex >= 0) {
+          memberRoles[creatorRoleIndex].role = "admin";
+        } else {
+          memberRoles.push({ uid: user.uid, role: "admin" });
+          if (!memberUids.includes(user.uid)) {
+            memberUids.push(user.uid);
+          }
+        }
+      }
+
       const idToken = await user?.getIdToken();
       if (!idToken) {
         throw new Error("Unauthorized");
       }
-
-      // Convert selected users to comma-separated emails
-      const memberEmails = selectedUsers.map((u) => u.email).join(",");
 
       const response = await apiPost(
         "/teams/create/api",
@@ -98,7 +155,8 @@ export default function CreateTeamPage() {
           name: form.getValues("name"),
           description: form.getValues("description"),
           img: imageSelection.imagePreview || "",
-          members: memberEmails,
+          members: memberUids,
+          memberRoles: memberRoles,
         },
         idToken
       );
@@ -113,14 +171,9 @@ export default function CreateTeamPage() {
       }
 
       setSuccess(true);
-      form.reset();
-      imageSelection.removeImage();
-      setSelectedUsers([]);
-
-      // Redirect to teams page after success
-      setTimeout(() => {
-        router.push(`/team/${data.data._id}`);
-      }, 1000);
+      
+      // Redirect immediately after success
+      router.push(`/team/${data.data._id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create team");
     } finally {
@@ -268,10 +321,140 @@ export default function CreateTeamPage() {
                     </div>
                     <UserSelector
                       selectedUsers={selectedUsers}
-                      onUsersChange={setSelectedUsers}
+                      onUsersChange={handleUsersChange}
                       disabled={loading}
                       placeholder="Search by name or email..."
                     />
+                    
+                    {/* Selected Users with Role Selectors */}
+                    {selectedUsers.length > 0 && (
+                      <div className="space-y-2 mt-3 max-h-64 overflow-y-auto">
+                        {selectedUsers.map((user) => (
+                          <div
+                            key={user.uid}
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-lg border transition-all",
+                              user.role === "admin"
+                                ? "bg-yellow-50/50 dark:bg-yellow-950/20 border-yellow-200/50 dark:border-yellow-800/30"
+                                : "bg-card border-border/50 hover:bg-muted/50 hover:border-border"
+                            )}
+                          >
+                            {/* Avatar */}
+                            <div className={cn(
+                              "relative h-10 w-10 rounded-full overflow-hidden ring-2 shrink-0",
+                              user.role === "admin" ? "ring-yellow-400/50" : "ring-border"
+                            )}>
+                              <Image
+                                src={user.avatar || DEFAULT_AVATAR}
+                                alt={user.name}
+                                width={40}
+                                height={40}
+                                className="rounded-full object-cover"
+                              />
+                            </div>
+
+                            {/* Name and Email */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-foreground truncate">
+                                  {user.name}
+                                </p>
+                                {user.role === "admin" && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] px-1.5 py-0 h-5 border-yellow-300 dark:border-yellow-700 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300"
+                                  >
+                                    <Crown className="w-2.5 h-2.5 mr-0.5" />
+                                    Admin
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {user.email}
+                              </p>
+                            </div>
+
+                            {/* Role Selector */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Select
+                                value={user.role || "unassigned"}
+                                onValueChange={(value) =>
+                                  handleRoleChange(user.uid, value as MemberRole)
+                                }
+                              >
+                                <SelectTrigger className={cn(
+                                  "min-w-[120px] max-w-[140px] h-8 text-xs border-border/50",
+                                  user.role === "admin" && "border-yellow-300/50 dark:border-yellow-700/50"
+                                )}>
+                                  <SelectValue>
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <span className={cn(
+                                        "w-2 h-2 rounded-full shrink-0",
+                                        getRoleColor(user.role)
+                                      )} />
+                                      <span className="truncate">
+                                        {getRoleLabel(user.role)}
+                                      </span>
+                                    </div>
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">
+                                    <div className="flex items-center gap-2">
+                                      <span className={cn("w-2 h-2 rounded-full", getRoleColor("unassigned"))} />
+                                      <UserX className="w-3 h-3 text-muted-foreground" />
+                                      <span>Unassigned</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="backend">
+                                    <div className="flex items-center gap-2">
+                                      <span className={cn("w-2 h-2 rounded-full", getRoleColor("backend"))} />
+                                      <Server className="w-3 h-3 text-muted-foreground" />
+                                      <span>Backend</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="frontend">
+                                    <div className="flex items-center gap-2">
+                                      <span className={cn("w-2 h-2 rounded-full", getRoleColor("frontend"))} />
+                                      <Monitor className="w-3 h-3 text-muted-foreground" />
+                                      <span>Frontend</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="ui">
+                                    <div className="flex items-center gap-2">
+                                      <span className={cn("w-2 h-2 rounded-full", getRoleColor("ui"))} />
+                                      <Palette className="w-3 h-3 text-muted-foreground" />
+                                      <span>UI</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="qa">
+                                    <div className="flex items-center gap-2">
+                                      <span className={cn("w-2 h-2 rounded-full", getRoleColor("qa"))} />
+                                      <Bug className="w-3 h-3 text-muted-foreground" />
+                                      <span>QA</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="pm">
+                                    <div className="flex items-center gap-2">
+                                      <span className={cn("w-2 h-2 rounded-full", getRoleColor("pm"))} />
+                                      <Briefcase className="w-3 h-3 text-muted-foreground" />
+                                      <span>PM</span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="admin">
+                                    <div className="flex items-center gap-2">
+                                      <span className={cn("w-2 h-2 rounded-full", getRoleColor("admin"))} />
+                                      <Crown className="w-3 h-3 text-muted-foreground" />
+                                      <span>Admin</span>
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Error Message */}

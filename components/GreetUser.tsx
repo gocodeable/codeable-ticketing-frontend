@@ -54,11 +54,6 @@ export function GreetUser() {
             width={320}
             height={320}
             className="w-full h-full object-contain"
-            style={{
-              filter: theme === "dark" 
-                ? 'drop-shadow(0 0 30px rgba(255, 255, 255, 0.2)) brightness(1.1)'
-                : 'drop-shadow(0 0 30px rgba(59, 130, 246, 0.4)) brightness(1.1)',
-            }}
           />
           {/* Soft fade overlay on right edge */}
           <div className="absolute inset-0 bg-linear-to-l from-card/60 via-card/20 to-transparent pointer-events-none" />

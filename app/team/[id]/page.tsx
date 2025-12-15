@@ -436,7 +436,7 @@ export default function TeamPage({
                     <Members
                       members={team.members}
                       adminList={team.admin}
-                      showOnlyAdminBadge={true}
+                      showOnlyAdminBadge={false}
                     />
                   </div>
                 </div>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, description, img, members } = await request.json();
+    const { name, description, img, members, memberRoles } = await request.json();
     const idToken = request.headers.get("Authorization")?.split(" ")[1];
 
     if (!idToken) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${idToken}`,
       },
-      body: JSON.stringify({ name, description, img, members }),
+      body: JSON.stringify({ name, description, img, members, memberRoles }),
     });
 
     const data = await res.json();

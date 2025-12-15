@@ -38,11 +38,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(firebaseUser)
         setError(null)
         
+        // Only update last sign-in if auth operation is not in progress (not during signup/login)
+        // And wait a bit for backend sync to complete during signup
         if (lastSyncedUid.current !== firebaseUser.uid && !authOperationInProgress) {
           lastSyncedUid.current = firebaseUser.uid
-          updateLastSignIn(firebaseUser).catch(err => {
-            console.error("Failed to update last sign-in:", err)
-          })
+          // Small delay to ensure backend sync completes
+          setTimeout(() => {
+            updateLastSignIn(firebaseUser).catch(err => {
+              console.error("Failed to update last sign-in:", err)
+            })
+          }, 500)
         }
       } else {
         setUser(null)
@@ -58,9 +63,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!authOperationInProgress && user && lastSyncedUid.current !== user.uid) {
       lastSyncedUid.current = user.uid
-      updateLastSignIn(user).catch(err => {
-        console.error("Failed to update last sign-in after auth operation:", err)
-      })
+      // Wait a bit for backend sync to complete after signup/login
+      setTimeout(() => {
+        updateLastSignIn(user).catch(err => {
+          console.error("Failed to update last sign-in after auth operation:", err)
+        })
+      }, 1000)
     }
   }, [authOperationInProgress, user])
 

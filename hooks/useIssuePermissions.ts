@@ -3,10 +3,12 @@
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Issue } from "@/types/issue";
 
+import { MemberRole } from "@/types/project";
+
 interface UseIssuePermissionsProps {
   issue: Issue | null;
   isAdmin: boolean;
-  userRole?: "admin" | "developer" | "qa";
+  userRole?: MemberRole;
 }
 
 export function useIssuePermissions({
