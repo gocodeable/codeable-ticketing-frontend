@@ -1,6 +1,6 @@
 import { Issue } from "./issue";
 
-export type MemberRole = "admin" | "developer" | "qa";
+export type MemberRole = "backend" | "frontend" | "ui" | "qa" | "unassigned" | "admin" | "pm";
 
 export interface MemberRoleInfo {
   uid: string;

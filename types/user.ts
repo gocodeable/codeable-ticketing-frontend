@@ -4,6 +4,7 @@ export type User = {
     email: string;
     avatar?: string;
     bio: string;
+    loginType?: 'email' | 'google';
     createdAt: string ;
     updatedAt: string ;
 }

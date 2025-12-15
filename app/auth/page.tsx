@@ -8,6 +8,10 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { ModeToggle } from "@/components/ThemeToggle";
 import { AuthPageSpinner } from "@/components/AuthPageSpinner";
 import Image from "next/image";
+import { isValidEmailDomain } from "@/lib/utils/emailValidation";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase/firebase";
+import { checkUserExists } from "@/lib/auth/checkUserExists";
 
 export default function AuthPage() {
   const { user, loading, error, authOperationInProgress } = useAuth();
@@ -16,7 +20,41 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (!loading && user && !authOperationInProgress) {
-      router.push("/");
+      // Validate email domain before allowing navigation
+      if (!isValidEmailDomain(user.email)) {
+        // Sign out and delete account if email is invalid
+        signOut(auth).then(() => {
+          user.delete().catch((err) => {
+            console.error("Error deleting user account:", err);
+          });
+        }).catch((err) => {
+          console.error("Error signing out:", err);
+        });
+        return;
+      }
+      
+      // Check if user exists in backend before allowing navigation
+      checkUserExists(user).then((exists) => {
+        if (!exists) {
+          // User doesn't exist in backend - delete account and keep on auth page
+          user.delete().then(() => {
+            signOut(auth).catch((err) => {
+              console.error("Error signing out:", err);
+            });
+          }).catch((err) => {
+            console.error("Error deleting user account:", err);
+            signOut(auth).catch((signOutErr) => {
+              console.error("Error signing out:", signOutErr);
+            });
+          });
+          return;
+        }
+        // User exists in backend, allow navigation
+        router.push("/");
+      }).catch((err) => {
+        console.error("Error checking user existence:", err);
+        // On error, don't allow navigation to be safe
+      });
     }
   }, [user, loading, authOperationInProgress, router]);
 
@@ -46,7 +84,7 @@ export default function AuthPage() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center">
               <Image
                 src="/codeable-white.svg"
                 alt="Codeable"
@@ -54,7 +92,6 @@ export default function AuthPage() {
                 height={24}
                 className="h-6 w-auto object-contain"
               />
-              <span className="text-xl font-sans font-bold leading-none tracking-tight mt-1">Tickets</span>
             </div>
           </div>
         </div>
@@ -151,6 +188,27 @@ export default function AuthPage() {
           <a href="#" className="hover:text-white/80 transition-colors">
             Terms
           </a>
+        </div>
+
+        {/* Logo decoration - bottom right */}
+        <div className="absolute -bottom-10 right-0 w-96 h-96 opacity-30 dark:opacity-20 pointer-events-none">
+          <div 
+            className="relative w-full h-full transform -rotate-15 -skew-y-1.5 -skew-x-1.5 scale-150"
+            style={{
+              maskImage: 'radial-gradient(ellipse 80% 80% at center, black 40%, transparent 100%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at center, black 40%, transparent 100%)',
+            }}
+          >
+            <Image
+              src="/logo-white.svg"
+              alt=""
+              width={320}
+              height={320}
+              className="w-full h-full object-contain"
+            />
+            {/* Soft fade overlay on right edge */}
+            <div className="absolute inset-0 bg-linear-to-l from-[#0e0926]/60 via-[#0e0926]/20 to-transparent pointer-events-none" />
+          </div>
         </div>
       </div>
 

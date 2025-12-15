@@ -30,10 +30,11 @@ import z from "zod";
 import { apiPost } from "@/lib/api/apiClient";
 import { UserSelector, UserSuggestion } from "@/components/UserSelector";
 import { TeamSelector, TeamSuggestion } from "@/components/TeamSelector";
-import { Users, UserPlus, Crown } from "lucide-react";
+import { Users, UserPlus, Crown, Server, Monitor, Palette, TestTube, UserX, Briefcase } from "lucide-react";
 import Image from "next/image";
 import { generateProjectCode } from "@/utils/generateProjectCode";
 import { MemberRole } from "@/types/project";
+import { getRoleColor, getRoleLabel } from "@/utils/roleUtils";
 import {
   Select,
   SelectContent,
@@ -153,11 +154,12 @@ export default function CreateProjectPage() {
   // Handle team selection - add all team members to selected users and link project to team
   const handleTeamSelected = (team: TeamSuggestion) => {
     // Get unique members by combining existing and new team members
+    // Use team member roles if available, otherwise default to unassigned
     const newMembers: UserWithRole[] = team.members
       .filter((member) => !selectedUsers.some((u) => u.uid === member.uid))
       .map((member) => ({
         ...member,
-        role: "developer" as MemberRole,
+        role: ((member as any).role || "unassigned") as MemberRole,
       }));
     setSelectedUsers([...selectedUsers, ...newMembers]);
     
@@ -168,11 +170,11 @@ export default function CreateProjectPage() {
   // Handle individual user selection - add with default role
   const handleUsersChange = (users: UserSuggestion[]) => {
     const usersWithRoles: UserWithRole[] = users.map((user) => {
-      // If user already exists, keep their role, otherwise default to developer
+      // If user already exists, keep their role, otherwise default to unassigned
       const existing = selectedUsers.find((u) => u.uid === user.uid);
       return {
         ...user,
-        role: existing?.role || ("developer" as MemberRole),
+        role: existing?.role || ("unassigned" as MemberRole),
       };
     });
     setSelectedUsers(usersWithRoles);
@@ -186,17 +188,13 @@ export default function CreateProjectPage() {
   };
 
   const onSubmit = async (data: ProjectFormData) => {
+    // Set loading state immediately for better UX
     setLoading(true);
     setError(null);
     setSuccess(false);
 
     try {
-      const idToken = await user?.getIdToken();
-      if (!idToken) {
-        throw new Error("Unauthorized");
-      }
-
-      // Send member UIDs and roles
+      // Prepare data while getting token
       const memberUids = selectedUsers.map((u) => u.uid);
       const memberRoles = selectedUsers.map((u) => ({
         uid: u.uid,
@@ -204,7 +202,7 @@ export default function CreateProjectPage() {
       }));
 
       const adminUids = selectedUsers
-        .filter((u) => u.role === "admin")
+        .filter((u) => u.role === "admin" || u.role === "pm")
         .map((u) => u.uid);
       
       if (user?.uid && !adminUids.includes(user.uid)) {
@@ -215,6 +213,11 @@ export default function CreateProjectPage() {
         } else {
           memberRoles.push({ uid: user.uid, role: "admin" });
         }
+      }
+
+      const idToken = await user?.getIdToken();
+      if (!idToken) {
+        throw new Error("Unauthorized");
       }
 
       const response = await apiPost(
@@ -244,16 +247,9 @@ export default function CreateProjectPage() {
       }
 
       setSuccess(true);
-      form.reset();
-      imageSelection.removeImage();
-      setSelectedUsers([]);
-      setSelectedTeams([]);
-      setLinkedTeam(null);
-
-      // Redirect to projects page after success
-      setTimeout(() => {
-        router.push(`/project/${data.data._id}`);
-      }, 1000);
+      
+      // Redirect immediately after success
+      router.push(`/project/${data.data._id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create project");
     } finally {
@@ -567,44 +563,75 @@ export default function CreateProjectPage() {
                                   {/* Role Selector */}
                                   <div className="flex items-center gap-2 shrink-0">
                                     <Select
-                                      value={user.role}
+                                      value={user.role || "unassigned"}
                                       onValueChange={(value) =>
                                         handleRoleChange(user.uid, value as MemberRole)
                                       }
                                     >
                                       <SelectTrigger className={cn(
-                                        "w-30 h-8 text-xs border-border/50",
+                                        "min-w-[120px] max-w-[140px] h-8 text-xs border-border/50",
                                         user.role === "admin" && "border-yellow-300/50 dark:border-yellow-700/50"
                                       )}>
                                         <SelectValue>
-                                          <div className="flex items-center gap-1.5">
+                                          <div className="flex items-center gap-1.5 min-w-0">
                                             <span className={cn(
-                                              "w-2 h-2 rounded-full",
-                                              user.role === "admin" && "bg-yellow-500",
-                                              user.role === "developer" && "bg-blue-500",
-                                              user.role === "qa" && "bg-purple-500"
+                                              "w-2 h-2 rounded-full shrink-0",
+                                              getRoleColor(user.role)
                                             )} />
-                                            <span className="capitalize">{user.role}</span>
+                                            <span className="truncate">
+                                              {getRoleLabel(user.role)}
+                                            </span>
                                           </div>
                                         </SelectValue>
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="admin">
+                                        <SelectItem value="unassigned">
                                           <div className="flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                                            <span>Admin</span>
+                                            <span className={cn("w-2 h-2 rounded-full", getRoleColor("unassigned"))} />
+                                            <UserX className="w-3 h-3 text-muted-foreground" />
+                                            <span>Unassigned</span>
                                           </div>
                                         </SelectItem>
-                                        <SelectItem value="developer">
+                                        <SelectItem value="backend">
                                           <div className="flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-blue-500" />
-                                            <span>Developer</span>
+                                            <span className={cn("w-2 h-2 rounded-full", getRoleColor("backend"))} />
+                                            <Server className="w-3 h-3 text-muted-foreground" />
+                                            <span>Backend</span>
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="frontend">
+                                          <div className="flex items-center gap-2">
+                                            <span className={cn("w-2 h-2 rounded-full", getRoleColor("frontend"))} />
+                                            <Monitor className="w-3 h-3 text-muted-foreground" />
+                                            <span>Frontend</span>
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="ui">
+                                          <div className="flex items-center gap-2">
+                                            <span className={cn("w-2 h-2 rounded-full", getRoleColor("ui"))} />
+                                            <Palette className="w-3 h-3 text-muted-foreground" />
+                                            <span>UI</span>
                                           </div>
                                         </SelectItem>
                                         <SelectItem value="qa">
                                           <div className="flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-purple-500" />
+                                            <span className={cn("w-2 h-2 rounded-full", getRoleColor("qa"))} />
+                                            <TestTube className="w-3 h-3 text-muted-foreground" />
                                             <span>QA</span>
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="pm">
+                                          <div className="flex items-center gap-2">
+                                            <span className={cn("w-2 h-2 rounded-full", getRoleColor("pm"))} />
+                                            <Briefcase className="w-3 h-3 text-muted-foreground" />
+                                            <span>Project Manager</span>
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="admin">
+                                          <div className="flex items-center gap-2">
+                                            <span className={cn("w-2 h-2 rounded-full", getRoleColor("admin"))} />
+                                            <Crown className="w-3 h-3 text-muted-foreground" />
+                                            <span>Admin</span>
                                           </div>
                                         </SelectItem>
                                       </SelectContent>

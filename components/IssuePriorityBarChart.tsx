@@ -140,7 +140,7 @@ export function IssuePriorityBarChart({ issues, loading = false }: IssuePriority
   if (chartData.length === 0 || chartData.every((d) => d.count === 0)) {
     return (
       <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
-        No issues found
+        No issues created yet
       </div>
     );
   }
@@ -174,7 +174,7 @@ export function IssuePriorityBarChart({ issues, loading = false }: IssuePriority
       }} />
       <div ref={chartRef} className={`w-full priority-bar-chart priority-bar-chart-${resolvedTheme}`}>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis
               dataKey="priority"
@@ -183,6 +183,7 @@ export function IssuePriorityBarChart({ issues, loading = false }: IssuePriority
               tickLine={{ stroke: textColor }}
             />
             <YAxis
+              domain={[0, 'auto']}
               stroke={textColor}
               tick={{ fill: textColor, fontSize: 12 }}
               tickLine={{ stroke: textColor }}

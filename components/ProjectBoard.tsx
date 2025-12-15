@@ -31,12 +31,12 @@ import SortableStatusColumn from "./SortableStatusColumn";
 import AddWorkflowStatus from "./AddWorkflowStatus";
 import IssueCard from "./IssueCard";
 
-import { ProjectMember } from "@/types/project";
+import { ProjectMember, MemberRole } from "@/types/project";
 
 interface ProjectBoardProps {
   projectId: string;
   isAdmin: boolean;
-  userRole?: "admin" | "developer" | "qa";
+  userRole?: MemberRole;
   projectMembers: ProjectMember[];
   initialIssueId?: string;
   onIssuesCountChange?: (count: number) => void;

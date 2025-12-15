@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { ProjectMember, MemberRole } from "@/types/project";
 import { Badge } from "@/components/ui/badge";
+import { getRoleLabel } from "@/utils/roleUtils";
 import { Issue } from "@/types/issue";
 import Image from "next/image";
 import { DEFAULT_AVATAR } from "@/lib/constants";
@@ -358,11 +359,6 @@ export function AddIssueDialog({
           variant: "outline" as const,
           className: "border-yellow-300 dark:border-yellow-700 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300",
         };
-      case "developer":
-        return {
-          variant: "default" as const,
-          className: "",
-        };
       case "qa":
         return {
           variant: "secondary" as const,
@@ -621,7 +617,7 @@ export function AddIssueDialog({
 
                   {/* Suggestions Dropdown */}
                   {showAssigneeSuggestions && filteredMembers.length > 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-sm shadow-lg max-h-60 overflow-y-auto">
                       {filteredMembers.map((member) => (
                         <button
                           key={member.uid}
@@ -656,11 +652,11 @@ export function AddIssueDialog({
                               <Badge
                                 variant={variant}
                                 className={cn(
-                                  "absolute top-2 right-2 text-[10px] px-1.5 py-0.5 capitalize shrink-0",
+                                  "absolute top-2 right-2 text-[10px] px-1.5 py-0.5 shrink-0",
                                   roleClassName
                                 )}
                               >
-                                {member.role}
+                                {getRoleLabel(member.role)}
                               </Badge>
                             );
                           })()}

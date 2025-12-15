@@ -1,6 +1,6 @@
 import { Issue } from "@/types/issue";
 import { WorkflowStatus } from "@/types/workflowStatus";
-import { ProjectMember } from "@/types/project";
+import { ProjectMember, MemberRole } from "@/types/project";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -87,7 +87,7 @@ export default function SortableStatusColumn({
   status: WorkflowStatus;
   statusIssues: Issue[];
   isAdmin: boolean;
-  userRole?: "admin" | "developer" | "qa";
+  userRole?: MemberRole;
   projectId: string;
   projectMembers: ProjectMember[];
   getTypeIcon: (type: string) => string;
@@ -373,10 +373,10 @@ export default function SortableStatusColumn({
         )}
       </div>
 
-      <div className="sticky top-0 z-10 bg-background border-b border-border/40 dark:border-border/60 px-3 py-2">
+      <div className="sticky top-0 z-10 border-b border-border/40 dark:border-border/60 px-3 py-2">
         <Button
           variant="outline"
-          className="w-full cursor-pointer border-dashed hover:border-primary/50 hover:bg-accent/50 gap-2 text-muted-foreground hover:text-primary"
+          className="w-full cursor-pointer border-dashed hover:border-primary/50 hover:bg-accent/50 gap-2 text-black dark:text-white hover:text-primary dark:hover:text-primary"
           onClick={() => setShowAddIssueDialog(true)}
         >
           <Plus className="w-4 h-4" />
