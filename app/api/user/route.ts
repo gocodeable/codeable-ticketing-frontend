@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
                 email: user.email,
                 name: user.name,
                 avatar: user.avatar,
+                loginType: user.loginType || 'email',
             })
         });
         

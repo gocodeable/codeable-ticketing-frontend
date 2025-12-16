@@ -24,6 +24,7 @@ import { formatDistanceToNow } from "date-fns"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
+import { DEFAULT_AVATAR } from "@/lib/constants"
 
 export function Header() {
   const auth = useAuth()
@@ -50,21 +51,6 @@ export function Header() {
     } catch (error) {
       console.error("Failed to logout:", error)
     }
-  }
-
-  const getInitials = (displayName: string | null | undefined, email?: string | null) => {
-    if (displayName) {
-      const words = displayName.trim().split(/\s+/)
-      if (words.length >= 2) {
-        return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase()
-      } else if (words.length === 1 && words[0].length > 0) {
-        return words[0].charAt(0).toUpperCase()
-      }
-    }
-    if (email) {
-      return email.split("@")[0].charAt(0).toUpperCase()
-    }
-    return "U"
   }
 
   const getNotificationIcon = (type: string) => {
@@ -104,7 +90,7 @@ export function Header() {
             alt="Codeable Tickets Logo"
             width={32}
             height={32}
-            className="size-8 rounded-lg"
+            className="size-7 rounded-lg"
           />
           <span className="font-bold text-base hidden sm:inline-block tracking-tight">
             Codeable Tickets
@@ -334,51 +320,39 @@ export function Header() {
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-lg shrink-0 hover:bg-primary/10 dark:hover:bg-primary/10 transition-all duration-200 h-10 w-10"
+              className="rounded-lg shrink-0 hover:bg-primary/10 dark:hover:bg-primary/10 transition-all duration-200 h-10 w-10 p-0"
             >
-              {user?.photoURL && !imageError ? (
-                <div className="relative size-8 rounded-lg overflow-hidden ring-2 ring-border/40 dark:ring-border/60">
-                  <Image
-                    src={user.photoURL}
-                    alt="Profile"
-                    width={32}
-                    height={32}
-                    className="w-full h-full object-cover"
-                    onError={() => setImageError(true)}
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center size-8 rounded-lg bg-linear-to-br from-primary to-primary/80 text-primary-foreground text-sm font-semibold shadow-md dark:shadow-primary/20">
-                  {getInitials(user?.displayName || undefined, user?.email || undefined)}
-                </div>
-              )}
+              <div className="relative size-8 rounded-lg overflow-hidden">
+                <Image
+                  src={user?.photoURL && !imageError ? user.photoURL : DEFAULT_AVATAR}
+                  alt="Profile"
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-cover"
+                  onError={() => setImageError(true)}
+                />
+              </div>
               <span className="sr-only">Account menu</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuLabel>
               <div className="flex items-center gap-3 py-1">
-                {user?.photoURL && !imageError ? (
-                  <div className="relative size-10 rounded-lg overflow-hidden ring-2 ring-border/40 dark:ring-border/60">
-                    <Image
-                      src={user.photoURL}
-                      alt="Profile"
-                      width={40}
-                      height={40}
-                      className="w-full h-full object-cover"
-                      onError={() => setImageError(true)}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center size-10 rounded-lg bg-linear-to-br from-primary to-primary/80 text-primary-foreground text-sm font-semibold">
-                    {getInitials(user?.displayName || undefined, user?.email || undefined)}
-                  </div>
-                )}
-                <div className="flex flex-col">
-                  <p className="text-sm font-semibold leading-none mb-1">
+                <div className="relative size-10 rounded-lg overflow-hidden shrink-0">
+                  <Image
+                    src={user?.photoURL && !imageError ? user.photoURL : DEFAULT_AVATAR}
+                    alt="Profile"
+                    width={40}
+                    height={40}
+                    className="w-full h-full object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                </div>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <p className="text-sm font-semibold leading-none mb-1 truncate">
                     {user?.displayName || "User"}
                   </p>
-                  <p className="text-xs leading-none text-muted-foreground">
+                  <p className="text-xs leading-none text-muted-foreground truncate">
                     {user?.email || ""}
                   </p>
                 </div>

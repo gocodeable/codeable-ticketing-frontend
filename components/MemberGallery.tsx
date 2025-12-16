@@ -3,7 +3,9 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { User, ChevronLeft, ChevronRight, Crown, Code, Bug } from "lucide-react";
+import { User, ChevronLeft, ChevronRight, Crown, Server, Monitor, Palette, TestTube, UserX, Briefcase } from "lucide-react";
+import { getRoleLabel } from "@/utils/roleUtils";
+import { MemberRole } from "@/types/project";
 
 interface MemberGalleryProps {
   members: {
@@ -11,7 +13,7 @@ interface MemberGalleryProps {
     name: string;
     email?: string;
     avatar?: string;
-    role?: "admin" | "developer" | "qa";
+    role?: MemberRole;
   }[];
   adminList?: string[];
   showOnlyAdminBadge?: boolean;
@@ -32,32 +34,45 @@ export default function MemberGallery({
     router.push(`/profile/${memberId}`);
   };
 
-  const getRoleIcon = (role?: string) => {
+  const getRoleIcon = (role?: MemberRole | string) => {
     switch (role) {
       case "admin":
         return <Crown className="w-3 h-3" />;
+      case "backend":
+        return <Server className="w-3 h-3" />;
+      case "frontend":
+        return <Monitor className="w-3 h-3" />;
+      case "ui":
+        return <Palette className="w-3 h-3" />;
       case "qa":
-        return <Bug className="w-3 h-3" />;
-      case "developer":
+        return <TestTube className="w-3 h-3" />;
+      case "pm":
+        return <Briefcase className="w-3 h-3" />;
+      case "unassigned":
+        return <UserX className="w-3 h-3" />;
       default:
-        return <Code className="w-3 h-3" />;
+        return <UserX className="w-3 h-3" />;
     }
   };
 
-  const getRoleColor = (role?: string) => {
+  const getRoleColor = (role?: MemberRole | string) => {
     switch (role) {
       case "admin":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800";
+      case "backend":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-purple-200 dark:border-purple-800";
+      case "frontend":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-800";
+      case "ui":
+        return "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 border-pink-200 dark:border-pink-800";
       case "qa":
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200 dark:border-green-800";
-      case "developer":
+      case "pm":
+        return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 border-indigo-200 dark:border-indigo-800";
+      case "unassigned":
       default:
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-800";
     }
-  };
-
-  const getRoleLabel = (role?: string) => {
-    return role ? role.charAt(0).toUpperCase() + role.slice(1) : "Developer";
   };
 
   const isAdmin = (memberId: string) => {
@@ -154,7 +169,7 @@ export default function MemberGallery({
               onMouseLeave={() => setHoveredIndex(null)}
             >
               {/* Card */}
-              <div className="relative bg-card rounded-xl overflow-hidden shadow-lg border border-border hover:border-primary transition-all duration-300">
+              <div className="relative bg-card rounded-xl overflow-hidden shadow-sm dark:shadow-xs border border-border hover:border-primary transition-all duration-300">
                 {/* Avatar Container */}
                 <div className="relative w-full aspect-square bg-linear-to-br from-primary/20 to-purple-500/20 flex items-center justify-center overflow-hidden">
                   {member.avatar ? (

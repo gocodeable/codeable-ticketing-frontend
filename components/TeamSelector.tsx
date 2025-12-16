@@ -39,7 +39,7 @@ export interface TeamSuggestion {
   name: string;
   img?: string;
   description?: string;
-  members: UserSuggestion[];
+  members: Array<UserSuggestion & { role?: string }>;
 }
 
 interface TeamSelectorProps {

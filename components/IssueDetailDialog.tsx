@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useDropzone } from "react-dropzone";
 import { uploadMediaToStorage } from "@/lib/firebase/uploadMedia";
 import { UserSuggestion } from "@/components/UserSelector";
+import { MemberRole } from "@/types/project";
 
 // Import new components
 import { IssueDetailHeader } from "./IssueDetailHeader";
@@ -31,7 +32,7 @@ interface IssueDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   issueId: string | null;
   isAdmin?: boolean;
-  userRole?: "admin" | "developer" | "qa";
+  userRole?: MemberRole;
   projectMembers?: Array<{ uid: string; name: string; email: string; avatar?: string }>;
   onIssueUpdated?: (issue: Issue) => void;
   onIssueDeleted?: (issueId: string) => void;

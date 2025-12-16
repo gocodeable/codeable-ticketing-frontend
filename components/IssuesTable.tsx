@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { Issue } from "@/types/issue";
 import { WorkflowStatus } from "@/types/workflowStatus";
+import { MemberRole } from "@/types/project";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { apiGet } from "@/lib/api/apiClient";
 import {
@@ -39,7 +40,7 @@ interface IssuesTableProps {
   projectId: string;
   onIssuesCountChange?: (count: number) => void;
   isAdmin?: boolean;
-  userRole?: "admin" | "developer" | "qa";
+  userRole?: MemberRole;
   projectMembers?: Array<{
     uid: string;
     name: string;
@@ -738,7 +739,12 @@ export default function IssuesTable({
               issue._id === updatedIssue._id ? updatedIssue : issue
             )
           );
-          fetchIssues();
+          // Also update in allIssuesForFilters if it exists
+          setAllIssuesForFilters((prevIssues) =>
+            prevIssues.map((issue) =>
+              issue._id === updatedIssue._id ? updatedIssue : issue
+            )
+          );
         }}
       />
     </div>

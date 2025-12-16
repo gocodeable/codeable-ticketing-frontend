@@ -146,6 +146,8 @@ export default function ProjectsPage() {
         // Remove from pinned projects list
         setPinnedProjects((prev) => prev.filter((p) => p._id !== projectId));
         toast.success("Project unpinned");
+        // Dispatch event to refresh sidebar
+        window.dispatchEvent(new CustomEvent('project-unpinned'));
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to unpin project");

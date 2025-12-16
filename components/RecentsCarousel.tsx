@@ -72,18 +72,18 @@ export function RecentsCarousel({ recents }: { recents: Recents[] }) {
                                                     <KanbanIcon className="w-4 h-4 text-primary dark:text-primary/90" />
                                                 </div>
                                             )}
-                                            <div className="flex-1 min-w-0 space-y-1">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <h3 className="text-sm font-semibold line-clamp-1 group-hover:text-primary transition-colors">
-                                                        {recent.title}
-                                                    </h3>
+                                            <div className="flex-1 min-w-0 flex flex-col">
+                                                <h3 className="text-sm font-semibold line-clamp-2 group-hover:text-primary transition-colors mb-1">
+                                                    {recent.title}
+                                                </h3>
+                                                <div className="flex items-center justify-between gap-2 mt-auto">
+                                                    <p className="text-xs text-muted-foreground capitalize">{recent.type}</p>
                                                     <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
                                                         {recent.lastAccessed
                                                             ? formatDistanceToNow(new Date(recent.lastAccessed), { addSuffix: true })
                                                             : "N/A"}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-muted-foreground capitalize">{recent.type}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -117,18 +117,18 @@ export function RecentsCarousel({ recents }: { recents: Recents[] }) {
                                                 <FolderIcon className="w-4 h-4 text-primary dark:text-primary/90" />
                                             </div>
                                         )}
-                                        <div className="flex-1 min-w-0 space-y-1">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <h3 className="text-sm font-semibold line-clamp-1 group-hover:text-primary transition-colors">
-                                                    {recent.title}
-                                                </h3>
+                                        <div className="flex-1 min-w-0 flex flex-col">
+                                            <h3 className="text-sm font-semibold line-clamp-2 group-hover:text-primary transition-colors mb-1">
+                                                {recent.title}
+                                            </h3>
+                                            <div className="flex items-center justify-between gap-2 mt-auto">
+                                                <p className="text-xs text-muted-foreground capitalize">{recent.type}</p>
                                                 <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
                                                     {recent.lastAccessed
                                                         ? formatDistanceToNow(new Date(recent.lastAccessed), { addSuffix: true })
                                                         : "N/A"}
                                                 </span>
                                             </div>
-                                            <p className="text-xs text-muted-foreground capitalize">{recent.type}</p>
                                         </div>
                                     </div>
                                 </div>

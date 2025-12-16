@@ -6,6 +6,7 @@ import { Issue } from "@/types/issue";
 import { WorkflowStatus } from "@/types/workflowStatus";
 import { Loader2 } from "lucide-react";
 import { getStatusName, getStatusId } from "@/utils/issueUtils";
+import { useTheme } from "next-themes";
 
 interface IssueStatusPieChartProps {
   issues: Issue[];
@@ -20,19 +21,51 @@ interface ChartData {
   [key: string]: string | number;
 }
 
+// Colors that work well in both light and dark themes
 const COLORS = [
-  "#1e3a8a", // Dark blue
-  "#2563eb", // Blue
-  "#3b82f6", // Lighter blue
-  "#60a5fa", // Light blue
-  "#93c5fd", // Very light blue
-  "#bfdbfe", // Pale blue
-  "#dbeafe", // Very pale blue
-  "#0e0926", // Very dark blue
-  "#160d3f", // Dark purple-blue
+  "#3b82f6", // Blue - good contrast in both themes
+  "#10b981", // Green - vibrant and visible
+  "#f59e0b", // Amber - warm and visible
+  "#ef4444", // Red - strong contrast
+  "#8b5cf6", // Purple - vibrant
+  "#06b6d4", // Cyan - bright
+  "#f97316", // Orange - warm
+  "#ec4899", // Pink - vibrant
+  "#6366f1", // Indigo - medium tone
 ];
 
+// Convert status color names to hex colors that work in both themes
+const getStatusColorHex = (colorName: string | undefined, theme: string | undefined): string => {
+  if (!colorName) return COLORS[0];
+  
+  const colorMap: Record<string, { light: string; dark: string }> = {
+    blue: { light: "#2563eb", dark: "#3b82f6" },
+    purple: { light: "#7c3aed", dark: "#8b5cf6" },
+    yellow: { light: "#ca8a04", dark: "#eab308" }, // Darker yellow for light mode, brighter for dark
+    orange: { light: "#ea580c", dark: "#f97316" },
+    red: { light: "#dc2626", dark: "#ef4444" },
+    green: { light: "#16a34a", dark: "#10b981" },
+    gray: { light: "#6b7280", dark: "#9ca3af" },
+  };
+
+  const normalizedColor = colorName.toLowerCase();
+  const colorSet = colorMap[normalizedColor];
+  
+  if (colorSet) {
+    return theme === "dark" ? colorSet.dark : colorSet.light;
+  }
+  
+  // If it's already a hex color, return it
+  if (colorName.startsWith("#")) {
+    return colorName;
+  }
+  
+  // Fallback to COLORS array
+  return COLORS[0];
+};
+
 export function IssueStatusPieChart({ issues, statuses, loading = false }: IssueStatusPieChartProps) {
+  const { theme } = useTheme();
   const chartData = useMemo(() => {
     if (!issues || issues.length === 0) return [];
 
@@ -66,7 +99,9 @@ export function IssueStatusPieChart({ issues, statuses, loading = false }: Issue
           statusName = getStatusName(issueWithStatus, statuses);
         }
       }
-      const color = status?.color || COLORS[chartDataArray.length % COLORS.length];
+      const color = status?.color 
+        ? getStatusColorHex(status.color, theme) 
+        : COLORS[chartDataArray.length % COLORS.length];
       
       chartDataArray.push({
         name: statusName,
@@ -79,7 +114,7 @@ export function IssueStatusPieChart({ issues, statuses, loading = false }: Issue
     chartDataArray.sort((a, b) => b.value - a.value);
     
     return chartDataArray;
-  }, [issues, statuses]);
+  }, [issues, statuses, theme]);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -106,22 +141,22 @@ export function IssueStatusPieChart({ issues, statuses, loading = false }: Issue
   if (chartData.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-sm text-muted-foreground">
-        No issues found
+        No issues created yet
       </div>
     );
   }
 
   return (
     <div className="w-full">
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={350}>
         <PieChart>
           <Pie
             data={chartData}
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ name, percent }) => percent ? `${name}: ${(percent * 100).toFixed(0)}%` : name}
-            outerRadius={80}
+            label={({ percent }) => percent ? `${(percent * 100).toFixed(0)}%` : ""}
+            outerRadius={95}
             fill="#8884d8"
             dataKey="value"
           >

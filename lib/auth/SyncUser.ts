@@ -1,7 +1,13 @@
 import { User } from "firebase/auth"
 import { apiPost } from "@/lib/api/apiClient"
+import { isValidEmailDomain } from "../utils/emailValidation"
 
-export async function syncUserWithBackend(firebaseUser: User, retries = 3): Promise<boolean> {
+export async function syncUserWithBackend(firebaseUser: User, loginType: 'email' | 'google' = 'email', retries = 3): Promise<boolean> {
+    // Don't sync users with invalid email domains
+    if (!isValidEmailDomain(firebaseUser.email)) {
+      console.log("Skipping backend sync for user with invalid email domain:", firebaseUser.email)
+      return false
+    }
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         console.log(`Creating user in backend (attempt ${attempt}/${retries}):`, firebaseUser.uid)
@@ -14,6 +20,7 @@ export async function syncUserWithBackend(firebaseUser: User, retries = 3): Prom
             email: firebaseUser.email,
             name: username,
             avatar: firebaseUser.photoURL,
+            loginType: loginType,
           }
         })
         
