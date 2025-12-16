@@ -17,7 +17,7 @@ import {
   Pin,
   PinOff,
 } from "lucide-react";
-import { Project } from "@/types/project";
+import { Project, MemberRole } from "@/types/project";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { ProjectPageSkeleton } from "@/components/ProjectPageSkeleton";
@@ -42,8 +42,8 @@ function ProjectBoardWithSearchParams({
 }: {
   projectId: string;
   isAdmin: boolean;
-  userRole?: "admin" | "developer" | "qa";
-  projectMembers: Array<{ uid: string; name: string; email: string; avatar?: string; role?: "admin" | "developer" | "qa" | undefined }>;
+  userRole?: MemberRole;
+  projectMembers: Array<{ uid: string; name: string; email: string; avatar?: string; role?: MemberRole | undefined }>;
   onIssuesCountChange?: (count: number) => void;
 }) {
   const searchParams = useSearchParams();
@@ -163,6 +163,8 @@ export default function ProjectPage({
         if (response.ok) {
           setIsPinned(false);
           toast.success("Project unpinned");
+          // Dispatch event to refresh sidebar
+          window.dispatchEvent(new CustomEvent('project-unpinned'));
         } else {
           const errorData = await response.json();
           throw new Error(errorData.message || "Failed to unpin project");
@@ -178,6 +180,8 @@ export default function ProjectPage({
         if (response.ok) {
           setIsPinned(true);
           toast.success("Project pinned");
+          // Dispatch event to refresh sidebar
+          window.dispatchEvent(new CustomEvent('project-pinned'));
         } else {
           const errorData = await response.json();
           throw new Error(errorData.message || "Failed to pin project");
@@ -220,14 +224,15 @@ export default function ProjectPage({
     );
   }
 
-  const isAdmin = user && project.admin.includes(user.uid);
+  // Check if user is admin or PM
+  const isAdminInArray = user && project.admin.includes(user.uid);
   
   // Get user's role from project memberRoles or members array
-  const getUserRole = (): "admin" | "developer" | "qa" | undefined => {
+  const getUserRole = (): "backend" | "frontend" | "ui" | "qa" | "unassigned" | "admin" | "pm" | undefined => {
     if (!user) return undefined;
     
     // Check if user is admin first
-    if (isAdmin) return "admin";
+    if (isAdminInArray) return "admin";
     
     // Check memberRoles array for role
     if (Array.isArray(project.members)) {
@@ -236,14 +241,16 @@ export default function ProjectPage({
       );
       
       if (member && typeof member !== 'string' && member.role) {
-        return member.role as "admin" | "developer" | "qa";
+        return member.role as "backend" | "frontend" | "ui" | "qa" | "unassigned" | "admin" | "pm";
       }
     }
     
-    return "developer";
+    return "unassigned";
   };
   
   const userRole = getUserRole();
+  // PM has admin-level permissions
+  const isAdmin = isAdminInArray || userRole === "pm";
 
   return (
     <div className="w-full min-w-0 bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background min-h-screen">
@@ -417,7 +424,7 @@ export default function ProjectPage({
                       name: m.name,
                       email: m.email,
                       avatar: m.avatar,
-                      role: m.role as "admin" | "developer" | "qa" | undefined,
+                      role: m.role as MemberRole | undefined,
                     })) : []}
                     onIssuesCountChange={(count) => setIssueCount(count)}
                   />

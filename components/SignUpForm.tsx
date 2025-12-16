@@ -25,9 +25,13 @@ const formSchema = z.object({
   username: z.string().min(2, {
     message: "Username must be at least 2 characters.",
   }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
+  email: z.string()
+    .email({
+      message: "Please enter a valid email address.",
+    })
+    .refine((email) => email.toLowerCase().endsWith("@gocodeable.com"), {
+      message: "Only @gocodeable.com email addresses are allowed.",
+    }),
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
   }),

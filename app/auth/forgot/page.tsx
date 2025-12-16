@@ -20,9 +20,13 @@ import { ArrowLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 const formSchema = z.object({
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
+  email: z.string()
+    .email({
+      message: "Please enter a valid email address.",
+    })
+    .refine((email) => email.toLowerCase().endsWith("@gocodeable.com"), {
+      message: "Only @gocodeable.com email addresses are allowed.",
+    }),
 });
 
 export default function ForgotPasswordPage() {

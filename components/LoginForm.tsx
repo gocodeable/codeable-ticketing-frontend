@@ -22,9 +22,13 @@ import { useAuth } from "@/lib/auth/AuthProvider"
 import Link from "next/link"
 
 const formSchema = z.object({
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
+  email: z.string()
+    .email({
+      message: "Please enter a valid email address.",
+    })
+    .refine((email) => email.toLowerCase().endsWith("@gocodeable.com"), {
+      message: "Only @gocodeable.com email addresses are allowed.",
+    }),
   password: z.string().min(1, {
     message: "Password is required.",
   }),

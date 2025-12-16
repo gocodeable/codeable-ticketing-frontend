@@ -6,5 +6,7 @@ export interface TabItem {
   issueCode?: string;
   commentCount?: number;
   projectId?: string;
+  projectImg?: string | null;
+  projectCode?: string | null;
 }
 
