@@ -585,7 +585,23 @@ export function IssueDetailDialog({
                             commentCount={issue.commentCount}
                             downloadingAttachments={downloadingAttachments}
                             onDownload={handleDownload}
-                            onCommentAdded={fetchIssue}
+                            onCommentAdded={(newComment) => {
+                              if (newComment) {
+                                // Update local state with new comment
+                                setIssue((prevIssue) => {
+                                  if (!prevIssue) return prevIssue;
+                                  const updatedComments = prevIssue.comments ? [...prevIssue.comments, newComment] : [newComment];
+                                  return {
+                                    ...prevIssue,
+                                    comments: updatedComments,
+                                    commentCount: updatedComments.length,
+                                  };
+                                });
+                              } else {
+                                // For deletions/edits, refetch to ensure consistency
+                                fetchIssue();
+                              }
+                            }}
                           />
                         </div>
                       </>
