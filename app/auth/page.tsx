@@ -182,12 +182,6 @@ export default function AuthPage() {
 
         <div className="relative z-10 flex items-center gap-8 text-sm text-white/40">
           <span>© 2024 Codeable</span>
-          <a href="#" className="hover:text-white/80 transition-colors">
-            Privacy
-          </a>
-          <a href="#" className="hover:text-white/80 transition-colors">
-            Terms
-          </a>
         </div>
 
         {/* Logo decoration - bottom right */}

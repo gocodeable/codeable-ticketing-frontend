@@ -170,7 +170,7 @@ export function LoginForm() {
                 <FormControl>
                   <Input
                     type="email"
-                    placeholder="name@example.com"
+                    placeholder="name@gocodeable.com"
                     className="h-12"
                     {...field}
                   />
