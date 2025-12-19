@@ -106,16 +106,7 @@ export default function TeamPage({
       }
 
       const idToken = await user.getIdToken();
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/teams/${id}/projects`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await apiGet(`/api/team/${id}/projects`, idToken);
 
       if (!response.ok) {
         console.error("Failed to fetch team projects");
@@ -149,13 +140,13 @@ export default function TeamPage({
     try {
       const idToken = await user.getIdToken();
       const response = await apiDelete(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/teams/${team._id}`,
+        `/team/api?id=${team._id}`,
         idToken
       );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to delete team");
+        throw new Error(errorData.error || errorData.message || "Failed to delete team");
       }
 
       toast.success("Team deleted successfully");

@@ -43,14 +43,17 @@ export default function ProjectSettings({ project, onEdit }: ProjectSettingsProp
     try {
       const idToken = await user.getIdToken();
       const response = await apiDelete(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/projects/${project._id}`,
+        `/project/api?id=${project._id}`,
         idToken
       );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to delete project");
+        throw new Error(errorData.error || errorData.message || "Failed to delete project");
       }
+
+      // Dispatch event to refresh sidebar
+      window.dispatchEvent(new CustomEvent('project-deleted'));
 
       toast.success("Project deleted successfully");
       router.push("/projects");
