@@ -13,7 +13,7 @@ import { MediaViewerDialog } from "./MediaViewerDialog";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useDropzone } from "react-dropzone";
 import { uploadMediaToStorage } from "@/lib/firebase/uploadMedia";
-import { apiPost } from "@/lib/api/apiClient";
+import { apiPost, apiDelete } from "@/lib/api/apiClient";
 import { toast } from "sonner";
 import { RichTextEditor } from "./RichTextEditor";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -1275,17 +1275,11 @@ export function IssueCommentsSection({
     setIsDeleting(true);
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch(`/api/comments/${deleteCommentId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-
-      const data = await response.json();
+      const response = await apiDelete(`/api/comments/${deleteCommentId}`, idToken);
 
       if (!response.ok) {
-        toast.error(data.error || "Failed to delete comment");
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to delete comment");
         return;
       }
 

@@ -113,12 +113,18 @@ export function SideBar() {
       refreshSidebar()
     }
 
+    const handleProjectDeleted = () => {
+      refreshSidebar()
+    }
+
     window.addEventListener('project-pinned', handleProjectPinned)
     window.addEventListener('project-unpinned', handleProjectUnpinned)
+    window.addEventListener('project-deleted', handleProjectDeleted)
 
     return () => {
       window.removeEventListener('project-pinned', handleProjectPinned)
       window.removeEventListener('project-unpinned', handleProjectUnpinned)
+      window.removeEventListener('project-deleted', handleProjectDeleted)
     }
   }, [refreshSidebar])
 
