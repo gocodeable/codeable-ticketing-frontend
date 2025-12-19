@@ -36,7 +36,20 @@ export async function syncUserWithBackend(firebaseUser: User, loginType: 'email'
           return false
         }
         
-        const data = await response.json()
+        // Read response body only once
+        const responseText = await response.text()
+        let data
+        try {
+          data = JSON.parse(responseText)
+        } catch (parseError) {
+          console.error(`Failed to parse response (attempt ${attempt}/${retries}):`, parseError)
+          if (attempt < retries) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+            continue
+          }
+          return false
+        }
+        
         if (!data.success) {
           console.error(`Backend returned success=false (attempt ${attempt}/${retries}):`, data.error)
           

@@ -73,6 +73,8 @@ export function SignUpForm() {
       await signup(data.email, data.password, data.username)
       setSuccess(true)
       form.reset()
+      // Small delay to ensure state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 300))
       setAuthOperationInProgress(false)
     } catch (err: any) {
       setError(err.message || "An error occurred during sign up.")
@@ -93,6 +95,8 @@ export function SignUpForm() {
       await signupWithGoogle()
       setSuccess(true)
       form.reset()
+      // Small delay to ensure state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 300))
       setAuthOperationInProgress(false)
     } catch (err: any) {
       setError(err.message || "An error occurred during Google sign up.")

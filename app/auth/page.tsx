@@ -33,28 +33,72 @@ export default function AuthPage() {
         return;
       }
       
-      // Check if user exists in backend before allowing navigation
-      checkUserExists(user).then((exists) => {
-        if (!exists) {
-          // User doesn't exist in backend - delete account and keep on auth page
-          user.delete().then(() => {
-            signOut(auth).catch((err) => {
-              console.error("Error signing out:", err);
-            });
-          }).catch((err) => {
-            console.error("Error deleting user account:", err);
-            signOut(auth).catch((signOutErr) => {
-              console.error("Error signing out:", signOutErr);
-            });
-          });
-          return;
-        }
-        // User exists in backend, allow navigation
-        router.push("/");
-      }).catch((err) => {
-        console.error("Error checking user existence:", err);
-        // On error, don't allow navigation to be safe
-      });
+      // Check if this is a fresh signup/login (user created or signed in less than 10 seconds ago)
+      // For fresh signups/logins, we trust that syncUserWithBackend succeeded and navigate directly
+      // For existing sessions, we verify the user exists in backend
+      const userCreationTime = user.metadata.creationTime 
+        ? new Date(user.metadata.creationTime).getTime() 
+        : 0;
+      const lastSignInTime = user.metadata.lastSignInTime
+        ? new Date(user.metadata.lastSignInTime).getTime()
+        : 0;
+      const now = Date.now();
+      const timeSinceCreation = userCreationTime > 0 ? now - userCreationTime : Infinity;
+      const timeSinceLastSignIn = lastSignInTime > 0 ? now - lastSignInTime : Infinity;
+      
+      // Consider it fresh if user was created or signed in recently (less than 10 seconds ago)
+      const isFreshSignup = timeSinceCreation < 10000;
+      const isRecentLogin = timeSinceLastSignIn < 10000;
+      const isFreshAuth = isFreshSignup || isRecentLogin;
+      
+      if (isFreshAuth) {
+        // Fresh signup/login - syncUserWithBackend already verified creation/sync
+        // Add a small delay to ensure backend processing is complete, then navigate
+        setTimeout(() => {
+          router.push("/");
+        }, 500);
+      } else {
+        // Existing session - verify user exists in backend before navigating
+        const checkUserWithRetry = async (retries = 2, delay = 1000) => {
+          for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+              const exists = await checkUserExists(user);
+              if (exists) {
+                // User exists in backend, allow navigation
+                router.push("/");
+                return;
+              }
+              
+              // If this is not the last attempt, wait before retrying
+              if (attempt < retries) {
+                console.log(`User not found in backend, retrying... (attempt ${attempt}/${retries})`);
+                await new Promise(resolve => setTimeout(resolve, delay * attempt));
+              } else {
+                // After all retries failed, sign out but don't delete (user might exist but check failed)
+                console.error("User doesn't exist in backend after retries, signing out");
+                signOut(auth).catch((err) => {
+                  console.error("Error signing out:", err);
+                });
+              }
+            } catch (err) {
+              console.error(`Error checking user existence (attempt ${attempt}/${retries}):`, err);
+              if (attempt < retries) {
+                await new Promise(resolve => setTimeout(resolve, delay * attempt));
+              } else {
+                // On final error, just sign out
+                signOut(auth).catch((signOutErr) => {
+                  console.error("Error signing out:", signOutErr);
+                });
+              }
+            }
+          }
+        };
+        
+        // Add initial delay to give backend time to process
+        setTimeout(() => {
+          checkUserWithRetry();
+        }, 500);
+      }
     }
   }, [user, loading, authOperationInProgress, router]);
 
