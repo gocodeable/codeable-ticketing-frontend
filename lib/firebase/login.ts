@@ -22,12 +22,17 @@ export const login = async (email: string, password: string) => {
     throw new Error(getEmailDomainError())
   }
   
-  // Check if user exists in backend - if not, delete account and throw error
+  // Check if user exists in backend - if not, sync them (they might have been created before backend sync was implemented)
   const userExists = await checkUserExists(userCredential.user)
   if (!userExists) {
-    await userCredential.user.delete()
-    await auth.signOut()
-    throw new Error("User account not found. Please contact support.")
+    // User exists in Firebase but not in backend - sync them
+    console.log("User exists in Firebase but not in backend, syncing...")
+    const syncSuccess = await syncUserWithBackend(userCredential.user, 'email')
+    if (!syncSuccess) {
+      // If sync fails, don't delete the user - just throw an error
+      await auth.signOut()
+      throw new Error("Failed to sync user account. Please try again or contact support.")
+    }
   }
   
   return userCredential.user
@@ -44,20 +49,17 @@ export const loginWithGoogle = async () => {
     throw new Error(getEmailDomainError())
   }
   
-  const isNewUser = userCredential.user.metadata.creationTime === userCredential.user.metadata.lastSignInTime
+  // Check if user exists in backend
+  const userExists = await checkUserExists(userCredential.user)
   
-  if (isNewUser) {
-    // New user during Google login - don't allow, they should use signup
-    await userCredential.user.delete()
-    await auth.signOut()
-    throw new Error("New users must sign up first. Please use the sign up option.")
-  } else {
-    // Existing user - check if they exist in backend
-    const userExists = await checkUserExists(userCredential.user)
-    if (!userExists) {
-      await userCredential.user.delete()
+  if (!userExists) {
+    // User doesn't exist in backend - sync them (could be new user or existing Firebase user)
+    console.log("User doesn't exist in backend, syncing...")
+    const syncSuccess = await syncUserWithBackend(userCredential.user, 'google')
+    if (!syncSuccess) {
+      // If sync fails, don't delete the user - just throw an error
       await auth.signOut()
-      throw new Error("User account not found. Please contact support.")
+      throw new Error("Failed to sync user account. Please try again or contact support.")
     }
   }
   

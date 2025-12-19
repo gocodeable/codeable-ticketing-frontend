@@ -62,6 +62,8 @@ export function LoginForm() {
       const user = await login(data.email, data.password)
       setSuccess(true)
       form.reset()
+      // Small delay to ensure state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 300))
       // Clear flag before redirect - auth page will handle the redirect
       setAuthOperationInProgress(false)
     } catch (err: any) {
@@ -85,6 +87,8 @@ export function LoginForm() {
       const user = await loginWithGoogle()
       setSuccess(true)
       form.reset()
+      // Small delay to ensure state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 300))
       // Clear flag before redirect - auth page will handle the redirect
       setAuthOperationInProgress(false)
     } catch (err: any) {
