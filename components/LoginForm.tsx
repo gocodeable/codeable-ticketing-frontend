@@ -19,6 +19,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { login, loginWithGoogle } from "@/lib/firebase/login"
 import { useAuth } from "@/lib/auth/AuthProvider"
+import { getEmailDomainError } from "@/lib/utils/emailValidation"
+import { toast } from "sonner"
 import Link from "next/link"
 
 const formSchema = z.object({
@@ -92,7 +94,16 @@ export function LoginForm() {
       // Clear flag before redirect - auth page will handle the redirect
       setAuthOperationInProgress(false)
     } catch (err: any) {
-      setError(err.message || "An error occurred during Google login.")
+      const errorMessage = err.message || "An error occurred during Google login."
+      setError(errorMessage)
+      
+      // Show toast notification for email domain errors
+      if (errorMessage === getEmailDomainError() || errorMessage.includes("@gocodeable.com")) {
+        toast.error("Invalid Email Domain", {
+          description: "Only @gocodeable.com email addresses are allowed for Google login.",
+        })
+      }
+      
       // Clear flag on error
       setAuthOperationInProgress(false)
     } finally {
