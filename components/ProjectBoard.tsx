@@ -582,13 +582,14 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         </div>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <ScrollArea className="w-full">
+      <div className="-mx-3 sm:-mx-4 md:-mx-8 lg:-mx-12">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <ScrollArea className="w-full [&_div[data-slot='scroll-area-viewport']]:px-1">
           <SortableContext
             items={statuses.map((s) => s._id)}
             strategy={horizontalListSortingStrategy}
@@ -670,15 +671,16 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
             </div>
           </SortableContext>
           <ScrollBar orientation="horizontal" />
-        </ScrollArea>
-        <DragOverlay>
-          {activeIssue ? (
-            <div className="rotate-3 opacity-90" style={{ width: '280px' }}>
-              <IssueCard issue={activeIssue} />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          </ScrollArea>
+          <DragOverlay>
+            {activeIssue ? (
+              <div className="rotate-3 opacity-90" style={{ width: '280px' }}>
+                <IssueCard issue={activeIssue} />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
     </div>
   );
 }

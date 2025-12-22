@@ -20,6 +20,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { signup, signupWithGoogle } from "@/lib/firebase/signup"
 import { useAuth } from "@/lib/auth/AuthProvider"
+import { getEmailDomainError } from "@/lib/utils/emailValidation"
+import { toast } from "sonner"
 
 const formSchema = z.object({
   username: z.string().min(2, {
@@ -99,7 +101,16 @@ export function SignUpForm() {
       await new Promise(resolve => setTimeout(resolve, 300))
       setAuthOperationInProgress(false)
     } catch (err: any) {
-      setError(err.message || "An error occurred during Google sign up.")
+      const errorMessage = err.message || "An error occurred during Google sign up."
+      setError(errorMessage)
+      
+      // Show toast notification for email domain errors
+      if (errorMessage === getEmailDomainError() || errorMessage.includes("@gocodeable.com")) {
+        toast.error("Invalid Email Domain", {
+          description: "Only @gocodeable.com email addresses are allowed for Google sign up.",
+        })
+      }
+      
       setAuthOperationInProgress(false)
     } finally {
       setIsLoadingGoogle(false)
