@@ -8,10 +8,11 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { ModeToggle } from "@/components/ThemeToggle";
 import { AuthPageSpinner } from "@/components/AuthPageSpinner";
 import Image from "next/image";
-import { isValidEmailDomain } from "@/lib/utils/emailValidation";
+import { isValidEmailDomain, getEmailDomainError } from "@/lib/utils/emailValidation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/firebase";
 import { checkUserExists } from "@/lib/auth/checkUserExists";
+import { toast } from "sonner";
 
 export default function AuthPage() {
   const { user, loading, error, authOperationInProgress } = useAuth();
@@ -22,6 +23,11 @@ export default function AuthPage() {
     if (!loading && user && !authOperationInProgress) {
       // Validate email domain before allowing navigation
       if (!isValidEmailDomain(user.email)) {
+        // Show toast notification
+        toast.error("Invalid Email Domain", {
+          description: "Only @gocodeable.com email addresses are allowed. Please use a valid email address.",
+        });
+        
         // Sign out and delete account if email is invalid
         signOut(auth).then(() => {
           user.delete().catch((err) => {
