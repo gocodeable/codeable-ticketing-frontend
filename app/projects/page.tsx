@@ -139,8 +139,7 @@ export default function ProjectsPage() {
 
     try {
       const idToken = await user.getIdToken();
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/pinned-projects/${projectId}`;
-      const response = await apiDelete(apiUrl, idToken);
+      const response = await apiDelete(`/api/pinned-projects/${projectId}`, idToken);
 
       if (response.ok) {
         // Remove from pinned projects list
@@ -150,7 +149,7 @@ export default function ProjectsPage() {
         window.dispatchEvent(new CustomEvent('project-unpinned'));
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to unpin project");
+        throw new Error(errorData.error || errorData.message || "Failed to unpin project");
       }
     } catch (err) {
       console.error("Error unpinning project:", err);

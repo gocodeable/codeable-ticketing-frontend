@@ -158,7 +158,7 @@ export function IssueDetailDialog({
     try {
       const idToken = await user.getIdToken();
       const response = await apiGet(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/starred-issues/${issueId}/status`,
+        `/api/starred-issues/${issueId}/status`,
         idToken
       );
       const data = await response.json();
@@ -179,22 +179,21 @@ export function IssueDetailDialog({
 
     try {
       const idToken = await user.getIdToken();
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/starred-issues`;
 
       if (isStarred) {
         // Unstar the issue
-        const response = await apiDelete(`${apiUrl}/${issueId}`, idToken);
+        const response = await apiDelete(`/api/starred-issues/${issueId}`, idToken);
         if (response.ok) {
           setIsStarred(false);
           toast.success("Issue unstarred");
         } else {
           const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to unstar issue");
+          throw new Error(errorData.error || errorData.message || "Failed to unstar issue");
         }
       } else {
         // Star the issue
         const response = await apiPost(
-          apiUrl,
+          `/api/starred-issues`,
           { issueId },
           idToken
         );
@@ -203,7 +202,7 @@ export function IssueDetailDialog({
           toast.success("Issue starred");
         } else {
           const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to star issue");
+          throw new Error(errorData.error || errorData.message || "Failed to star issue");
         }
       }
     } catch (err) {

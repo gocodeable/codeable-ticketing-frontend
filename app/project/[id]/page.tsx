@@ -128,8 +128,7 @@ export default function ProjectPage({
 
       try {
         const idToken = await user.getIdToken();
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/pinned-projects/${id}/status`;
-        const response = await apiGet(apiUrl, idToken);
+        const response = await apiGet(`/api/pinned-projects/${id}/status`, idToken);
 
         if (response.ok) {
           const data = await response.json();
@@ -151,12 +150,11 @@ export default function ProjectPage({
     try {
       setIsTogglingPin(true);
       const idToken = await user.getIdToken();
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/pinned-projects`;
 
       if (isPinned) {
         // Unpin the project
         const response = await apiDelete(
-          `${apiUrl}/${id}`,
+          `/api/pinned-projects/${id}`,
           idToken
         );
 
@@ -167,12 +165,12 @@ export default function ProjectPage({
           window.dispatchEvent(new CustomEvent('project-unpinned'));
         } else {
           const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to unpin project");
+          throw new Error(errorData.error || errorData.message || "Failed to unpin project");
         }
       } else {
         // Pin the project
         const response = await apiPost(
-          apiUrl,
+          `/api/pinned-projects`,
           { projectId: id },
           idToken
         );
@@ -184,7 +182,7 @@ export default function ProjectPage({
           window.dispatchEvent(new CustomEvent('project-pinned'));
         } else {
           const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to pin project");
+          throw new Error(errorData.error || errorData.message || "Failed to pin project");
         }
       }
     } catch (err) {

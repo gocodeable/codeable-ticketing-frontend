@@ -131,33 +131,62 @@ export const DELETE = async (req: NextRequest) => {
     }
 
     const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/projects/${id}`;
+    console.log(`[DELETE Project] Calling backend: ${backendUrl}`);
+    
+    if (!backendUrl || !process.env.NEXT_PUBLIC_API_URL || !process.env.NEXT_PUBLIC_API_URL.startsWith('http')) {
+      console.error('[DELETE Project] Invalid backend URL:', backendUrl);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Backend API URL is not configured properly",
+        },
+        { status: 500 }
+      );
+    }
+    
     const response = await fetch(backendUrl, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${idToken}`,
-        "Content-Type": "application/json",
       },
     });
 
-    const data = await response.json();
+    console.log(`[DELETE Project] Backend response status: ${response.status}`);
 
-    if (!response.ok) {
+    let data;
+    try {
+      const text = await response.text();
+      console.log(`[DELETE Project] Backend response text:`, text);
+      data = text ? JSON.parse(text) : {};
+    } catch (parseError) {
+      console.error("[DELETE Project] Failed to parse response:", parseError);
       return NextResponse.json(
         {
           success: false,
-          error: data.message || "Failed to delete project",
+          error: "Invalid response from backend",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!response.ok) {
+      console.error(`[DELETE Project] Backend error:`, data);
+      return NextResponse.json(
+        {
+          success: false,
+          error: data.message || data.error || "Failed to delete project",
         },
         { status: response.status }
       );
     }
 
-    return NextResponse.json({ success: true, message: data.message });
+    return NextResponse.json({ success: true, message: data.message || "Project deleted successfully" });
   } catch (error) {
-    console.error("Error deleting project:", error);
+    console.error("[DELETE Project] Error deleting project:", error);
     return NextResponse.json(
       {
         success: false,
-        error: "Internal server error",
+        error: error instanceof Error ? error.message : "Internal server error",
       },
       { status: 500 }
     );
