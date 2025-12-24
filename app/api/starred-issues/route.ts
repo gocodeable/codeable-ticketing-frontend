@@ -1,61 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// GET - Get all pinned projects
-export async function GET(request: NextRequest) {
-  try {
-    const idToken = request.headers.get("Authorization")?.split(" ")[1];
-    if (!idToken) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { searchParams } = new URL(request.url);
-    const limit = searchParams.get("limit");
-
-    const backendUrl = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/pinned-projects`);
-    if (limit) {
-      backendUrl.searchParams.set("limit", limit);
-    }
-
-    const response = await fetch(backendUrl.toString(), {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: data.message || "Failed to fetch pinned projects",
-        },
-        { status: response.status }
-      );
-    }
-
-    // Extract projects from the pinned projects data
-    const pinnedProjects = data.data?.map((pinnedItem: any) => pinnedItem.project) || [];
-
-    return NextResponse.json({ success: true, data: pinnedProjects });
-  } catch (error) {
-    console.error("Error fetching pinned projects:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Internal server error",
-      },
-      { status: 500 }
-    );
-  }
-}
-
-// POST - Pin a project
+// POST - Star an issue
 export async function POST(req: NextRequest) {
   try {
     const idToken = req.headers.get("Authorization")?.split(" ")[1];
@@ -68,23 +13,23 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { projectId } = body;
+    const { issueId } = body;
 
-    if (!projectId) {
+    if (!issueId) {
       return NextResponse.json(
-        { success: false, error: "Project ID is required" },
+        { success: false, error: "Issue ID is required" },
         { status: 400 }
       );
     }
 
-    const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/pinned-projects`;
+    const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/starred-issues`;
     const response = await fetch(backendUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${idToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ projectId }),
+      body: JSON.stringify({ issueId }),
     });
 
     const data = await response.json();
@@ -93,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: data.message || "Failed to pin project",
+          error: data.message || "Failed to star issue",
         },
         { status: response.status }
       );
@@ -101,7 +46,52 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: data.data });
   } catch (error) {
-    console.error("Error pinning project:", error);
+    console.error("Error starring issue:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// GET - Get all starred issues
+export async function GET(req: NextRequest) {
+  try {
+    const idToken = req.headers.get("Authorization")?.split(" ")[1];
+    
+    if (!idToken) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const backendUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/starred-issues`;
+    const response = await fetch(backendUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: data.message || "Failed to get starred issues",
+        },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: data.data });
+  } catch (error) {
+    console.error("Error getting starred issues:", error);
     return NextResponse.json(
       {
         success: false,
