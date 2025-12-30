@@ -2,12 +2,12 @@
 
 import { WorkflowStatus } from "@/types/workflowStatus";
 import { Issue } from "@/types/issue";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { apiGet, apiPatch } from "@/lib/api/apiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Loader2 } from "lucide-react";
 import IssuesFilterBar from "@/components/IssuesFilterBar";
-import { getAssigneeUid, getStatusId, filterIssues } from "@/utils/issueUtils";
+import { filterIssues } from "@/utils/issueUtils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   DndContext,
@@ -19,6 +19,7 @@ import {
   DragEndEvent,
   DragStartEvent,
   DragOverlay,
+  DragMoveEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -65,6 +66,9 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string[]>([]);
   const [dueDateFilter, setDueDateFilter] = useState<Date | undefined>(undefined);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const autoScrollAnimationRef = useRef<number | null>(null);
+  const lastScrollTimeRef = useRef<number>(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -214,14 +218,88 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   // Check if user can move an issue between statuses
   const canMoveIssue = (issue: Issue): boolean => {
     if (!user) return false;
-    if (isAdmin || userRole === "qa") return true;
+    if (isAdmin || userRole === "qa" || userRole === "pm") return true;
     // Check if user is assignee or reporter
     const isAssignee = typeof issue.assignee === "string" 
       ? issue.assignee === user.uid 
       : issue.assignee?.uid === user.uid;
-    const isReporter = issue.reporter === user.uid;
+    const isReporter = typeof issue.reporter === "string" 
+      ? issue.reporter === user.uid 
+      : issue.reporter?.uid === user.uid;
     return isAssignee || isReporter;
   };
+
+  // Auto-scroll when dragging near edges using requestAnimationFrame for smooth performance
+  const handleAutoScroll = useCallback((clientX: number) => {
+    const scrollViewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (!scrollViewport) return;
+
+    const viewportRect = scrollViewport.getBoundingClientRect();
+    const scrollThreshold = 150; // Distance from edge to trigger scroll
+    const maxScrollSpeed = 20; // Maximum pixels to scroll per frame
+
+    // Calculate distance from edges
+    const distanceFromLeft = clientX - viewportRect.left;
+    const distanceFromRight = viewportRect.right - clientX;
+
+    let scrollSpeed = 0;
+
+    // Check if near left edge
+    if (distanceFromLeft < scrollThreshold && distanceFromLeft > 0) {
+      // Scroll speed increases as you get closer to the edge
+      const intensity = 1 - (distanceFromLeft / scrollThreshold);
+      scrollSpeed = -maxScrollSpeed * intensity;
+    }
+    // Check if near right edge
+    else if (distanceFromRight < scrollThreshold && distanceFromRight > 0) {
+      // Scroll speed increases as you get closer to the edge
+      const intensity = 1 - (distanceFromRight / scrollThreshold);
+      scrollSpeed = maxScrollSpeed * intensity;
+    }
+
+    // Cancel any existing animation frame
+    if (autoScrollAnimationRef.current) {
+      cancelAnimationFrame(autoScrollAnimationRef.current);
+      autoScrollAnimationRef.current = null;
+    }
+
+    // Only scroll if there's a speed
+    if (scrollSpeed !== 0) {
+      const animate = () => {
+        const now = Date.now();
+        const delta = now - lastScrollTimeRef.current;
+        
+        if (delta > 0) {
+          // Smooth scroll with timing
+          const scroll = scrollSpeed * Math.min(delta / 16, 2); // Normalize to ~60fps
+          scrollViewport.scrollLeft += scroll;
+          lastScrollTimeRef.current = now;
+        }
+
+        // Continue animation
+        autoScrollAnimationRef.current = requestAnimationFrame(animate);
+      };
+
+      lastScrollTimeRef.current = Date.now();
+      autoScrollAnimationRef.current = requestAnimationFrame(animate);
+    }
+  }, []);
+
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollAnimationRef.current) {
+      cancelAnimationFrame(autoScrollAnimationRef.current);
+      autoScrollAnimationRef.current = null;
+    }
+  }, []);
+
+  // Clean up auto-scroll on unmount
+  useEffect(() => {
+    return () => {
+      if (autoScrollAnimationRef.current) {
+        cancelAnimationFrame(autoScrollAnimationRef.current);
+      }
+    };
+  }, []);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -232,8 +310,20 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
     }
   };
 
+  const handleDragMove = (event: DragMoveEvent) => {
+    const { activatorEvent } = event;
+    
+    // Get mouse position from the activator event
+    if (activatorEvent && 'clientX' in activatorEvent) {
+      handleAutoScroll(activatorEvent.clientX as number);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    
+    // Stop auto-scrolling
+    stopAutoScroll();
     
     // Always clear the active issue overlay
     setActiveIssue(null);
@@ -357,11 +447,11 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         return;
       }
 
-      // Check if moving to "Done" status - only admin and QA can move to Done
+      // Check if moving to "Done" status - only admin, PM, and QA can move to Done
       const targetStatus = statuses.find((status) => status._id === targetStatusId);
       if (targetStatus && targetStatus.name.toLowerCase().trim() === 'done') {
-        if (!isAdmin && userRole !== 'qa') {
-          toast.error("Only admins and QA members can move issues to Done status");
+        if (!isAdmin && userRole !== 'qa' && userRole !== 'pm') {
+          toast.error("Only admins, PMs, and QA members can move issues to Done status");
           const idToken = await user?.getIdToken();
           if (idToken) {
             const issuesRes = await apiGet(`/api/issues?projectId=${projectId}`, idToken);
@@ -473,6 +563,12 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
       return;
     }
 
+    // Check if user can reorder workflow columns (admin or PM only)
+    if (!isAdmin && userRole !== 'pm') {
+      toast.error("Only admins and PMs can reorder workflow columns");
+      return;
+    }
+
     const newStatuses = arrayMove(statuses, oldIndex, newIndex);
     
     // Optimistically update UI
@@ -568,7 +664,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
               Board
             </h2>
             <p className="text-sm text-muted-foreground">
-              {isAdmin
+              {isAdmin || userRole === "pm"
                 ? "Drag workflow columns to reorder • Drag issues to move them"
                 : "View and track project issues"}
             </p>
@@ -587,14 +683,15 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
+          onDragMove={handleDragMove}
           onDragEnd={handleDragEnd}
         >
-          <ScrollArea className="w-full [&_div[data-slot='scroll-area-viewport']]:px-1">
+          <ScrollArea ref={scrollAreaRef} className="w-full">
           <SortableContext
             items={statuses.map((s) => s._id)}
             strategy={horizontalListSortingStrategy}
           >
-            <div className="flex gap-4 pb-4">
+            <div className="flex gap-4 pb-4 px-3 sm:px-4 md:px-8 lg:px-12">
               {statuses.map((status) => {
                 const statusIssues = getIssuesByStatus(status._id);
                 return (
@@ -663,7 +760,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
               {/* Add Workflow Status Component */}
               <AddWorkflowStatus
                 projectId={projectId}
-                canEdit={isAdmin || userRole === "qa"}
+                canEdit={isAdmin || userRole === "qa" || userRole === "pm"}
                 onStatusCreated={(newStatus) => {
                   setStatuses([...statuses, newStatus]);
                 }}
