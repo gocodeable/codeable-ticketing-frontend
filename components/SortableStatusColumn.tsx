@@ -140,7 +140,7 @@ export default function SortableStatusColumn({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: status._id, disabled: !isAdmin });
+  } = useSortable({ id: status._id, disabled: !isAdmin && userRole !== 'pm' });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -148,18 +148,21 @@ export default function SortableStatusColumn({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  // Check if user can edit (admin or QA)
-  const canEdit = isAdmin || userRole === "qa";
+  // Check if user can edit workflow status (admin, PM, or QA)
+  const canEdit = isAdmin || userRole === "qa" || userRole === "pm";
   
+  // Check if user can reorder/move issues (admin, PM, QA, assignee, or reporter)
   const canReorderIssue = (issue: Issue): boolean => {
-    if (isAdmin || userRole === "qa") {
+    if (isAdmin || userRole === "qa" || userRole === "pm") {
       return true;
     }
     // Check if user is assignee or reporter
     const isAssignee = typeof issue.assignee === "string" 
       ? issue.assignee === user?.uid 
       : issue.assignee?.uid === user?.uid;
-    const isReporter = user?.uid === issue.reporter;
+    const isReporter = typeof issue.reporter === "string" 
+      ? issue.reporter === user?.uid 
+      : issue.reporter?.uid === user?.uid;
     return isAssignee || isReporter;
   };
 
@@ -320,7 +323,7 @@ export default function SortableStatusColumn({
           <>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2 flex-1">
-                {isAdmin && (
+                {(isAdmin || userRole === 'pm') && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -387,7 +390,7 @@ export default function SortableStatusColumn({
       {/* Issues List - Droppable area for cross-column dragging */}
       <StatusDroppable 
         statusId={status._id}
-        disabled={status.name.toLowerCase() === 'done' && !isAdmin && userRole !== 'qa'}
+        disabled={status.name.toLowerCase() === 'done' && !isAdmin && userRole !== 'qa' && userRole !== 'pm'}
       >
         <div className="p-3 space-y-3 min-h-[200px] overflow-x-visible">
           <SortableContext

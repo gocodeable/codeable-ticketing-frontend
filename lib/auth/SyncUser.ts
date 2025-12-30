@@ -2,6 +2,20 @@ import { User } from "firebase/auth"
 import { apiPost } from "@/lib/api/apiClient"
 import { isValidEmailDomain } from "../utils/emailValidation"
 
+/**
+ * Replaces s96-c (96px) with s500-c (500px) for better image quality
+ */
+function upgradeGooglePhotoURL(photoURL: string | null): string | null {
+  if (!photoURL) return photoURL
+  
+  // Check if it's a Google photo URL and contains the size parameter
+  if (photoURL.includes('googleusercontent.com') && photoURL.includes('=s96-c')) {
+    return photoURL.replace('=s96-c', '=s500-c')
+  }
+  
+  return photoURL
+}
+
 export async function syncUserWithBackend(firebaseUser: User, loginType: 'email' | 'google' = 'email', retries = 3): Promise<boolean> {
     // Don't sync users with invalid email domains
     if (!isValidEmailDomain(firebaseUser.email)) {
@@ -14,12 +28,17 @@ export async function syncUserWithBackend(firebaseUser: User, loginType: 'email'
         
         const username = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User'
         
+        // Upgrade Google photo URL to higher quality
+        const avatarURL = loginType === 'google' 
+          ? upgradeGooglePhotoURL(firebaseUser.photoURL)
+          : firebaseUser.photoURL
+        
         const response = await apiPost("/api/user", { 
           user: {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: username,
-            avatar: firebaseUser.photoURL,
+            avatar: avatarURL,
             loginType: loginType,
           }
         })
