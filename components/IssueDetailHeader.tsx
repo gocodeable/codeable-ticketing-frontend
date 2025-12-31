@@ -122,36 +122,37 @@ export function IssueDetailHeader({
                   )}
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onClose}
-                className="gap-2 rounded-lg"
-              >
-                <span className="hidden sm:inline">Close</span>
-              </Button>
-              {canEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onEdit}
-                  className="gap-2 rounded-lg"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Edit</span>
-                </Button>
-              )}
               {canDelete && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={onDelete}
-                  className="gap-2 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="gap-1.5 rounded-lg px-4 text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Delete</span>
                 </Button>
               )}
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onEdit}
+                  className="gap-1.5 rounded-lg px-4"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Edit</span>
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                className="gap-1.5 rounded-lg px-4"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Close</span>
+              </Button>
             </div>
           )}
           {isEditing && (
@@ -161,7 +162,7 @@ export function IssueDetailHeader({
                 size="sm"
                 onClick={onCancelEdit}
                 disabled={isSaving}
-                className="gap-2 rounded-lg"
+                className="gap-1.5 rounded-lg px-4"
               >
                 <X className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Cancel</span>
@@ -170,7 +171,7 @@ export function IssueDetailHeader({
                 size="sm"
                 onClick={onSave}
                 disabled={isSaving || !editTitle.trim()}
-                className="gap-2 rounded-lg bg-primary hover:bg-primary/90"
+                className="gap-1.5 rounded-lg bg-primary hover:bg-primary/90 px-4"
               >
                 {isSaving ? (
                   <>

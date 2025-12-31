@@ -41,6 +41,8 @@ interface IssueEditFormProps {
   editPriority: "highest" | "high" | "medium" | "low" | "lowest";
   editAssignee: UserSuggestion | null;
   editDueDate: Date | undefined;
+  editWorkflowStatus: string;
+  workflowStatuses: Array<{ _id: string; name: string; color?: string }>;
   editAttachments: Attachment[];
   newAttachments: Array<{
     file: File;
@@ -61,6 +63,7 @@ interface IssueEditFormProps {
   onPriorityChange: (value: "highest" | "high" | "medium" | "low" | "lowest") => void;
   onAssigneeChange: (assignee: UserSuggestion | null) => void;
   onDueDateChange: (date: Date | undefined) => void;
+  onWorkflowStatusChange: (value: string) => void;
   onAssigneeSearchChange: (query: string) => void;
   onShowSuggestionsChange: (show: boolean) => void;
   onRemoveExistingAttachment: (index: number) => void;
@@ -83,6 +86,8 @@ export function IssueEditForm({
   editPriority,
   editAssignee,
   editDueDate,
+  editWorkflowStatus,
+  workflowStatuses,
   editAttachments,
   newAttachments,
   assigneeSearchQuery,
@@ -95,6 +100,7 @@ export function IssueEditForm({
   onPriorityChange,
   onAssigneeChange,
   onDueDateChange,
+  onWorkflowStatusChange,
   onAssigneeSearchChange,
   onShowSuggestionsChange,
   onRemoveExistingAttachment,
@@ -264,6 +270,50 @@ export function IssueEditForm({
         </div>
       </div>
 
+      {/* Workflow Status */}
+      <div className="space-y-2">
+        <Label htmlFor="edit-workflow-status" className="text-sm font-semibold">
+          Workflow Status
+        </Label>
+        <Select
+          value={editWorkflowStatus}
+          onValueChange={onWorkflowStatusChange}
+          disabled={isSaving}
+        >
+          <SelectTrigger id="edit-workflow-status" className="h-11">
+            <SelectValue placeholder="Select workflow status">
+              {editWorkflowStatus && workflowStatuses.find(s => s._id === editWorkflowStatus) ? (
+                <span className="flex items-center gap-2">
+                  <span 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ 
+                      backgroundColor: workflowStatuses.find(s => s._id === editWorkflowStatus)?.color || '#3b82f6' 
+                    }}
+                  />
+                  {workflowStatuses.find(s => s._id === editWorkflowStatus)?.name}
+                </span>
+              ) : null}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {workflowStatuses.map((status) => (
+              <SelectItem key={status._id} value={status._id}>
+                <span className="flex items-center gap-2">
+                  <span 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ backgroundColor: status.color || '#3b82f6' }}
+                  />
+                  {status.name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Changing workflow will move the issue to the top of the new status
+        </p>
+      </div>
+
       {/* Due Date and Assignee */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Due Date */}
@@ -320,7 +370,7 @@ export function IssueEditForm({
                 onClick={() => {
                   onAssigneeChange(null);
                   onAssigneeSearchChange("");
-                  onShowSuggestionsChange(false);
+                  onShowSuggestionsChange(true); // Show suggestions immediately when assignee is removed
                 }}
                 disabled={isSaving}
                 className="text-muted-foreground hover:text-destructive transition-colors"
@@ -339,12 +389,10 @@ export function IssueEditForm({
                   value={assigneeSearchQuery}
                   onChange={(e) => {
                     onAssigneeSearchChange(e.target.value);
-                    onShowSuggestionsChange(e.target.value.trim().length > 0);
+                    onShowSuggestionsChange(true); // Always show suggestions when typing
                   }}
                   onFocus={() => {
-                    if (assigneeSearchQuery.trim().length > 0) {
-                      onShowSuggestionsChange(true);
-                    }
+                    onShowSuggestionsChange(true); // Show all members when field is focused
                   }}
                   disabled={isSaving}
                   className="pl-9 h-11"
@@ -352,50 +400,46 @@ export function IssueEditForm({
               </div>
 
               {/* Suggestions Dropdown */}
-              {showAssigneeSuggestions && filteredMembers.length > 0 && (
+              {showAssigneeSuggestions && (
                 <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {filteredMembers.map((member) => (
-                    <button
-                      key={member.uid}
-                      type="button"
-                      onClick={() => {
-                        onAssigneeChange(member);
-                        onAssigneeSearchChange("");
-                        onShowSuggestionsChange(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left border-b border-border last:border-0"
-                    >
-                      <div className="shrink-0 relative h-8 w-8 rounded-full overflow-hidden ring-2 ring-border">
-                        <Image
-                          src={member.avatar || DEFAULT_AVATAR}
-                          alt={member.name}
-                          width={32}
-                          height={32}
-                          className="rounded-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {member.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {member.email}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
+                  {filteredMembers.length > 0 ? (
+                    filteredMembers.map((member) => (
+                      <button
+                        key={member.uid}
+                        type="button"
+                        onClick={() => {
+                          onAssigneeChange(member);
+                          onAssigneeSearchChange("");
+                          onShowSuggestionsChange(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left border-b border-border last:border-0"
+                      >
+                        <div className="shrink-0 relative h-8 w-8 rounded-full overflow-hidden ring-2 ring-border">
+                          <Image
+                            src={member.avatar || DEFAULT_AVATAR}
+                            alt={member.name}
+                            width={32}
+                            height={32}
+                            className="rounded-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {member.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {member.email}
+                          </p>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                      No members found
+                    </div>
+                  )}
                 </div>
               )}
-
-              {/* No Results Message */}
-              {showAssigneeSuggestions &&
-                assigneeSearchQuery.trim().length > 0 &&
-                filteredMembers.length === 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg p-4 text-center text-sm text-muted-foreground">
-                    No members found matching &quot;{assigneeSearchQuery}
-                    &quot;
-                  </div>
-                )}
             </div>
           )}
         </div>

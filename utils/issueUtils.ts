@@ -229,10 +229,11 @@ export const filterIssues = ({
     });
   }
 
-  // Filter by assignee
+  // Filter by member (assignee or reporter)
   if (assigneeFilter.length > 0) {
     filtered = filtered.filter((issue) => {
       const assigneeUid = getAssigneeUid(issue.assignee);
+      const reporterUid = getReporterUid(issue.reporter);
       const isUnassigned = !issue.assignee;
 
       // If "unassigned" is selected and issue is unassigned, include it
@@ -242,6 +243,11 @@ export const filterIssues = ({
 
       // If assignee UID is in the selected filters, include it
       if (assigneeUid && assigneeFilter.includes(assigneeUid)) {
+        return true;
+      }
+
+      // If reporter UID is in the selected filters, include it
+      if (reporterUid && assigneeFilter.includes(reporterUid)) {
         return true;
       }
 

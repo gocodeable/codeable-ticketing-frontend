@@ -1,19 +1,84 @@
 import { User } from "firebase/auth"
-import { apiPost } from "@/lib/api/apiClient"
+import { apiPost, apiGet, apiPut } from "@/lib/api/apiClient"
 import { isValidEmailDomain } from "../utils/emailValidation"
 
 /**
- * Replaces s96-c (96px) with s500-c (500px) for better image quality
+ * Replaces any size parameter (e.g., s96-c, s128-c, etc.) with s500-c (500px) for better image quality
+ * Only upgrades if the URL is NOT already 500px
  */
 function upgradeGooglePhotoURL(photoURL: string | null): string | null {
   if (!photoURL) return photoURL
   
-  // Check if it's a Google photo URL and contains the size parameter
-  if (photoURL.includes('googleusercontent.com') && photoURL.includes('=s96-c')) {
-    return photoURL.replace('=s96-c', '=s500-c')
+  if (photoURL.includes('googleusercontent.com')) {
+    if (photoURL.includes('=s500-c')) {
+      return photoURL
+    }
+
+    const sizePattern = /=s\d+-c/
+    if (sizePattern.test(photoURL)) {
+      // Replace any size parameter with s500-c
+      return photoURL.replace(/=s\d+-c/, '=s500-c')
+    }
+    
+    return photoURL
   }
   
   return photoURL
+}
+
+/**
+ * Checks and upgrades user's avatar to 500px if it's a Google photo URL that's not already 500px
+ * This is called on login to ensure all users have high-quality profile images
+ */
+export async function checkAndUpgradeUserAvatar(firebaseUser: User): Promise<void> {
+  try {
+    // Only check for Google login users with a photo URL
+    if (!firebaseUser.photoURL || !firebaseUser.photoURL.includes('googleusercontent.com')) {
+      return
+    }
+
+    const idToken = await firebaseUser.getIdToken()
+    
+    // Get current user data from backend
+    const response = await apiGet(`/api/user?uid=${firebaseUser.uid}`, idToken)
+    
+    if (!response.ok) {
+      console.log("Could not fetch user data to check avatar, skipping upgrade")
+      return
+    }
+
+    const data = await response.json()
+    if (!data.success || !data.data) {
+      console.log("User data not found, skipping avatar upgrade")
+      return
+    }
+
+    const currentAvatar = data.data.avatar
+    
+    // Check if current avatar in backend is already 500px
+    if (currentAvatar && currentAvatar.includes('googleusercontent.com') && currentAvatar.includes('=s500-c')) {
+      return
+    }
+
+    const upgradedAvatar = upgradeGooglePhotoURL(firebaseUser.photoURL)
+
+    if (upgradedAvatar && upgradedAvatar !== currentAvatar) {
+      console.log("Upgrading user avatar to 500px")
+      const updateResponse = await apiPut(
+        '/api/user',
+        { avatar: upgradedAvatar },
+        idToken
+      )
+
+      if (updateResponse.ok) {
+        console.log("User avatar upgraded successfully")
+      } else {
+        console.error("Failed to upgrade user avatar")
+      }
+    }
+  } catch (error) {
+    console.error("Error checking/upgrading user avatar:", error)
+  }
 }
 
 export async function syncUserWithBackend(firebaseUser: User, loginType: 'email' | 'google' = 'email', retries = 3): Promise<boolean> {
