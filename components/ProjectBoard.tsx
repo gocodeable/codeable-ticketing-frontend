@@ -347,8 +347,9 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         ? draggedIssue.workflowStatus
         : draggedIssue.workflowStatus?._id;
 
-      // Check if over.id is a status ID or an issue ID
+      // Check if over.id is a status ID, droppable zone ID, or an issue ID
       const isValidStatus = statuses.some((status) => status._id === over.id);
+      const isDroppableZone = typeof over.id === 'string' && over.id.startsWith('droppable-');
       const targetIssue = issues.find((issue) => issue._id === over.id);
       
       let targetStatusId: string;
@@ -357,6 +358,11 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
       if (isValidStatus) {
         // Dropped directly on a status column
         targetStatusId = over.id as string;
+        const targetStatusIssues = getIssuesByStatus(targetStatusId);
+        targetPosition = targetStatusIssues.length;
+      } else if (isDroppableZone) {
+        // Dropped on a droppable zone - extract the status ID
+        targetStatusId = (over.id as string).replace('droppable-', '');
         const targetStatusIssues = getIssuesByStatus(targetStatusId);
         targetPosition = targetStatusIssues.length;
       } else if (targetIssue) {
