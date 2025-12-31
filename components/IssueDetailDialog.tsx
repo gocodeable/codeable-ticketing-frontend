@@ -69,6 +69,8 @@ export function IssueDetailDialog({
   const [editPriority, setEditPriority] = useState<"highest" | "high" | "medium" | "low" | "lowest">("medium");
   const [editAssignee, setEditAssignee] = useState<UserSuggestion | null>(null);
   const [editDueDate, setEditDueDate] = useState<Date | undefined>();
+  const [editWorkflowStatus, setEditWorkflowStatus] = useState<string>("");
+  const [workflowStatuses, setWorkflowStatuses] = useState<Array<{ _id: string; name: string; color?: string }>>([]);
   const [editAttachments, setEditAttachments] = useState<Attachment[]>([]);
   const [newAttachments, setNewAttachments] = useState<
     Array<{
@@ -103,6 +105,13 @@ export function IssueDetailDialog({
     }
   }, [open, issueId, user]);
 
+  // Fetch workflow statuses when issue is loaded
+  useEffect(() => {
+    if (issue && issue.project && user) {
+      fetchWorkflowStatuses();
+    }
+  }, [issue, user]);
+
   // Initialize edit form when issue is loaded or editing mode changes
   useEffect(() => {
     if (issue && isEditing) {
@@ -113,6 +122,14 @@ export function IssueDetailDialog({
       setEditDueDate(issue.estimatedCompletionDate ? new Date(issue.estimatedCompletionDate) : undefined);
       setEditAttachments(issue.attachments || []);
       setNewAttachments([]);
+      
+      // Set workflow status
+      const workflowStatusId = typeof issue.workflowStatus === "object" && issue.workflowStatus?._id
+        ? issue.workflowStatus._id
+        : typeof issue.workflowStatus === "string"
+        ? issue.workflowStatus
+        : "";
+      setEditWorkflowStatus(workflowStatusId);
       
       // Set assignee
       if (issue.assignee && typeof issue.assignee === "object") {
@@ -149,6 +166,25 @@ export function IssueDetailDialog({
       onOpenChange(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWorkflowStatuses = async () => {
+    if (!issue || !user) return;
+
+    const projectId = typeof issue.project === "string" ? issue.project : issue.project?._id;
+    if (!projectId) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await apiGet(`/api/workflow-statuses/${projectId}`, idToken);
+      const data = await response.json();
+
+      if (data.success) {
+        setWorkflowStatuses(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching workflow statuses:", error);
     }
   };
 
@@ -288,6 +324,15 @@ export function IssueDetailDialog({
       
       const allAttachments = [...editAttachments, ...uploadedNewAttachments];
 
+      // Check if workflow status changed
+      const originalWorkflowStatusId = typeof issue.workflowStatus === "object" && issue.workflowStatus?._id
+        ? issue.workflowStatus._id
+        : typeof issue.workflowStatus === "string"
+        ? issue.workflowStatus
+        : "";
+      
+      const workflowStatusChanged = editWorkflowStatus && editWorkflowStatus !== originalWorkflowStatusId;
+
       const updateData = {
         title: editTitle.trim(),
         description: editDescription.trim(),
@@ -296,21 +341,55 @@ export function IssueDetailDialog({
         assignee: editAssignee?.uid || undefined,
         estimatedCompletionDate: editDueDate ? editDueDate.toISOString() : undefined,
         attachments: allAttachments,
+        ...(workflowStatusChanged && { workflowStatus: editWorkflowStatus }),
       };
 
-      const response = await apiPatch(`/api/issues/${issue._id}`, updateData, idToken);
-      const data = await response.json();
+      // If workflow status changed, use the move API to position at top
+      if (workflowStatusChanged) {
+        // First update the issue details (without workflow status)
+        const { workflowStatus: _, ...updateDataWithoutWorkflow } = updateData;
+        
+        const updateResponse = await apiPatch(`/api/issues/${issue._id}`, updateDataWithoutWorkflow, idToken);
+        const updateResponseData = await updateResponse.json();
 
-      if (data.success) {
-        toast.success("Issue updated successfully");
-        setIsEditing(false);
-        // Refresh issue data
-        await fetchIssue();
-        if (onIssueUpdated) {
-          onIssueUpdated(data.data);
+        if (!updateResponse.ok || !updateResponseData.success) {
+          toast.error(updateResponseData.error || "Failed to update issue");
+          return;
+        }
+
+        // Then move the issue to the new workflow status at position 0 (top)
+        const moveResponse = await apiPatch(
+          `/api/issues/${issue._id}/move`,
+          { workflowStatusId: editWorkflowStatus, position: 0 },
+          idToken
+        );
+        const moveData = await moveResponse.json();
+
+        if (moveData.success) {
+          toast.success("Issue updated and moved to new workflow");
+          setIsEditing(false);
+          await fetchIssue();
+          if (onIssueUpdated) {
+            onIssueUpdated(moveData.data);
+          }
+        } else {
+          toast.error(moveData.error || "Failed to move issue to new workflow");
         }
       } else {
-        toast.error(data.error || "Failed to update issue");
+        // Regular update without workflow change
+        const response = await apiPatch(`/api/issues/${issue._id}`, updateData, idToken);
+        const data = await response.json();
+
+        if (data.success) {
+          toast.success("Issue updated successfully");
+          setIsEditing(false);
+          await fetchIssue();
+          if (onIssueUpdated) {
+            onIssueUpdated(data.data);
+          }
+        } else {
+          toast.error(data.error || "Failed to update issue");
+        }
       }
     } catch (error) {
       console.error("Error updating issue:", error);
@@ -427,9 +506,9 @@ export function IssueDetailDialog({
     avatar: member.avatar,
   }));
 
-  // Filter members based on search query
+  // Filter members based on search query - show all members if query is empty
   const filteredMembers = memberSuggestions.filter((member) => {
-    if (!assigneeSearchQuery.trim()) return false;
+    if (!assigneeSearchQuery.trim()) return true; // Show all members when query is empty
     const query = assigneeSearchQuery.toLowerCase();
     return (
       member.name.toLowerCase().includes(query) ||
@@ -547,6 +626,8 @@ export function IssueDetailDialog({
                         editPriority={editPriority}
                         editAssignee={editAssignee}
                         editDueDate={editDueDate}
+                        editWorkflowStatus={editWorkflowStatus}
+                        workflowStatuses={workflowStatuses}
                         editAttachments={editAttachments}
                         newAttachments={newAttachments}
                         assigneeSearchQuery={assigneeSearchQuery}
@@ -559,6 +640,7 @@ export function IssueDetailDialog({
                         onPriorityChange={setEditPriority}
                         onAssigneeChange={setEditAssignee}
                         onDueDateChange={setEditDueDate}
+                        onWorkflowStatusChange={setEditWorkflowStatus}
                         onAssigneeSearchChange={setAssigneeSearchQuery}
                         onShowSuggestionsChange={setShowAssigneeSuggestions}
                         onRemoveExistingAttachment={removeExistingAttachment}
