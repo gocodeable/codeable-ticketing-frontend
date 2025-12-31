@@ -78,9 +78,6 @@ export default function IssuesTable({
   const [reporters, setReporters] = useState<Map<string, ReporterInfo>>(
     new Map()
   );
-  const [assignees, setAssignees] = useState<Map<string, AssigneeInfo>>(
-    new Map()
-  );
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -90,6 +87,19 @@ export default function IssuesTable({
   const observerTarget = useRef<HTMLDivElement>(null);
   const skipRef = useRef(0);
   const [allIssuesForFilters, setAllIssuesForFilters] = useState<Issue[]>([]);
+
+  // Convert project members to a Map for the filter bar
+  const membersMap = useMemo(() => {
+    const map = new Map<string, AssigneeInfo>();
+    projectMembers.forEach((member) => {
+      map.set(member.uid, {
+        uid: member.uid,
+        name: member.name,
+        avatar: member.avatar,
+      });
+    });
+    return map;
+  }, [projectMembers]);
   const [filterLoading, setFilterLoading] = useState(false);
 
   const fetchIssues = useCallback(
@@ -143,91 +153,9 @@ export default function IssuesTable({
             onIssuesCountChange(data.pagination?.total || fetchedIssues.length);
           }
 
-          const assigneeMap = new Map<string, AssigneeInfo>();
-          fetchedIssues.forEach((issue: Issue) => {
-            if (issue.assignee) {
-              if (typeof issue.assignee === "object" && issue.assignee.uid) {
-                // Already populated assignee object
-                assigneeMap.set(issue.assignee.uid, {
-                  uid: issue.assignee.uid,
-                  name: issue.assignee.name,
-                  avatar: issue.assignee.avatar,
-                });
-              } else if (typeof issue.assignee === "string") {
-                // Assignee is just a UID string, we'll fetch it
-                if (!assigneeMap.has(issue.assignee)) {
-                  assigneeMap.set(issue.assignee, {
-                    uid: issue.assignee,
-                    name: "",
-                    avatar: undefined,
-                  });
-                }
-              }
-            }
-          });
-
-          // Only fetch assignee/reporter info on initial load or when needed
+          // Only fetch reporter info on initial load or when needed
           if (isInitial || fetchedIssues.length > 0) {
             const issuesToProcess = isInitial ? fetchedIssues : fetchedIssues;
-
-            const assigneeMap = new Map<string, AssigneeInfo>();
-            issuesToProcess.forEach((issue: Issue) => {
-              if (issue.assignee) {
-                if (typeof issue.assignee === "object" && issue.assignee.uid) {
-                  assigneeMap.set(issue.assignee.uid, {
-                    uid: issue.assignee.uid,
-                    name: issue.assignee.name,
-                    avatar: issue.assignee.avatar,
-                  });
-                } else if (typeof issue.assignee === "string") {
-                  if (!assigneeMap.has(issue.assignee)) {
-                    assigneeMap.set(issue.assignee, {
-                      uid: issue.assignee,
-                      name: "",
-                      avatar: undefined,
-                    });
-                  }
-                }
-              }
-            });
-
-            // Fetch assignee information for UIDs that don't have full info
-            const assigneeUidsToFetch = Array.from(assigneeMap.values())
-              .filter((a) => !a.name)
-              .map((a) => a.uid);
-
-            if (assigneeUidsToFetch.length > 0) {
-              await Promise.all(
-                assigneeUidsToFetch.map(async (uid) => {
-                  try {
-                    const userResponse = await apiGet(
-                      `/api/user?uid=${uid}`,
-                      idToken
-                    );
-                    const userData = await userResponse.json();
-                    if (userData.success && userData.data) {
-                      assigneeMap.set(uid, {
-                        uid: userData.data.uid,
-                        name: userData.data.name,
-                        avatar: userData.data.avatar,
-                      });
-                    }
-                  } catch (err) {
-                    console.error(`Error fetching assignee ${uid}:`, err);
-                  }
-                })
-              );
-            }
-
-            if (isInitial) {
-              setAssignees(assigneeMap);
-            } else {
-              setAssignees((prev) => {
-                const merged = new Map(prev);
-                assigneeMap.forEach((value, key) => merged.set(key, value));
-                return merged;
-              });
-            }
 
             // Fetch reporter information for all unique reporters
             const reporterUids: string[] = Array.from(
@@ -520,7 +448,7 @@ export default function IssuesTable({
         statuses={statuses}
         assigneeFilter={assigneeFilter}
         onAssigneeChange={setAssigneeFilter}
-        assignees={assignees}
+        assignees={membersMap}
         dueDateFilter={dueDateFilter}
         onDueDateChange={setDueDateFilter}
         onRefresh={fetchIssues}

@@ -90,6 +90,7 @@ export default function SortableStatusColumn({
   onIssueUpdated,
   onIssueDeleted,
   initialIssueId,
+  dropIndicator,
 }: {
   status: WorkflowStatus;
   statusIssues: Issue[];
@@ -105,6 +106,7 @@ export default function SortableStatusColumn({
   onIssueDeleted?: (issueId: string) => void;
   onIssuesReordered?: (statusId: string, reorderedIssues: Issue[]) => void;
   initialIssueId?: string;
+  dropIndicator?: number | null;
 }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -404,14 +406,23 @@ export default function SortableStatusColumn({
             items={localIssues.map((issue) => issue._id)}
             strategy={verticalListSortingStrategy}
           >
-            {localIssues.map((issue) => (
-              <SortableIssueCard
-                key={issue._id}
-                issue={issue}
-                disabled={!canReorderIssue(issue)}
-                onClick={() => setSelectedIssueId(issue._id)}
-              />
+            {localIssues.map((issue, index) => (
+              <div key={issue._id}>
+                {/* Drop indicator line */}
+                {dropIndicator === index && (
+                  <div className="h-0.5 bg-primary rounded-full mb-3 shadow-lg shadow-primary/50" />
+                )}
+                <SortableIssueCard
+                  issue={issue}
+                  disabled={!canReorderIssue(issue)}
+                  onClick={() => setSelectedIssueId(issue._id)}
+                />
+              </div>
             ))}
+            {/* Drop indicator at the end */}
+            {dropIndicator === localIssues.length && (
+              <div className="h-0.5 bg-primary rounded-full shadow-lg shadow-primary/50" />
+            )}
           </SortableContext>
         </div>
       </StatusDroppable>

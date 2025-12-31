@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { User, ChevronLeft, ChevronRight, Crown, Server, Monitor, Palette, TestTube, UserX, Briefcase } from "lucide-react";
@@ -28,7 +28,35 @@ export default function MemberGallery({
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(true);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  useEffect(() => {
+    const checkScrollNeeded = () => {
+      if (scrollContainerRef.current) {
+        const { scrollWidth, clientWidth } = scrollContainerRef.current;
+        const needsScroll = scrollWidth > clientWidth;
+        setShowRightArrow(needsScroll);
+        setShowLeftArrow(false); // Always start with left arrow hidden
+      }
+    };
+
+    // Check immediately
+    checkScrollNeeded();
+
+    // Also check after a short delay to ensure layout is complete
+    const timer = setTimeout(checkScrollNeeded, 100);
+
+    // Add resize observer to handle window resizing
+    const resizeObserver = new ResizeObserver(checkScrollNeeded);
+    if (scrollContainerRef.current) {
+      resizeObserver.observe(scrollContainerRef.current);
+    }
+
+    return () => {
+      clearTimeout(timer);
+      resizeObserver.disconnect();
+    };
+  }, [members]);
 
   const handleMemberClick = (memberId: string) => {
     router.push(`/profile/${memberId}`);

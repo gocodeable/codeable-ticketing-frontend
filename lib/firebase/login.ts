@@ -1,6 +1,6 @@
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, User } from "firebase/auth"
 import { auth } from "./firebase"
-import { syncUserWithBackend } from "../auth/SyncUser"
+import { syncUserWithBackend, checkAndUpgradeUserAvatar } from "../auth/SyncUser"
 import { isValidEmailDomain, getEmailDomainError } from "../utils/emailValidation"
 import { checkUserExists } from "../auth/checkUserExists"
 
@@ -33,6 +33,9 @@ export const login = async (email: string, password: string) => {
       await auth.signOut()
       throw new Error("Failed to sync user account. Please try again or contact support.")
     }
+  } else {
+    // User exists - check and upgrade avatar if needed (for Google login users)
+    await checkAndUpgradeUserAvatar(userCredential.user)
   }
   
   return userCredential.user
@@ -61,6 +64,9 @@ export const loginWithGoogle = async () => {
       await auth.signOut()
       throw new Error("Failed to sync user account. Please try again or contact support.")
     }
+  } else {
+    // User exists - check and upgrade avatar if needed (for Google login users)
+    await checkAndUpgradeUserAvatar(userCredential.user)
   }
   
   return userCredential.user

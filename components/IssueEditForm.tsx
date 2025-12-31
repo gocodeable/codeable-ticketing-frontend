@@ -41,6 +41,8 @@ interface IssueEditFormProps {
   editPriority: "highest" | "high" | "medium" | "low" | "lowest";
   editAssignee: UserSuggestion | null;
   editDueDate: Date | undefined;
+  editWorkflowStatus: string;
+  workflowStatuses: Array<{ _id: string; name: string; color?: string }>;
   editAttachments: Attachment[];
   newAttachments: Array<{
     file: File;
@@ -61,6 +63,7 @@ interface IssueEditFormProps {
   onPriorityChange: (value: "highest" | "high" | "medium" | "low" | "lowest") => void;
   onAssigneeChange: (assignee: UserSuggestion | null) => void;
   onDueDateChange: (date: Date | undefined) => void;
+  onWorkflowStatusChange: (value: string) => void;
   onAssigneeSearchChange: (query: string) => void;
   onShowSuggestionsChange: (show: boolean) => void;
   onRemoveExistingAttachment: (index: number) => void;
@@ -83,6 +86,8 @@ export function IssueEditForm({
   editPriority,
   editAssignee,
   editDueDate,
+  editWorkflowStatus,
+  workflowStatuses,
   editAttachments,
   newAttachments,
   assigneeSearchQuery,
@@ -95,6 +100,7 @@ export function IssueEditForm({
   onPriorityChange,
   onAssigneeChange,
   onDueDateChange,
+  onWorkflowStatusChange,
   onAssigneeSearchChange,
   onShowSuggestionsChange,
   onRemoveExistingAttachment,
@@ -262,6 +268,50 @@ export function IssueEditForm({
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {/* Workflow Status */}
+      <div className="space-y-2">
+        <Label htmlFor="edit-workflow-status" className="text-sm font-semibold">
+          Workflow Status
+        </Label>
+        <Select
+          value={editWorkflowStatus}
+          onValueChange={onWorkflowStatusChange}
+          disabled={isSaving}
+        >
+          <SelectTrigger id="edit-workflow-status" className="h-11">
+            <SelectValue placeholder="Select workflow status">
+              {editWorkflowStatus && workflowStatuses.find(s => s._id === editWorkflowStatus) ? (
+                <span className="flex items-center gap-2">
+                  <span 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ 
+                      backgroundColor: workflowStatuses.find(s => s._id === editWorkflowStatus)?.color || '#3b82f6' 
+                    }}
+                  />
+                  {workflowStatuses.find(s => s._id === editWorkflowStatus)?.name}
+                </span>
+              ) : null}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {workflowStatuses.map((status) => (
+              <SelectItem key={status._id} value={status._id}>
+                <span className="flex items-center gap-2">
+                  <span 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ backgroundColor: status.color || '#3b82f6' }}
+                  />
+                  {status.name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Changing workflow will move the issue to the top of the new status
+        </p>
       </div>
 
       {/* Due Date and Assignee */}
