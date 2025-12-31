@@ -18,6 +18,7 @@ import {
   useSensors,
   DragEndEvent,
   DragStartEvent,
+  DragOverEvent,
   DragOverlay,
   DragMoveEvent,
 } from "@dnd-kit/core";
@@ -60,7 +61,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
-  const [assignees, setAssignees] = useState<Map<string, AssigneeInfo>>(new Map());
+  const [dropIndicator, setDropIndicator] = useState<{ statusId: string; position: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -68,12 +69,12 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   const [dueDateFilter, setDueDateFilter] = useState<Date | undefined>(undefined);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const autoScrollAnimationRef = useRef<number | null>(null);
-  const lastScrollTimeRef = useRef<number>(0);
+  const currentMousePosition = useRef<{ x: number; y: number } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 10, // Increased distance to prevent accidental dialog opening when grabbing
+        distance: 10, 
       },
     }),
     useSensor(KeyboardSensor, {
@@ -81,6 +82,19 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
     })
   );
 
+
+  // Convert project members to a Map for the filter bar
+  const membersMap = useMemo(() => {
+    const map = new Map<string, AssigneeInfo>();
+    projectMembers.forEach((member) => {
+      map.set(member.uid, {
+        uid: member.uid,
+        name: member.name,
+        avatar: member.avatar,
+      });
+    });
+    return map;
+  }, [projectMembers]);
 
   // Filter issues based on search, priority, status, assignee, and due date
   const filteredIssues = useMemo(() => {
@@ -138,55 +152,6 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         if (onIssuesCountChange) {
           onIssuesCountChange(fetchedIssues.length);
         }
-
-        // Build assignees map
-        const assigneeMap = new Map<string, AssigneeInfo>();
-        fetchedIssues.forEach((issue: Issue) => {
-          if (issue.assignee) {
-            if (typeof issue.assignee === "object" && issue.assignee.uid) {
-              assigneeMap.set(issue.assignee.uid, {
-                uid: issue.assignee.uid,
-                name: issue.assignee.name,
-                avatar: issue.assignee.avatar,
-              });
-            } else if (typeof issue.assignee === "string") {
-              if (!assigneeMap.has(issue.assignee)) {
-                assigneeMap.set(issue.assignee, {
-                  uid: issue.assignee,
-                  name: "",
-                  avatar: undefined,
-                });
-              }
-            }
-          }
-        });
-
-        // Fetch assignee information for UIDs that don't have full info
-        const assigneeUidsToFetch = Array.from(assigneeMap.values())
-          .filter(a => !a.name)
-          .map(a => a.uid);
-
-        if (assigneeUidsToFetch.length > 0) {
-          await Promise.all(
-            assigneeUidsToFetch.map(async (uid) => {
-              try {
-                const userResponse = await apiGet(`/api/user?uid=${uid}`, idToken);
-                const userData = await userResponse.json();
-                if (userData.success && userData.data) {
-                  assigneeMap.set(uid, {
-                    uid: userData.data.uid,
-                    name: userData.data.name,
-                    avatar: userData.data.avatar,
-                  });
-                }
-              } catch (err) {
-                console.error(`Error fetching assignee ${uid}:`, err);
-              }
-            })
-          );
-        }
-        
-        setAssignees(assigneeMap);
       }
     } catch (err) {
       console.error("Error fetching board data:", err);
@@ -230,13 +195,14 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   };
 
   // Auto-scroll when dragging near edges using requestAnimationFrame for smooth performance
-  const handleAutoScroll = useCallback((clientX: number) => {
+  const handleAutoScroll = useCallback(() => {
     const scrollViewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    if (!scrollViewport) return;
+    if (!scrollViewport || !currentMousePosition.current) return;
 
     const viewportRect = scrollViewport.getBoundingClientRect();
-    const scrollThreshold = 150; // Distance from edge to trigger scroll
-    const maxScrollSpeed = 20; // Maximum pixels to scroll per frame
+    const clientX = currentMousePosition.current.x;
+    const scrollThreshold = 100;
+    const maxScrollSpeed = 15;
 
     // Calculate distance from edges
     const distanceFromLeft = clientX - viewportRect.left;
@@ -246,46 +212,37 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
 
     // Check if near left edge
     if (distanceFromLeft < scrollThreshold && distanceFromLeft > 0) {
-      // Scroll speed increases as you get closer to the edge
-      const intensity = 1 - (distanceFromLeft / scrollThreshold);
-      scrollSpeed = -maxScrollSpeed * intensity;
+      // Check if we can scroll left (not at the start)
+      if (scrollViewport.scrollLeft > 0) {
+        // Scroll speed increases as you get closer to the edge
+        const intensity = 1 - (distanceFromLeft / scrollThreshold);
+        scrollSpeed = -maxScrollSpeed * intensity;
+      }
     }
     // Check if near right edge
     else if (distanceFromRight < scrollThreshold && distanceFromRight > 0) {
-      // Scroll speed increases as you get closer to the edge
-      const intensity = 1 - (distanceFromRight / scrollThreshold);
-      scrollSpeed = maxScrollSpeed * intensity;
+      // Check if we can scroll right (not at the end)
+      const maxScrollLeft = scrollViewport.scrollWidth - scrollViewport.clientWidth;
+      if (scrollViewport.scrollLeft < maxScrollLeft) {
+        // Scroll speed increases as you get closer to the edge
+        const intensity = 1 - (distanceFromRight / scrollThreshold);
+        scrollSpeed = maxScrollSpeed * intensity;
+      }
     }
 
-    // Cancel any existing animation frame
-    if (autoScrollAnimationRef.current) {
-      cancelAnimationFrame(autoScrollAnimationRef.current);
-      autoScrollAnimationRef.current = null;
-    }
-
-    // Only scroll if there's a speed
+    // Apply scroll if there's a speed
     if (scrollSpeed !== 0) {
-      const animate = () => {
-        const now = Date.now();
-        const delta = now - lastScrollTimeRef.current;
-        
-        if (delta > 0) {
-          // Smooth scroll with timing
-          const scroll = scrollSpeed * Math.min(delta / 16, 2); // Normalize to ~60fps
-          scrollViewport.scrollLeft += scroll;
-          lastScrollTimeRef.current = now;
-        }
+      scrollViewport.scrollLeft += scrollSpeed;
+    }
 
-        // Continue animation
-        autoScrollAnimationRef.current = requestAnimationFrame(animate);
-      };
-
-      lastScrollTimeRef.current = Date.now();
-      autoScrollAnimationRef.current = requestAnimationFrame(animate);
+    // Continue animation if still dragging
+    if (currentMousePosition.current) {
+      autoScrollAnimationRef.current = requestAnimationFrame(handleAutoScroll);
     }
   }, []);
 
   const stopAutoScroll = useCallback(() => {
+    currentMousePosition.current = null;
     if (autoScrollAnimationRef.current) {
       cancelAnimationFrame(autoScrollAnimationRef.current);
       autoScrollAnimationRef.current = null;
@@ -295,6 +252,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   // Clean up auto-scroll on unmount
   useEffect(() => {
     return () => {
+      currentMousePosition.current = null;
       if (autoScrollAnimationRef.current) {
         cancelAnimationFrame(autoScrollAnimationRef.current);
       }
@@ -308,14 +266,76 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
     if (draggedIssue) {
       setActiveIssue(draggedIssue);
     }
+    
+    // Start tracking mouse position for auto-scroll
+    currentMousePosition.current = { x: 0, y: 0 };
   };
 
   const handleDragMove = (event: DragMoveEvent) => {
-    const { activatorEvent } = event;
+    const { delta, activatorEvent } = event;
     
-    // Get mouse position from the activator event
-    if (activatorEvent && 'clientX' in activatorEvent) {
-      handleAutoScroll(activatorEvent.clientX as number);
+    // Update current mouse position
+    if (activatorEvent && 'clientX' in activatorEvent && 'clientY' in activatorEvent) {
+      const initialX = activatorEvent.clientX as number;
+      const initialY = activatorEvent.clientY as number;
+      
+      currentMousePosition.current = {
+        x: initialX + delta.x,
+        y: initialY + delta.y,
+      };
+      
+      // Start auto-scroll animation if not already running
+      if (!autoScrollAnimationRef.current) {
+        autoScrollAnimationRef.current = requestAnimationFrame(handleAutoScroll);
+      }
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    
+    if (!over) {
+      setDropIndicator(null);
+      return;
+    }
+
+    const draggedIssue = issues.find((issue) => issue._id === active.id);
+    if (!draggedIssue) {
+      setDropIndicator(null);
+      return;
+    }
+
+    // Determine the target status and position
+    const isValidStatus = statuses.some((status) => status._id === over.id);
+    const isDroppableZone = typeof over.id === 'string' && over.id.startsWith('droppable-');
+    const targetIssue = issues.find((issue) => issue._id === over.id);
+    
+    let targetStatusId: string | null = null;
+    let targetPosition: number = 0;
+
+    if (isValidStatus) {
+      targetStatusId = over.id as string;
+      const targetStatusIssues = getIssuesByStatus(targetStatusId);
+      targetPosition = targetStatusIssues.length;
+    } else if (isDroppableZone) {
+      targetStatusId = (over.id as string).replace('droppable-', '');
+      const targetStatusIssues = getIssuesByStatus(targetStatusId);
+      targetPosition = targetStatusIssues.length;
+    } else if (targetIssue) {
+      const targetIssueStatusId = typeof targetIssue.workflowStatus === "string"
+        ? targetIssue.workflowStatus
+        : targetIssue.workflowStatus?._id;
+      
+      targetStatusId = targetIssueStatusId;
+      const targetStatusIssues = getIssuesByStatus(targetStatusId);
+      const targetIndex = targetStatusIssues.findIndex((issue) => issue._id === over.id);
+      targetPosition = targetIndex >= 0 ? targetIndex : targetStatusIssues.length;
+    }
+
+    if (targetStatusId) {
+      setDropIndicator({ statusId: targetStatusId, position: targetPosition });
+    } else {
+      setDropIndicator(null);
     }
   };
 
@@ -324,6 +344,13 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
     
     // Stop auto-scrolling
     stopAutoScroll();
+    
+    // Clear drop indicator
+    setDropIndicator(null);
+    
+    // Save current scroll position before any updates
+    const scrollViewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    const savedScrollLeft = scrollViewport?.scrollLeft || 0;
     
     // Always clear the active issue overlay
     setActiveIssue(null);
@@ -396,6 +423,13 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
             }))];
           });
 
+          // Restore scroll position after DOM update
+          requestAnimationFrame(() => {
+            if (scrollViewport) {
+              scrollViewport.scrollLeft = savedScrollLeft;
+            }
+          });
+
           // Update backend
           setIsSaving(true);
           try {
@@ -429,6 +463,13 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
               const issuesData = await issuesRes.json();
               if (issuesData.success) {
                 setIssues(issuesData.data);
+                
+                // Restore scroll position after refetch
+                requestAnimationFrame(() => {
+                  if (scrollViewport) {
+                    scrollViewport.scrollLeft = savedScrollLeft;
+                  }
+                });
               }
             }
           } finally {
@@ -517,6 +558,13 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
           ];
         });
 
+        // Restore scroll position after DOM update
+        requestAnimationFrame(() => {
+          if (scrollViewport) {
+            scrollViewport.scrollLeft = savedScrollLeft;
+          }
+        });
+
         const response = await apiPatch(
           `/api/issues/${draggedIssue._id}/move`,
           { workflowStatusId: targetStatusId, position: targetPosition },
@@ -528,6 +576,14 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         if (!response.ok || !data.success) {
           // Revert optimistic update on error
           setIssues(originalIssues);
+          
+          // Restore scroll position after revert
+          requestAnimationFrame(() => {
+            if (scrollViewport) {
+              scrollViewport.scrollLeft = savedScrollLeft;
+            }
+          });
+          
           const errorMessage = data.message || data.error || "Failed to move issue";
           throw new Error(errorMessage);
         }
@@ -537,6 +593,13 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
           setIssues((prevIssues) => {
             const otherIssues = prevIssues.filter((issue) => issue._id !== draggedIssue._id);
             return [...otherIssues, data.data];
+          });
+          
+          // Restore scroll position after server update
+          requestAnimationFrame(() => {
+            if (scrollViewport) {
+              scrollViewport.scrollLeft = savedScrollLeft;
+            }
           });
         }
 
@@ -553,6 +616,13 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
           const issuesData = await issuesRes.json();
           if (issuesData.success) {
             setIssues(issuesData.data);
+            
+            // Restore scroll position after refetch
+            requestAnimationFrame(() => {
+              if (scrollViewport) {
+                scrollViewport.scrollLeft = savedScrollLeft;
+              }
+            });
           }
         }
       } finally {
@@ -654,7 +724,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         showStatusFilter={false}
         assigneeFilter={assigneeFilter}
         onAssigneeChange={setAssigneeFilter}
-        assignees={assignees}
+        assignees={membersMap}
         dueDateFilter={dueDateFilter}
         onDueDateChange={setDueDateFilter}
         onRefresh={fetchData}
@@ -690,6 +760,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
           onDragMove={handleDragMove}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
           <ScrollArea ref={scrollAreaRef} className="w-full">
@@ -711,6 +782,7 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
                     projectMembers={projectMembers}
                     getTypeIcon={getTypeIcon}
                     initialIssueId={initialIssueId}
+                    dropIndicator={dropIndicator?.statusId === status._id ? dropIndicator.position : null}
                     onStatusUpdate={(updatedStatus) => {
                       setStatuses(statuses.map(s => 
                         s._id === updatedStatus._id ? updatedStatus : s

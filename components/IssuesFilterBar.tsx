@@ -262,7 +262,7 @@ export default function IssuesFilterBar({
             const assigneesList = Array.from(assignees.values());
             if (assigneesList.length === 0) {
               return (
-                <span className="text-sm text-muted-foreground px-2">No assignees</span>
+                <span className="text-sm text-muted-foreground px-2">No members</span>
               );
             }
             const visibleAssignees = assigneesList.slice(0, 5);
@@ -312,7 +312,7 @@ export default function IssuesFilterBar({
                       setShowAssigneeDropdown(true);
                       setAssigneeSearchQuery("");
                     }}
-                    title={`${remainingCount} more assignees`}
+                    title={`${remainingCount} more members`}
                   >
                     <span className="text-[11px] font-semibold text-foreground">
                       +{remainingCount}
@@ -331,7 +331,7 @@ export default function IssuesFilterBar({
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Search assignees..."
+                  placeholder="Search members..."
                   value={assigneeSearchQuery}
                   onChange={(e) => setAssigneeSearchQuery(e.target.value)}
                   className="pl-8 pr-4 h-9 text-sm"
@@ -373,7 +373,7 @@ export default function IssuesFilterBar({
                     <Check className="w-3 h-3 text-primary-foreground" />
                   )}
                 </div>
-                <span className="text-sm font-medium">All Assignees</span>
+                <span className="text-sm font-medium">All Members</span>
               </button>
               <button
                 type="button"
