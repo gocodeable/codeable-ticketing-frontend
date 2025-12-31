@@ -55,9 +55,16 @@ function StatusDroppable({
   children: React.ReactNode;
   disabled?: boolean;
 }) {
+  // Use a different ID for the droppable zone to avoid conflicts with sortable column
+  const droppableId = `droppable-${statusId}`;
+  
   const { setNodeRef, isOver } = useDroppable({
-    id: statusId,
+    id: droppableId,
     disabled,
+    data: {
+      type: 'status-column',
+      statusId: statusId,
+    }
   });
 
   return (
@@ -140,7 +147,7 @@ export default function SortableStatusColumn({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: status._id, disabled: !isAdmin && userRole !== 'pm' });
+  } = useSortable({ id: status._id, disabled: !isAdmin && userRole !== 'pm' && userRole !== 'qa' });
 
   const style = {
     transform: CSS.Transform.toString(transform),
