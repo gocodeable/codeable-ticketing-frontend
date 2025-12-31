@@ -506,9 +506,9 @@ export function IssueDetailDialog({
     avatar: member.avatar,
   }));
 
-  // Filter members based on search query
+  // Filter members based on search query - show all members if query is empty
   const filteredMembers = memberSuggestions.filter((member) => {
-    if (!assigneeSearchQuery.trim()) return false;
+    if (!assigneeSearchQuery.trim()) return true; // Show all members when query is empty
     const query = assigneeSearchQuery.toLowerCase();
     return (
       member.name.toLowerCase().includes(query) ||
