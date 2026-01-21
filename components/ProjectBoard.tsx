@@ -3,6 +3,7 @@
 import { WorkflowStatus } from "@/types/workflowStatus";
 import { Issue } from "@/types/issue";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { apiGet, apiPatch } from "@/lib/api/apiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Loader2 } from "lucide-react";
@@ -315,11 +316,17 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
 
     if (isValidStatus) {
       targetStatusId = over.id as string;
-      const targetStatusIssues = getIssuesByStatus(targetStatusId);
+      // Exclude the dragged issue from the count
+      const targetStatusIssues = getIssuesByStatus(targetStatusId).filter(
+        (issue) => issue._id !== draggedIssue._id
+      );
       targetPosition = targetStatusIssues.length;
     } else if (isDroppableZone) {
       targetStatusId = (over.id as string).replace('droppable-', '');
-      const targetStatusIssues = getIssuesByStatus(targetStatusId);
+      // Exclude the dragged issue from the count
+      const targetStatusIssues = getIssuesByStatus(targetStatusId).filter(
+        (issue) => issue._id !== draggedIssue._id
+      );
       targetPosition = targetStatusIssues.length;
     } else if (targetIssue) {
       const targetIssueStatusId = typeof targetIssue.workflowStatus === "string"
@@ -327,9 +334,13 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         : targetIssue.workflowStatus?._id;
       
       targetStatusId = targetIssueStatusId;
-      const targetStatusIssues = getIssuesByStatus(targetStatusId);
+      // Exclude the dragged issue from the count
+      const targetStatusIssues = getIssuesByStatus(targetStatusId).filter(
+        (issue) => issue._id !== draggedIssue._id
+      );
       const targetIndex = targetStatusIssues.findIndex((issue) => issue._id === over.id);
-      targetPosition = targetIndex >= 0 ? targetIndex : targetStatusIssues.length;
+      // If dropping on an issue, position is after that issue
+      targetPosition = targetIndex >= 0 ? targetIndex + 1 : targetStatusIssues.length;
     }
 
     if (targetStatusId) {
@@ -385,12 +396,18 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
       if (isValidStatus) {
         // Dropped directly on a status column
         targetStatusId = over.id as string;
-        const targetStatusIssues = getIssuesByStatus(targetStatusId);
+        // Exclude the dragged issue from the count
+        const targetStatusIssues = getIssuesByStatus(targetStatusId).filter(
+          (issue) => issue._id !== draggedIssue._id
+        );
         targetPosition = targetStatusIssues.length;
       } else if (isDroppableZone) {
         // Dropped on a droppable zone - extract the status ID
         targetStatusId = (over.id as string).replace('droppable-', '');
-        const targetStatusIssues = getIssuesByStatus(targetStatusId);
+        // Exclude the dragged issue from the count
+        const targetStatusIssues = getIssuesByStatus(targetStatusId).filter(
+          (issue) => issue._id !== draggedIssue._id
+        );
         targetPosition = targetStatusIssues.length;
       } else if (targetIssue) {
         // Dropped on another issue - determine if it's same column or different
@@ -408,19 +425,21 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
           
           const reorderedIssues = arrayMove(statusIssues, oldIndex, newIndex);
           
-          // Optimistically update UI
-          setIssues((prevIssues) => {
-            const otherIssues = prevIssues.filter((issue) => {
-              const workflowStatusId =
-                typeof issue.workflowStatus === "string"
-                  ? issue.workflowStatus
-                  : issue.workflowStatus?._id;
-              return workflowStatusId !== currentStatusId;
+          // Optimistically update UI synchronously to prevent animation flash
+          flushSync(() => {
+            setIssues((prevIssues) => {
+              const otherIssues = prevIssues.filter((issue) => {
+                const workflowStatusId =
+                  typeof issue.workflowStatus === "string"
+                    ? issue.workflowStatus
+                    : issue.workflowStatus?._id;
+                return workflowStatusId !== currentStatusId;
+              });
+              return [...otherIssues, ...reorderedIssues.map((issue, index) => ({
+                ...issue,
+                position: index,
+              }))];
             });
-            return [...otherIssues, ...reorderedIssues.map((issue, index) => ({
-              ...issue,
-              position: index,
-            }))];
           });
 
           // Restore scroll position after DOM update
@@ -479,9 +498,13 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         } else {
           // Different column - move to that column at the position of the target issue
           targetStatusId = targetIssueStatusId;
-          const targetStatusIssues = getIssuesByStatus(targetStatusId);
+          // Exclude the dragged issue from the count
+          const targetStatusIssues = getIssuesByStatus(targetStatusId).filter(
+            (issue) => issue._id !== draggedIssue._id
+          );
           const targetIndex = targetStatusIssues.findIndex((issue) => issue._id === over.id);
-          targetPosition = targetIndex >= 0 ? targetIndex : targetStatusIssues.length;
+          // Position after the target issue
+          targetPosition = targetIndex >= 0 ? targetIndex + 1 : targetStatusIssues.length;
         }
       } else {
         // Dropped on something invalid - do nothing
@@ -511,20 +534,17 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
         }
       }
 
-      setIsSaving(true);
       // Store original issues state for potential rollback
       const originalIssues = [...issues];
       
-      try {
-        const idToken = await user?.getIdToken();
-        if (!idToken) throw new Error("Unauthorized");
-
-        // Optimistically update UI
-        const updatedIssue = {
-          ...draggedIssue,
-          workflowStatus: targetStatusId,
-          position: targetPosition,
-        };
+      // Optimistically update UI synchronously to prevent animation flash
+      const updatedIssue = {
+        ...draggedIssue,
+        workflowStatus: targetStatusId,
+        position: targetPosition,
+      };
+      
+      flushSync(() => {
         setIssues((prevIssues) => {
           const otherIssues = prevIssues.filter((issue) => issue._id !== draggedIssue._id);
           const targetStatusIssues = otherIssues
@@ -557,6 +577,13 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
             })),
           ];
         });
+      });
+
+      setIsSaving(true);
+      
+      try {
+        const idToken = await user?.getIdToken();
+        if (!idToken) throw new Error("Unauthorized");
 
         // Restore scroll position after DOM update
         requestAnimationFrame(() => {
@@ -588,18 +615,23 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
           throw new Error(errorMessage);
         }
 
-        // Update with server response
+        // Silently update with server response in background (no visual change)
+        // Only update the issue data, don't reorder to avoid animation flash
         if (data.data) {
           setIssues((prevIssues) => {
-            const otherIssues = prevIssues.filter((issue) => issue._id !== draggedIssue._id);
-            return [...otherIssues, data.data];
-          });
-          
-          // Restore scroll position after server update
-          requestAnimationFrame(() => {
-            if (scrollViewport) {
-              scrollViewport.scrollLeft = savedScrollLeft;
+            // Find the issue that was optimistically updated
+            const existingIssueIndex = prevIssues.findIndex((issue) => issue._id === data.data._id);
+            
+            if (existingIssueIndex === -1) {
+              // Issue not found (shouldn't happen), just return current state
+              return prevIssues;
             }
+            
+            // Update the issue data in place without reordering
+            // This prevents the animation flash
+            const updatedIssues = [...prevIssues];
+            updatedIssues[existingIssueIndex] = data.data;
+            return updatedIssues;
           });
         }
 

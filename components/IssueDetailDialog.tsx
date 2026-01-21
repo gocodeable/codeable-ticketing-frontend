@@ -65,11 +65,6 @@ export function IssueDetailDialog({
   // Edit form state
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [editType, setEditType] = useState<"task" | "bug" | "story" | "epic">("task");
-  const [editPriority, setEditPriority] = useState<"highest" | "high" | "medium" | "low" | "lowest">("medium");
-  const [editAssignee, setEditAssignee] = useState<UserSuggestion | null>(null);
-  const [editDueDate, setEditDueDate] = useState<Date | undefined>();
-  const [editWorkflowStatus, setEditWorkflowStatus] = useState<string>("");
   const [workflowStatuses, setWorkflowStatuses] = useState<Array<{ _id: string; name: string; color?: string }>>([]);
   const [editAttachments, setEditAttachments] = useState<Attachment[]>([]);
   const [newAttachments, setNewAttachments] = useState<
@@ -81,10 +76,6 @@ export function IssueDetailDialog({
       error?: string;
     }>
   >([]);
-  const [assigneeSearchQuery, setAssigneeSearchQuery] = useState("");
-  const [showAssigneeSuggestions, setShowAssigneeSuggestions] = useState(false);
-  const assigneeSearchRef = useRef<HTMLDivElement>(null);
-  const assigneeInputRef = useRef<HTMLInputElement>(null);
 
   // Use permissions hook
   const { canEditIssue, canDeleteIssue } = useIssuePermissions({
@@ -117,31 +108,8 @@ export function IssueDetailDialog({
     if (issue && isEditing) {
       setEditTitle(issue.title || "");
       setEditDescription(issue.description || "");
-      setEditType(issue.type || "task");
-      setEditPriority(issue.priority || "medium");
-      setEditDueDate(issue.estimatedCompletionDate ? new Date(issue.estimatedCompletionDate) : undefined);
       setEditAttachments(issue.attachments || []);
       setNewAttachments([]);
-      
-      // Set workflow status
-      const workflowStatusId = typeof issue.workflowStatus === "object" && issue.workflowStatus?._id
-        ? issue.workflowStatus._id
-        : typeof issue.workflowStatus === "string"
-        ? issue.workflowStatus
-        : "";
-      setEditWorkflowStatus(workflowStatusId);
-      
-      // Set assignee
-      if (issue.assignee && typeof issue.assignee === "object") {
-        setEditAssignee({
-          uid: issue.assignee.uid,
-          name: issue.assignee.name,
-          email: "",
-          avatar: issue.assignee.avatar,
-        });
-      } else {
-        setEditAssignee(null);
-      }
     }
   }, [issue, isEditing]);
 
@@ -261,9 +229,6 @@ export function IssueDetailDialog({
     if (issue) {
       setEditTitle(issue.title || "");
       setEditDescription(issue.description || "");
-      setEditType(issue.type || "task");
-      setEditPriority(issue.priority || "medium");
-      setEditDueDate(issue.estimatedCompletionDate ? new Date(issue.estimatedCompletionDate) : undefined);
       setEditAttachments(issue.attachments || []);
       setNewAttachments([]);
     }
@@ -324,72 +289,25 @@ export function IssueDetailDialog({
       
       const allAttachments = [...editAttachments, ...uploadedNewAttachments];
 
-      // Check if workflow status changed
-      const originalWorkflowStatusId = typeof issue.workflowStatus === "object" && issue.workflowStatus?._id
-        ? issue.workflowStatus._id
-        : typeof issue.workflowStatus === "string"
-        ? issue.workflowStatus
-        : "";
-      
-      const workflowStatusChanged = editWorkflowStatus && editWorkflowStatus !== originalWorkflowStatusId;
-
       const updateData = {
         title: editTitle.trim(),
         description: editDescription.trim(),
-        type: editType,
-        priority: editPriority,
-        assignee: editAssignee?.uid || undefined,
-        estimatedCompletionDate: editDueDate ? editDueDate.toISOString() : undefined,
         attachments: allAttachments,
-        ...(workflowStatusChanged && { workflowStatus: editWorkflowStatus }),
       };
 
-      // If workflow status changed, use the move API to position at top
-      if (workflowStatusChanged) {
-        // First update the issue details (without workflow status)
-        const { workflowStatus: _, ...updateDataWithoutWorkflow } = updateData;
-        
-        const updateResponse = await apiPatch(`/api/issues/${issue._id}`, updateDataWithoutWorkflow, idToken);
-        const updateResponseData = await updateResponse.json();
+      // Regular update
+      const response = await apiPatch(`/api/issues/${issue._id}`, updateData, idToken);
+      const data = await response.json();
 
-        if (!updateResponse.ok || !updateResponseData.success) {
-          toast.error(updateResponseData.error || "Failed to update issue");
-          return;
-        }
-
-        // Then move the issue to the new workflow status at position 0 (top)
-        const moveResponse = await apiPatch(
-          `/api/issues/${issue._id}/move`,
-          { workflowStatusId: editWorkflowStatus, position: 0 },
-          idToken
-        );
-        const moveData = await moveResponse.json();
-
-        if (moveData.success) {
-          toast.success("Issue updated and moved to new workflow");
-          setIsEditing(false);
-          await fetchIssue();
-          if (onIssueUpdated) {
-            onIssueUpdated(moveData.data);
-          }
-        } else {
-          toast.error(moveData.error || "Failed to move issue to new workflow");
+      if (data.success) {
+        toast.success("Issue updated successfully");
+        setIsEditing(false);
+        await fetchIssue();
+        if (onIssueUpdated) {
+          onIssueUpdated(data.data);
         }
       } else {
-        // Regular update without workflow change
-        const response = await apiPatch(`/api/issues/${issue._id}`, updateData, idToken);
-        const data = await response.json();
-
-        if (data.success) {
-          toast.success("Issue updated successfully");
-          setIsEditing(false);
-          await fetchIssue();
-          if (onIssueUpdated) {
-            onIssueUpdated(data.data);
-          }
-        } else {
-          toast.error(data.error || "Failed to update issue");
-        }
+        toast.error(data.error || "Failed to update issue");
       }
     } catch (error) {
       console.error("Error updating issue:", error);
@@ -397,6 +315,187 @@ export function IssueDetailDialog({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Optimistically update local issue state
+  const updateIssueOptimistically = (updates: {
+    type?: "task" | "bug" | "story" | "epic";
+    priority?: "highest" | "high" | "medium" | "low" | "lowest";
+    assignee?: string | undefined;
+    estimatedCompletionDate?: Date | undefined;
+    workflowStatus?: string;
+  }) => {
+    if (!issue) return;
+
+    setIssue((prevIssue) => {
+      if (!prevIssue) return prevIssue;
+
+      const updatedIssue = { ...prevIssue };
+
+      if (updates.type !== undefined) {
+        updatedIssue.type = updates.type;
+      }
+      if (updates.priority !== undefined) {
+        updatedIssue.priority = updates.priority;
+      }
+      if (updates.assignee !== undefined) {
+        if (updates.assignee) {
+          // Find the assignee from projectMembers
+          const assigneeMember = projectMembers.find((m) => m.uid === updates.assignee);
+          if (assigneeMember) {
+            updatedIssue.assignee = {
+              uid: assigneeMember.uid,
+              name: assigneeMember.name,
+              avatar: assigneeMember.avatar,
+            };
+          }
+        } else {
+          updatedIssue.assignee = undefined;
+        }
+      }
+      if (updates.estimatedCompletionDate !== undefined) {
+        updatedIssue.estimatedCompletionDate = updates.estimatedCompletionDate
+          ? updates.estimatedCompletionDate.toISOString()
+          : undefined;
+      }
+      if (updates.workflowStatus !== undefined) {
+        // Use the workflow status ID as string for optimistic update
+        // The full object will be populated when we fetch from server
+        updatedIssue.workflowStatus = updates.workflowStatus;
+      }
+
+      return updatedIssue;
+    });
+  };
+
+  // Quick update function for individual field changes (optimistic updates)
+  const handleQuickUpdate = async (updates: {
+    type?: "task" | "bug" | "story" | "epic";
+    priority?: "highest" | "high" | "medium" | "low" | "lowest";
+    assignee?: string | undefined;
+    estimatedCompletionDate?: Date | undefined;
+    workflowStatus?: string;
+  }) => {
+    if (!user || !issue) return;
+
+    // Store original issue for rollback on error
+    const originalIssue = { ...issue };
+
+    // Optimistically update UI immediately
+    updateIssueOptimistically(updates);
+
+    // Make API call in background (don't await, but handle errors)
+    (async () => {
+      try {
+        const idToken = await user.getIdToken();
+        
+        // Prepare update data
+        const updateData: any = {};
+        if (updates.type !== undefined) updateData.type = updates.type;
+        if (updates.priority !== undefined) updateData.priority = updates.priority;
+        if (updates.assignee !== undefined) updateData.assignee = updates.assignee;
+        if (updates.estimatedCompletionDate !== undefined) {
+          updateData.estimatedCompletionDate = updates.estimatedCompletionDate 
+            ? updates.estimatedCompletionDate.toISOString() 
+            : undefined;
+        }
+
+        // Check if workflow status changed
+        const originalWorkflowStatusId = typeof originalIssue.workflowStatus === "object" && originalIssue.workflowStatus?._id
+          ? originalIssue.workflowStatus._id
+          : typeof originalIssue.workflowStatus === "string"
+          ? originalIssue.workflowStatus
+          : "";
+
+        const workflowStatusChanged = updates.workflowStatus && updates.workflowStatus !== originalWorkflowStatusId;
+
+        if (workflowStatusChanged) {
+          // If workflow status changed, use the move API to position at top
+          // First update the issue details (without workflow status)
+          const updateResponse = await apiPatch(`/api/issues/${issue._id}`, updateData, idToken);
+          const updateResponseData = await updateResponse.json();
+
+          if (!updateResponse.ok || !updateResponseData.success) {
+            // Rollback on error
+            setIssue(originalIssue);
+            toast.error(updateResponseData.error || "Failed to update issue");
+            return;
+          }
+
+          // Then move the issue to the new workflow status at position 0 (top)
+          const moveResponse = await apiPatch(
+            `/api/issues/${issue._id}/move`,
+            { workflowStatusId: updates.workflowStatus, position: 0 },
+            idToken
+          );
+          const moveData = await moveResponse.json();
+
+          if (moveData.success) {
+            // Refresh to get latest data from server
+            fetchIssue().then(() => {
+              if (onIssueUpdated && moveData.data) {
+                onIssueUpdated(moveData.data);
+              }
+            });
+          } else {
+            // Rollback on error
+            setIssue(originalIssue);
+            toast.error(moveData.error || "Failed to move issue to new workflow");
+          }
+        } else {
+          // Regular update without workflow change
+          const response = await apiPatch(`/api/issues/${issue._id}`, updateData, idToken);
+          const data = await response.json();
+
+          if (data.success) {
+            // Refresh to get latest data from server (in background)
+            fetchIssue().then(() => {
+              if (onIssueUpdated && data.data) {
+                onIssueUpdated(data.data);
+              }
+            });
+          } else {
+            // Rollback on error
+            setIssue(originalIssue);
+            toast.error(data.error || "Failed to update issue");
+          }
+        }
+      } catch (error) {
+        console.error("Error updating issue:", error);
+        // Rollback on error
+        setIssue(originalIssue);
+        toast.error("Failed to update issue");
+      }
+    })();
+  };
+
+  // Quick update handlers
+  const handleQuickTypeChange = (value: "task" | "bug" | "story" | "epic") => {
+    handleQuickUpdate({ type: value });
+  };
+
+  const handleQuickPriorityChange = (value: "highest" | "high" | "medium" | "low" | "lowest") => {
+    handleQuickUpdate({ priority: value });
+  };
+
+  const handleQuickAssigneeChange = (assignee: UserSuggestion | null) => {
+    // Only trigger API call when assigning a new assignee (not when removing)
+    if (assignee) {
+      handleQuickUpdate({ assignee: assignee.uid });
+    }
+  };
+
+  const handleQuickAssigneeRemove = () => {
+    // Just update UI optimistically, no API call
+    updateIssueOptimistically({ assignee: undefined });
+  };
+
+  const handleQuickDueDateChange = (date: Date | undefined) => {
+    handleQuickUpdate({ estimatedCompletionDate: date });
+  };
+
+  const handleQuickWorkflowStatusChange = (value: string) => {
+    handleQuickUpdate({ workflowStatus: value });
   };
 
   // Handle file drop/selection for new attachments
@@ -498,23 +597,6 @@ export function IssueDetailDialog({
     setEditAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Convert project members to user suggestions format
-  const memberSuggestions: UserSuggestion[] = projectMembers.map((member) => ({
-    uid: member.uid,
-    name: member.name,
-    email: member.email,
-    avatar: member.avatar,
-  }));
-
-  // Filter members based on search query - show all members if query is empty
-  const filteredMembers = memberSuggestions.filter((member) => {
-    if (!assigneeSearchQuery.trim()) return true; // Show all members when query is empty
-    const query = assigneeSearchQuery.toLowerCase();
-    return (
-      member.name.toLowerCase().includes(query) ||
-      member.email.toLowerCase().includes(query)
-    );
-  });
 
   const handleDownload = async (attachment: { link: string; fileName: string }, attachmentId?: string) => {
     if (!user) {
@@ -622,34 +704,16 @@ export function IssueDetailDialog({
                       <IssueEditForm
                         editTitle={editTitle}
                         editDescription={editDescription}
-                        editType={editType}
-                        editPriority={editPriority}
-                        editAssignee={editAssignee}
-                        editDueDate={editDueDate}
-                        editWorkflowStatus={editWorkflowStatus}
-                        workflowStatuses={workflowStatuses}
                         editAttachments={editAttachments}
                         newAttachments={newAttachments}
-                        assigneeSearchQuery={assigneeSearchQuery}
-                        showAssigneeSuggestions={showAssigneeSuggestions}
                         isSaving={isSaving}
                         isDragActive={isDragActive}
                         onTitleChange={setEditTitle}
                         onDescriptionChange={setEditDescription}
-                        onTypeChange={setEditType}
-                        onPriorityChange={setEditPriority}
-                        onAssigneeChange={setEditAssignee}
-                        onDueDateChange={setEditDueDate}
-                        onWorkflowStatusChange={setEditWorkflowStatus}
-                        onAssigneeSearchChange={setAssigneeSearchQuery}
-                        onShowSuggestionsChange={setShowAssigneeSuggestions}
                         onRemoveExistingAttachment={removeExistingAttachment}
                         onRemoveNewAttachment={removeNewAttachment}
                         getRootProps={getRootProps}
                         getInputProps={getInputProps}
-                        filteredMembers={filteredMembers}
-                        assigneeSearchRef={assigneeSearchRef as React.RefObject<HTMLDivElement>}
-                        assigneeInputRef={assigneeInputRef as React.RefObject<HTMLInputElement>}
                       />
                     ) : (
                       <>
@@ -694,7 +758,18 @@ export function IssueDetailDialog({
                 <div className="w-[350px] min-w-[300px] min-h-0 overflow-y-auto bg-muted/10">
                   <div className="px-6 sm:px-8 py-6 min-h-full">
                     {!isEditing && (
-                      <IssueViewModeRight issue={issue as Issue} />
+                      <IssueViewModeRight 
+                        issue={issue as Issue}
+                        canEdit={canEditIssue()}
+                        workflowStatuses={workflowStatuses}
+                        projectMembers={projectMembers}
+                        onTypeChange={handleQuickTypeChange}
+                        onPriorityChange={handleQuickPriorityChange}
+                        onAssigneeChange={handleQuickAssigneeChange}
+                        onAssigneeRemove={handleQuickAssigneeRemove}
+                        onDueDateChange={handleQuickDueDateChange}
+                        onWorkflowStatusChange={handleQuickWorkflowStatusChange}
+                      />
                     )}
                   </div>
                 </div>

@@ -3,14 +3,31 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 import { Issue, Attachment } from "@/types/issue";
-import { File, Download, User, UserCircle, Calendar as CalendarIcon, Clock, Loader2, Play } from "lucide-react";
+import { File, Download, User, UserCircle, Calendar as CalendarIcon, Clock, Loader2, Play, Search, X } from "lucide-react";
 import Image from "next/image";
 import { DEFAULT_AVATAR } from "@/lib/constants";
 import { format } from "date-fns";
 import { isImageFile, isVideoFile } from "@/utils/mediaUtils";
 import { MediaViewerDialog } from "./MediaViewerDialog";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { UserSuggestion } from "@/components/UserSelector";
+import { PriorityIcon } from "@/components/PriorityIcon";
+import { cn } from "@/lib/utils";
 
 interface IssueViewModeProps {
   issue: Issue;
@@ -347,19 +364,406 @@ export function IssueViewModeLeft({
 // Right Side Component - Details Grid
 export function IssueViewModeRight({
   issue,
+  canEdit = false,
+  workflowStatuses = [],
+  projectMembers = [],
+  onTypeChange,
+  onPriorityChange,
+  onAssigneeChange,
+  onAssigneeRemove,
+  onDueDateChange,
+  onWorkflowStatusChange,
 }: {
   issue: Issue;
+  canEdit?: boolean;
+  workflowStatuses?: Array<{ _id: string; name: string; color?: string }>;
+  projectMembers?: Array<{ uid: string; name: string; email: string; avatar?: string }>;
+  onTypeChange?: (value: "task" | "bug" | "story" | "epic") => void;
+  onPriorityChange?: (value: "highest" | "high" | "medium" | "low" | "lowest") => void;
+  onAssigneeChange?: (assignee: UserSuggestion | null) => void;
+  onAssigneeRemove?: () => void;
+  onDueDateChange?: (date: Date | undefined) => void;
+  onWorkflowStatusChange?: (value: string) => void;
 }) {
+  const [assigneeSearchQuery, setAssigneeSearchQuery] = useState("");
+  const [showAssigneeSuggestions, setShowAssigneeSuggestions] = useState(false);
+  const [isAssigneeRemoved, setIsAssigneeRemoved] = useState(false);
+  const assigneeSearchRef = useRef<HTMLDivElement>(null);
+  const assigneeInputRef = useRef<HTMLInputElement>(null);
+
+  // Convert project members to user suggestions format
+  const memberSuggestions: UserSuggestion[] = projectMembers.map((member) => ({
+    uid: member.uid,
+    name: member.name,
+    email: member.email,
+    avatar: member.avatar,
+  }));
+
+  // Filter members based on search query
+  const filteredMembers = memberSuggestions.filter((member) => {
+    if (!assigneeSearchQuery.trim()) return true;
+    const query = assigneeSearchQuery.toLowerCase();
+    return (
+      member.name.toLowerCase().includes(query) ||
+      member.email.toLowerCase().includes(query)
+    );
+  });
+
+  // Get current workflow status ID
+  const currentWorkflowStatusId = typeof issue.workflowStatus === "object" && issue.workflowStatus?._id
+    ? issue.workflowStatus._id
+    : typeof issue.workflowStatus === "string"
+    ? issue.workflowStatus
+    : "";
+
+  // Get current assignee as UserSuggestion
+  const currentAssignee: UserSuggestion | null = !isAssigneeRemoved && issue.assignee && typeof issue.assignee === "object"
+    ? {
+        uid: issue.assignee.uid,
+        name: issue.assignee.name,
+        email: "",
+        avatar: issue.assignee.avatar,
+      }
+    : null;
+
+  // Reset removed state when issue changes
+  useEffect(() => {
+    setIsAssigneeRemoved(false);
+  }, [issue._id]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        assigneeSearchRef.current &&
+        !assigneeSearchRef.current.contains(event.target as Node)
+      ) {
+        setShowAssigneeSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4">
+        {/* Type and Workflow Status in one row */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Type */}
+          <div className="space-y-2.5">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Type
+            </Label>
+            {canEdit && onTypeChange ? (
+              <Select
+                value={issue.type || "task"}
+                onValueChange={(value: any) => onTypeChange(value)}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue>
+                    <span className="flex items-center gap-2">
+                      <span className={cn(
+                        "w-2 h-2 rounded-full",
+                        issue.type === "task" && "bg-blue-500",
+                        issue.type === "bug" && "bg-red-500",
+                        issue.type === "story" && "bg-green-500",
+                        issue.type === "epic" && "bg-purple-500"
+                      )} />
+                      {issue.type ? issue.type.charAt(0).toUpperCase() + issue.type.slice(1) : "Task"}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="task">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                      Task
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="bug">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                      Bug
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="story">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                      Story
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="epic">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-purple-500" />
+                      Epic
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
+                <span className={cn(
+                  "w-2 h-2 rounded-full",
+                  issue.type === "task" && "bg-blue-500",
+                  issue.type === "bug" && "bg-red-500",
+                  issue.type === "story" && "bg-green-500",
+                  issue.type === "epic" && "bg-purple-500"
+                )} />
+                <span className="text-sm font-medium">
+                  {issue.type ? issue.type.charAt(0).toUpperCase() + issue.type.slice(1) : "Task"}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Workflow Status */}
+          <div className="space-y-2.5">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Workflow Status
+            </Label>
+            {canEdit && onWorkflowStatusChange && workflowStatuses.length > 0 ? (
+              <Select
+                value={currentWorkflowStatusId}
+                onValueChange={onWorkflowStatusChange}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue>
+                    {currentWorkflowStatusId && workflowStatuses.find(s => s._id === currentWorkflowStatusId) ? (
+                      <span className="flex items-center gap-2">
+                        <span 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ 
+                            backgroundColor: workflowStatuses.find(s => s._id === currentWorkflowStatusId)?.color || '#3b82f6' 
+                          }}
+                        />
+                        {workflowStatuses.find(s => s._id === currentWorkflowStatusId)?.name}
+                      </span>
+                    ) : (
+                      "Select status"
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {workflowStatuses.map((status) => (
+                    <SelectItem key={status._id} value={status._id}>
+                      <span className="flex items-center gap-2">
+                        <span 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: status.color || '#3b82f6' }}
+                        />
+                        {status.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
+                {currentWorkflowStatusId && workflowStatuses.find(s => s._id === currentWorkflowStatusId) ? (
+                  <>
+                    <span 
+                      className="w-2 h-2 rounded-full" 
+                      style={{ 
+                        backgroundColor: workflowStatuses.find(s => s._id === currentWorkflowStatusId)?.color || '#3b82f6' 
+                      }}
+                    />
+                    <span className="text-sm font-medium">
+                      {workflowStatuses.find(s => s._id === currentWorkflowStatusId)?.name}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">No status</span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        {/* Workflow Status helper text */}
+        {canEdit && onWorkflowStatusChange && workflowStatuses.length > 0 && (
+          <p className="text-xs text-muted-foreground -mt-2">
+            Changing workflow will move the issue to the top of the new status
+          </p>
+        )}
+
+        {/* Priority */}
+        <div className="space-y-2.5">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Priority
+          </Label>
+          {canEdit && onPriorityChange ? (
+            <Select
+              value={issue.priority || "medium"}
+              onValueChange={(value: any) => onPriorityChange(value)}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue>
+                  {issue.priority ? (
+                    <span className="flex items-center gap-2 capitalize">
+                      <PriorityIcon priority={issue.priority} />
+                      {issue.priority}
+                    </span>
+                  ) : (
+                    "Medium"
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="highest">
+                  <span className="flex items-center gap-2">
+                    <PriorityIcon priority="highest" className="text-red-600" />
+                    Highest
+                  </span>
+                </SelectItem>
+                <SelectItem value="high">
+                  <span className="flex items-center gap-2">
+                    <PriorityIcon priority="high" className="text-orange-500" />
+                    High
+                  </span>
+                </SelectItem>
+                <SelectItem value="medium">
+                  <span className="flex items-center gap-2">
+                    <PriorityIcon priority="medium" className="text-yellow-600 dark:text-yellow-500" />
+                    Medium
+                  </span>
+                </SelectItem>
+                <SelectItem value="low">
+                  <span className="flex items-center gap-2">
+                    <PriorityIcon priority="low" className="text-blue-500" />
+                    Low
+                  </span>
+                </SelectItem>
+                <SelectItem value="lowest">
+                  <span className="flex items-center gap-2">
+                    <PriorityIcon priority="lowest" className="text-gray-500" />
+                    Lowest
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
+              <PriorityIcon priority={issue.priority || "medium"} />
+              <span className="text-sm font-medium capitalize">
+                {issue.priority || "Medium"}
+              </span>
+            </div>
+          )}
+        </div>
+
         {/* Assignee */}
         <div className="space-y-2.5">
           <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
             <User className="w-3.5 h-3.5" />
-            Assignee
+            Assign To
           </Label>
-          {issue.assignee && typeof issue.assignee === "object" ? (
+          {canEdit && (onAssigneeChange || onAssigneeRemove) ? (
+            currentAssignee ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg h-11">
+                <div className="relative h-6 w-6 rounded-full overflow-hidden ring-2 ring-background">
+                  <Image
+                    src={currentAssignee.avatar || DEFAULT_AVATAR}
+                    alt={currentAssignee.name}
+                    width={24}
+                    height={24}
+                    className="rounded-full object-cover"
+                  />
+                </div>
+                <span className="text-sm font-medium truncate flex-1">
+                  {currentAssignee.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Just remove from UI, don't trigger API call
+                    setIsAssigneeRemoved(true);
+                    setAssigneeSearchQuery("");
+                    setShowAssigneeSuggestions(true);
+                    // Call remove handler if provided (for optimistic UI update)
+                    if (onAssigneeRemove) {
+                      onAssigneeRemove();
+                    }
+                    // Focus the input after a brief delay
+                    setTimeout(() => {
+                      assigneeInputRef.current?.focus();
+                    }, 100);
+                  }}
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative" ref={assigneeSearchRef}>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    ref={assigneeInputRef}
+                    type="text"
+                    placeholder="Search members..."
+                    value={assigneeSearchQuery}
+                    onChange={(e) => {
+                      setAssigneeSearchQuery(e.target.value);
+                      setShowAssigneeSuggestions(true);
+                    }}
+                    onFocus={() => {
+                      setShowAssigneeSuggestions(true);
+                    }}
+                    className="pl-9 h-11"
+                  />
+                </div>
+
+                {/* Suggestions Dropdown */}
+                {showAssigneeSuggestions && (
+                  <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredMembers.length > 0 ? (
+                      filteredMembers.map((member) => (
+                        <button
+                          key={member.uid}
+                          type="button"
+                          onClick={() => {
+                            // Reset removed state and trigger API call with new assignee
+                            setIsAssigneeRemoved(false);
+                            if (onAssigneeChange) {
+                              onAssigneeChange(member);
+                            }
+                            setAssigneeSearchQuery("");
+                            setShowAssigneeSuggestions(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left border-b border-border last:border-0"
+                        >
+                          <div className="shrink-0 relative h-8 w-8 rounded-full overflow-hidden ring-2 ring-border">
+                            <Image
+                              src={member.avatar || DEFAULT_AVATAR}
+                              alt={member.name}
+                              width={32}
+                              height={32}
+                              className="rounded-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {member.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {member.email}
+                            </p>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                        No members found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          ) : issue.assignee && typeof issue.assignee === "object" ? (
             <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
               <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-background">
                 <Image
@@ -406,33 +810,66 @@ export function IssueViewModeRight({
         </div>
 
         {/* Due Date */}
-        {issue.estimatedCompletionDate && (() => {
-          const dueDate = new Date(issue.estimatedCompletionDate);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          dueDate.setHours(0, 0, 0, 0);
-          const isOverdue = today > dueDate;
-          
-          return (
-            <div className="space-y-2.5">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                <CalendarIcon className="w-3.5 h-3.5" />
-                Due Date
-              </Label>
-              <div className={`p-2.5 rounded-lg border ${
-                isOverdue 
-                  ? "bg-destructive/10 border-destructive/50 dark:bg-destructive/20 dark:border-destructive/60" 
-                  : "bg-muted/30 border-border/40 dark:border-border/60"
-              }`}>
-                <p className={`text-sm font-medium ${
-                  isOverdue ? "text-destructive dark:text-destructive" : ""
+        <div className="space-y-2.5">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+            <CalendarIcon className="w-3.5 h-3.5" />
+            Due Date
+          </Label>
+          {canEdit && onDueDateChange ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal h-11",
+                    !issue.estimatedCompletionDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {issue.estimatedCompletionDate ? (
+                    format(new Date(issue.estimatedCompletionDate), "PPP")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={issue.estimatedCompletionDate ? new Date(issue.estimatedCompletionDate) : undefined}
+                  onSelect={(date) => onDueDateChange(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          ) : issue.estimatedCompletionDate ? (
+            (() => {
+              const dueDate = new Date(issue.estimatedCompletionDate);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              dueDate.setHours(0, 0, 0, 0);
+              const isOverdue = today > dueDate;
+              
+              return (
+                <div className={`p-2.5 rounded-lg border ${
+                  isOverdue 
+                    ? "bg-destructive/10 border-destructive/50 dark:bg-destructive/20 dark:border-destructive/60" 
+                    : "bg-muted/30 border-border/40 dark:border-border/60"
                 }`}>
-                  {format(new Date(issue.estimatedCompletionDate), "PPP")}
-                </p>
-              </div>
+                  <p className={`text-sm font-medium ${
+                    isOverdue ? "text-destructive dark:text-destructive" : ""
+                  }`}>
+                    {format(new Date(issue.estimatedCompletionDate), "PPP")}
+                  </p>
+                </div>
+              );
+            })()
+          ) : (
+            <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 dark:border-border/60 border-dashed">
+              <span className="text-sm text-muted-foreground">No due date</span>
             </div>
-          );
-        })()}
+          )}
+        </div>
 
         {/* Created At */}
         {issue.createdAt && (
