@@ -277,7 +277,7 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
                 </a>
               )}
               
-              {/* Legacy Swagger Link (for backward compatibility) */}
+              {/* Legacy Swagger Link – show as Swagger PROD docs */}
               {project.swaggerLink && !project.docsType && (
                 <a
                   href={project.swaggerLink}
@@ -296,7 +296,7 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm sm:text-base text-foreground font-medium group-hover:text-primary transition-colors">
-                      API Documentation
+                      Swagger - PROD docs
                     </span>
                     <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
@@ -324,7 +324,7 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm sm:text-base text-foreground font-medium group-hover:text-primary transition-colors">
-                          {project.docsType === "firebase" ? "Firebase Docs" : "API Docs"} (DEV)
+                          {project.docsType === "firebase" ? "Firebase" : "Swagger"} - DEV docs
                         </span>
                         <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
@@ -348,7 +348,7 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm sm:text-base text-foreground font-medium group-hover:text-primary transition-colors">
-                          {project.docsType === "firebase" ? "Firebase Docs" : "API Docs"} (PROD)
+                          {project.docsType === "firebase" ? "Firebase" : "Swagger"} - PROD docs
                         </span>
                         <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
