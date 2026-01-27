@@ -21,6 +21,8 @@ export interface ProjectTeam {
   img?: string;
 }
 
+export type DocsType = "firebase" | "swagger";
+
 export interface Project {
   _id: string;
   title: string;
@@ -29,6 +31,9 @@ export interface Project {
   description: string;
   figmaLink?: string;
   swaggerLink?: string;
+  docsType?: DocsType;
+  devDocsLink?: string;
+  prodDocsLink?: string;
   admin: string[];
   members?: (string | ProjectMember)[];
   memberRoles?: MemberRoleInfo[];

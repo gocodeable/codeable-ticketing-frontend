@@ -243,7 +243,7 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
         </div>
 
         {/* External Links Section */}
-        {(project.figmaLink || project.swaggerLink) && (
+        {(project.figmaLink || project.swaggerLink || project.devDocsLink || project.prodDocsLink) && (
           <div className="rounded-lg bg-muted/30 p-4">
             <div className="flex items-center gap-2 mb-3">
               <ExternalLink className="w-4 h-4 text-primary" />
@@ -276,7 +276,9 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
                   </div>
                 </a>
               )}
-              {project.swaggerLink && (
+              
+              {/* Legacy Swagger Link (for backward compatibility) */}
+              {project.swaggerLink && !project.docsType && (
                 <a
                   href={project.swaggerLink}
                   target="_blank"
@@ -299,6 +301,60 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
                     <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
                 </a>
+              )}
+
+              {/* New Documentation Links with Type */}
+              {project.docsType && (
+                <>
+                  {project.devDocsLink && (
+                    <a
+                      href={project.devDocsLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 hover:bg-accent rounded-lg p-2.5 -ml-2 transition-all w-fit group"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-sm border">
+                        <Image
+                          src={project.docsType === "firebase" ? "/firebase.png" : "/swagger.png"}
+                          alt={project.docsType === "firebase" ? "Firebase" : "Swagger"}
+                          width={20}
+                          height={20}
+                          className="w-5 h-5"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm sm:text-base text-foreground font-medium group-hover:text-primary transition-colors">
+                          {project.docsType === "firebase" ? "Firebase Docs" : "API Docs"} (DEV)
+                        </span>
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </a>
+                  )}
+                  {project.prodDocsLink && (
+                    <a
+                      href={project.prodDocsLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 hover:bg-accent rounded-lg p-2.5 -ml-2 transition-all w-fit group"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-sm border">
+                        <Image
+                          src={project.docsType === "firebase" ? "/firebase.png" : "/swagger.png"}
+                          alt={project.docsType === "firebase" ? "Firebase" : "Swagger"}
+                          width={20}
+                          height={20}
+                          className="w-5 h-5"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm sm:text-base text-foreground font-medium group-hover:text-primary transition-colors">
+                          {project.docsType === "firebase" ? "Firebase Docs" : "API Docs"} (PROD)
+                        </span>
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </a>
+                  )}
+                </>
               )}
             </div>
           </div>

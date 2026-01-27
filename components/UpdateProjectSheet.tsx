@@ -21,6 +21,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { ImageSelector } from "@/components/ImageSelector";
 import { useImageSelection } from "@/hooks/useImageSelection";
@@ -28,6 +35,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import Loader from "@/components/Loader";
 import { Project } from "@/types/project";
 import { generateProjectCode } from "@/utils/generateProjectCode";
+import Image from "next/image";
 
 const updateProjectSchema = z.object({
   title: z
@@ -41,17 +49,21 @@ const updateProjectSchema = z.object({
     .regex(/^[A-Z][A-Z0-9]*$/, "Code must start with a letter and contain only uppercase letters and numbers"),
   description: z
     .string()
-    .min(1, "Description is required")
+    .optional()
     .refine((val) => {
+      if (!val || val.trim() === '') return true;
       // Strip HTML tags and check text content length
       const textContent = val.replace(/<[^>]*>/g, '').trim();
+      // If content exists, it must be at least 10 characters
       return textContent.length >= 10;
     }, "Description must have at least 10 characters of text content")
     .refine((val) => {
+      if (!val || val.trim() === '') return true;
       // Strip HTML tags and check text content length
       const textContent = val.replace(/<[^>]*>/g, '').trim();
       return textContent.length <= 5000;
-    }, "Description must be less than 5000 characters of text content"),
+    }, "Description must be less than 5000 characters of text content")
+    .or(z.literal("")),
   img: z
     .string()
     .optional()
@@ -83,6 +95,41 @@ const updateProjectSchema = z.object({
     )
     .or(z.literal("")),
   swaggerLink: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === "") return true;
+        try {
+          const url = new URL(val);
+          return url.protocol === "http:" || url.protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      { message: "Please enter a valid HTTP or HTTPS URL" }
+    )
+    .or(z.literal("")),
+  docsType: z
+    .enum(["firebase", "swagger"])
+    .optional(),
+  devDocsLink: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === "") return true;
+        try {
+          const url = new URL(val);
+          return url.protocol === "http:" || url.protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      { message: "Please enter a valid HTTP or HTTPS URL" }
+    )
+    .or(z.literal("")),
+  prodDocsLink: z
     .string()
     .optional()
     .refine(
@@ -132,6 +179,9 @@ export function UpdateProjectSheet({
       description: project.description,
       figmaLink: project.figmaLink || "",
       swaggerLink: project.swaggerLink || "",
+      docsType: project.docsType || "swagger",
+      devDocsLink: project.devDocsLink || "",
+      prodDocsLink: project.prodDocsLink || "",
     },
   });
 
@@ -144,6 +194,9 @@ export function UpdateProjectSheet({
         description: project.description,
         figmaLink: project.figmaLink || "",
         swaggerLink: project.swaggerLink || "",
+        docsType: project.docsType || "swagger",
+        devDocsLink: project.devDocsLink || "",
+        prodDocsLink: project.prodDocsLink || "",
       });
       // Set the image preview if project has an image
       if (project.img) {
@@ -174,6 +227,9 @@ export function UpdateProjectSheet({
         description: data.description,
         figmaLink: data.figmaLink || undefined,
         swaggerLink: data.swaggerLink || undefined,
+        docsType: data.docsType || undefined,
+        devDocsLink: data.devDocsLink || undefined,
+        prodDocsLink: data.prodDocsLink || undefined,
       };
 
       // Use the image preview (base64 or URL) if available
@@ -294,7 +350,7 @@ export function UpdateProjectSheet({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description *</FormLabel>
+                  <FormLabel>Description (Optional)</FormLabel>
                   <FormControl>
                     <RichTextEditor
                       value={field.value || ""}
@@ -317,37 +373,177 @@ export function UpdateProjectSheet({
                 <FormItem>
                   <FormLabel>Figma Link (Optional)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="url"
-                      placeholder="https://figma.com/..."
-                      disabled={loading}
-                      {...field}
-                    />
+                    <div className="relative">
+                      <Image
+                        src="/figma.png"
+                        alt="Figma"
+                        width={16}
+                        height={16}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                      />
+                      <Input
+                        type="url"
+                        placeholder="https://figma.com/..."
+                        disabled={loading}
+                        {...field}
+                        className="pl-9"
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Swagger Link Field */}
+            {/* Swagger Link Field (Legacy - kept for backward compatibility) */}
+            {!form.watch("docsType") && project.swaggerLink && (
+              <FormField
+                control={form.control}
+                name="swaggerLink"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>API Documentation Link (Legacy)</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Image
+                          src="/swagger.png"
+                          alt="Swagger"
+                          width={16}
+                          height={16}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                        />
+                        <Input
+                          type="url"
+                          placeholder="https://..."
+                          disabled={loading}
+                          {...field}
+                          className="pl-9"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Documentation Type Selector */}
             <FormField
               control={form.control}
-              name="swaggerLink"
+              name="docsType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>API Documentation Link (Optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="url"
-                      placeholder="https://..."
-                      disabled={loading}
-                      {...field}
-                    />
-                  </FormControl>
+                  <FormLabel>Documentation Type</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={loading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select documentation type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="swagger">
+                        <div className="flex items-center gap-2">
+                          <Image
+                            src="/swagger.png"
+                            alt="Swagger"
+                            width={16}
+                            height={16}
+                          />
+                          <span>Swagger</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="firebase">
+                        <div className="flex items-center gap-2">
+                          <Image
+                            src="/firebase.png"
+                            alt="Firebase"
+                            width={16}
+                            height={16}
+                          />
+                          <span>Firebase</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {/* Conditional DEV and PROD Docs Links */}
+            {form.watch("docsType") && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="devDocsLink"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>DEV docs</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Image
+                            src={
+                              form.watch("docsType") === "firebase"
+                                ? "/firebase.png"
+                                : "/swagger.png"
+                            }
+                            alt={form.watch("docsType") || "Docs"}
+                            width={16}
+                            height={16}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                          />
+                          <Input
+                            type="url"
+                            placeholder="https://dev-docs..."
+                            disabled={loading}
+                            {...field}
+                            className="pl-9"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="prodDocsLink"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PROD docs</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Image
+                            src={
+                              form.watch("docsType") === "firebase"
+                                ? "/firebase.png"
+                                : "/swagger.png"
+                            }
+                            alt={form.watch("docsType") || "Docs"}
+                            width={16}
+                            height={16}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                          />
+                          <Input
+                            type="url"
+                            placeholder="https://prod-docs..."
+                            disabled={loading}
+                            {...field}
+                            className="pl-9"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
 
             {/* Error Message */}
             {error && (
