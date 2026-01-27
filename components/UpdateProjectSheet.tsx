@@ -265,12 +265,6 @@ export function UpdateProjectSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-6">
-        {loading && (
-          <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center">
-            <Loader size="lg" hue={300} />
-          </div>
-        )}
-
         <SheetHeader>
           <SheetTitle>Update Project</SheetTitle>
           <SheetDescription>
