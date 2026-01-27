@@ -32,7 +32,6 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { ImageSelector } from "@/components/ImageSelector";
 import { useImageSelection } from "@/hooks/useImageSelection";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import Loader from "@/components/Loader";
 import { Project } from "@/types/project";
 import { generateProjectCode } from "@/utils/generateProjectCode";
 import Image from "next/image";
@@ -181,7 +180,7 @@ export function UpdateProjectSheet({
       swaggerLink: project.swaggerLink || "",
       docsType: project.docsType || "swagger",
       devDocsLink: project.devDocsLink || "",
-      prodDocsLink: project.prodDocsLink || "",
+      prodDocsLink: project.prodDocsLink || (project.swaggerLink || ""),
     },
   });
 
@@ -196,7 +195,7 @@ export function UpdateProjectSheet({
         swaggerLink: project.swaggerLink || "",
         docsType: project.docsType || "swagger",
         devDocsLink: project.devDocsLink || "",
-        prodDocsLink: project.prodDocsLink || "",
+        prodDocsLink: project.prodDocsLink || (project.swaggerLink || ""),
       });
       // Set the image preview if project has an image
       if (project.img) {
@@ -388,38 +387,6 @@ export function UpdateProjectSheet({
                 </FormItem>
               )}
             />
-
-            {/* Swagger Link Field (Legacy - kept for backward compatibility) */}
-            {!form.watch("docsType") && project.swaggerLink && (
-              <FormField
-                control={form.control}
-                name="swaggerLink"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>API Documentation Link (Legacy)</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Image
-                          src="/swagger.png"
-                          alt="Swagger"
-                          width={16}
-                          height={16}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                        />
-                        <Input
-                          type="url"
-                          placeholder="https://..."
-                          disabled={loading}
-                          {...field}
-                          className="pl-9"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
 
             {/* Documentation Type Selector */}
             <FormField
