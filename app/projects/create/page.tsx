@@ -64,6 +64,7 @@ const projectSchema = z.object({
       if (!val || val.trim() === '') return true;
       // Strip HTML tags and check text content length
       const textContent = val.replace(/<[^>]*>/g, '').trim();
+      // If content exists, it must be at least 10 characters
       return textContent.length >= 10;
     }, "Description must have at least 10 characters of text content")
     .refine((val) => {
@@ -71,7 +72,8 @@ const projectSchema = z.object({
       // Strip HTML tags and check text content length
       const textContent = val.replace(/<[^>]*>/g, '').trim();
       return textContent.length <= 5000;
-    }, "Description must be less than 5000 characters of text content"),
+    }, "Description must be less than 5000 characters of text content")
+    .or(z.literal("")),
   img: z
     .string()
     .optional()
@@ -101,6 +103,41 @@ const projectSchema = z.object({
     )
     .or(z.literal("")),
   swaggerLink: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === "") return true;
+        try {
+          const url = new URL(val);
+          return url.protocol === "http:" || url.protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      { message: "Please enter a valid HTTP or HTTPS URL" }
+    )
+    .or(z.literal("")),
+  docsType: z
+    .enum(["firebase", "swagger"])
+    .optional(),
+  devDocsLink: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === "") return true;
+        try {
+          const url = new URL(val);
+          return url.protocol === "http:" || url.protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      { message: "Please enter a valid HTTP or HTTPS URL" }
+    )
+    .or(z.literal("")),
+  prodDocsLink: z
     .string()
     .optional()
     .refine(
@@ -148,6 +185,9 @@ export default function CreateProjectPage() {
       img: "",
       figmaLink: "",
       swaggerLink: "",
+      docsType: "swagger",
+      devDocsLink: "",
+      prodDocsLink: "",
     },
   });
 
@@ -229,6 +269,9 @@ export default function CreateProjectPage() {
           img: imageSelection.imagePreview || "",
           figmaLink: form.getValues("figmaLink") || "",
           swaggerLink: form.getValues("swaggerLink") || "",
+          docsType: form.getValues("docsType") || undefined,
+          devDocsLink: form.getValues("devDocsLink") || "",
+          prodDocsLink: form.getValues("prodDocsLink") || "",
           members: memberUids,
           memberRoles: memberRoles,
           admin: adminUids,
@@ -447,35 +490,123 @@ export default function CreateProjectPage() {
                         )}
                       />
 
-                      {/* Swagger Link Field */}
+                      {/* Documentation Type Selector */}
                       <FormField
                         control={form.control}
-                        name="swaggerLink"
+                        name="docsType"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>API Documentation Link</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Image
-                                  src="/swagger.png"
-                                  alt="Swagger"
-                                  width={16}
-                                  height={16}
-                                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                                />
-                                <Input
-                                  type="url"
-                                  placeholder="https://..."
-                                  {...field}
-                                  disabled={loading}
-                                  className="rounded-lg pl-9"
-                                />
-                              </div>
-                            </FormControl>
+                            <FormLabel>Documentation Type</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              disabled={loading}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="rounded-lg">
+                                  <SelectValue placeholder="Select documentation type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="swagger">
+                                  <div className="flex items-center gap-2">
+                                    <Image
+                                      src="/swagger.png"
+                                      alt="Swagger"
+                                      width={16}
+                                      height={16}
+                                    />
+                                    <span>Swagger</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="firebase">
+                                  <div className="flex items-center gap-2">
+                                    <Image
+                                      src="/firebase.png"
+                                      alt="Firebase"
+                                      width={16}
+                                      height={16}
+                                    />
+                                    <span>Firebase</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+
+                      {/* Conditional DEV and PROD Docs Links */}
+                      {form.watch("docsType") && (
+                        <>
+                          <FormField
+                            control={form.control}
+                            name="devDocsLink"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>DEV docs</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Image
+                                      src={
+                                        form.watch("docsType") === "firebase"
+                                          ? "/firebase.png"
+                                          : "/swagger.png"
+                                      }
+                                      alt={form.watch("docsType") || "Docs"}
+                                      width={16}
+                                      height={16}
+                                      className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                                    />
+                                    <Input
+                                      type="url"
+                                      placeholder="https://dev-docs..."
+                                      {...field}
+                                      disabled={loading}
+                                      className="rounded-lg pl-9"
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="prodDocsLink"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>PROD docs</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Image
+                                      src={
+                                        form.watch("docsType") === "firebase"
+                                          ? "/firebase.png"
+                                          : "/swagger.png"
+                                      }
+                                      alt={form.watch("docsType") || "Docs"}
+                                      width={16}
+                                      height={16}
+                                      className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                                    />
+                                    <Input
+                                      type="url"
+                                      placeholder="https://prod-docs..."
+                                      {...field}
+                                      disabled={loading}
+                                      className="rounded-lg pl-9"
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </>
+                      )}
                     </div>
 
                     <div className="border-t border-border/40 dark:border-border/60" />
