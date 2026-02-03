@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { User, ChevronLeft, ChevronRight, Crown, Server, Monitor, Palette, TestTube, UserX, Briefcase } from "lucide-react";
 import { getRoleLabel } from "@/utils/roleUtils";
 import { MemberRole } from "@/types/project";
+import { getAvatarUrl } from "@/lib/utils";
 
 interface MemberGalleryProps {
   members: {
@@ -13,6 +14,7 @@ interface MemberGalleryProps {
     name: string;
     email?: string;
     avatar?: string;
+    updatedAt?: string;
     role?: MemberRole;
   }[];
   adminList?: string[];
@@ -202,7 +204,7 @@ export default function MemberGallery({
                 <div className="relative w-full aspect-square bg-linear-to-br from-primary/20 to-purple-500/20 flex items-center justify-center overflow-hidden">
                   {member.avatar ? (
                     <Image
-                      src={member.avatar}
+                      src={getAvatarUrl(member.avatar, member.updatedAt)}
                       alt={member.name}
                       fill
                       className="object-cover"

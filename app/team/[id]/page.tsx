@@ -127,6 +127,16 @@ export default function TeamPage({
     fetchTeamProjects();
   }, [id, user]);
 
+  // Refetch team when current user updates their profile so member avatars stay in sync
+  useEffect(() => {
+    const onProfileUpdated = () => {
+      fetchTeam();
+      fetchTeamProjects();
+    };
+    window.addEventListener("user-profile-updated", onProfileUpdated);
+    return () => window.removeEventListener("user-profile-updated", onProfileUpdated);
+  }, [id, user]);
+
   const handleDeleteTeam = async () => {
     if (!user || !team) return;
 

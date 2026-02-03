@@ -57,6 +57,13 @@ export default function TeamsPage() {
     fetchTeams();
   }, [user]);
 
+  // Refetch teams when current user updates their profile so member avatars stay in sync
+  useEffect(() => {
+    const onProfileUpdated = () => fetchTeams();
+    window.addEventListener("user-profile-updated", onProfileUpdated);
+    return () => window.removeEventListener("user-profile-updated", onProfileUpdated);
+  }, [user]);
+
   const filteredTeams = useMemo(() => {
     if (!searchQuery.trim()) {
       return teams;

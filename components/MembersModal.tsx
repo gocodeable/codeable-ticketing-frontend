@@ -14,7 +14,7 @@ import { Trash2, Loader2, Users, UserPlus, Crown, Server, Monitor, Palette, Bug,
 import Image from "next/image";
 import { DEFAULT_AVATAR } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, getAvatarUrl } from "@/lib/utils";
 
 type MembersModalType = "project" | "team";
 
@@ -24,6 +24,7 @@ interface BaseMember {
   name: string;
   email?: string;
   avatar?: string;
+  updatedAt?: string;
   role?: MemberRole;
 }
 
@@ -367,7 +368,7 @@ export function MembersModal({
                         member.role === "admin" ? "ring-yellow-400/50" : "ring-border"
                       )}>
                         <Image
-                          src={member.avatar || DEFAULT_AVATAR}
+                          src={getAvatarUrl(member.avatar, member.updatedAt) || DEFAULT_AVATAR}
                           alt={member.name}
                           width={40}
                           height={40}
@@ -526,7 +527,7 @@ export function MembersModal({
                   >
                     <div className="relative h-10 w-10 rounded-full overflow-hidden ring-2 ring-green-400/50 shrink-0">
                       <Image
-                        src={member.avatar || DEFAULT_AVATAR}
+                        src={getAvatarUrl(member.avatar, (member as BaseMember).updatedAt) || DEFAULT_AVATAR}
                         alt={member.name}
                         width={40}
                         height={40}
