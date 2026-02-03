@@ -12,6 +12,7 @@ export interface ProjectMember {
   name: string;
   email: string;
   avatar?: string;
+  updatedAt?: string;
   role?: MemberRole;
 }
 

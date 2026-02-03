@@ -162,7 +162,12 @@ export default function ProfilePage({
       const data = await response.json();
       if (data.success) {
         setUserData(data.data);
-        
+
+        // Notify other pages (project, team, etc.) to refetch so member avatars stay in sync
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("user-profile-updated"));
+        }
+
         // Update Firebase user profile (displayName and photoURL)
         if (user) {
           try {
@@ -174,7 +179,7 @@ export default function ProfilePage({
             console.error("Error updating Firebase profile:", firebaseError);
           }
         }
-        
+
         setIsSheetOpen(false);
         toast.success("Profile updated successfully!");
       }

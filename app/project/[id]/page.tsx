@@ -121,6 +121,13 @@ export default function ProjectPage({
     fetchProject();
   }, [id, user]);
 
+  // Refetch project when current user updates their profile so member avatars stay in sync
+  useEffect(() => {
+    const onProfileUpdated = () => fetchProject();
+    window.addEventListener("user-profile-updated", onProfileUpdated);
+    return () => window.removeEventListener("user-profile-updated", onProfileUpdated);
+  }, [id, user]);
+
   // Check pin status when project is loaded
   useEffect(() => {
     const checkPinStatus = async () => {
@@ -407,6 +414,7 @@ export default function ProjectPage({
                         name: m.name || "",
                         email: m.email || "",
                         avatar: m.avatar,
+                        updatedAt: m.updatedAt,
                       })) : []}
                   />
                 </div>
@@ -422,6 +430,7 @@ export default function ProjectPage({
                       name: m.name,
                       email: m.email,
                       avatar: m.avatar,
+                      updatedAt: m.updatedAt,
                       role: m.role as MemberRole | undefined,
                     })) : []}
                     onIssuesCountChange={(count) => setIssueCount(count)}
@@ -465,6 +474,7 @@ export default function ProjectPage({
                           name: m.name,
                           email: m.email,
                           avatar: m.avatar,
+                          updatedAt: m.updatedAt,
                           role: m.role,
                         }))}
                         adminList={Array.isArray(project.admin) ? project.admin : []}

@@ -21,6 +21,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { apiGet } from "@/lib/api/apiClient";
 import { Issue } from "@/types/issue";
 import { WorkflowStatus } from "@/types/workflowStatus";
+import { getAvatarUrl } from "@/lib/utils";
 
 interface ProjectInfoProps {
   project: Project;
@@ -483,7 +484,7 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
                   >
                     <Avatar className="w-10 h-10 ring-2 ring-yellow-500/30 shadow-sm">
                       <AvatarImage
-                        src={typeof member === 'string' ? '' : member.avatar || ''}
+                        src={typeof member === 'string' ? '' : getAvatarUrl(member.avatar, member.updatedAt) || ''}
                         alt={typeof member === 'string' ? 'Admin' : member.name}
                         className="object-cover"
                       />

@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
 import { getInitials } from "@/utils/issueUtils"
+import { getAvatarUrl } from "@/lib/utils"
 
 interface TeamCardProps {
     team: TeamType
@@ -91,7 +92,7 @@ export default function TeamCard({ team, i }: TeamCardProps) {
                                             >
                                                 {member.avatar ? (
                                                     <Image
-                                                        src={member.avatar}
+                                                        src={getAvatarUrl(member.avatar, member.updatedAt)}
                                                         alt={member.name || "User"}
                                                         width={24}
                                                         height={24}

@@ -6,6 +6,7 @@ import { ArrowRightIcon, Users, PinOff } from "lucide-react";
 import { motion } from "framer-motion";
 import { getInitials } from "@/utils/issueUtils";
 import { Button } from "./ui/button";
+import { getAvatarUrl } from "@/lib/utils";
 
 const MAX_VISIBLE_AVATARS = 5;
 
@@ -128,7 +129,7 @@ export default function ProjectCard({ project, i, isPinned = false, onUnpin }: P
                                             >
                                                 {member.avatar ? (
                                                     <Image
-                                                        src={member.avatar}
+                                                        src={getAvatarUrl(member.avatar, member.updatedAt)}
                                                         alt={member.name || "User"}
                                                         width={24}
                                                         height={24}

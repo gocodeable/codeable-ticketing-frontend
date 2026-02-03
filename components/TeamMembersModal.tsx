@@ -30,6 +30,7 @@ export function TeamMembersModal({
       name: member.name,
       email: member.email,
       avatar: member.avatar,
+      updatedAt: member.updatedAt,
       role: member.role,
     }));
   }, [team.members]);
