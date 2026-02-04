@@ -168,12 +168,15 @@ export default function ProfilePage({
           window.dispatchEvent(new CustomEvent("user-profile-updated"));
         }
 
-        // Update Firebase user profile (displayName and photoURL)
+        // Update Firebase user profile (displayName and photoURL).
+        // Firebase Auth limits photoURL to 2048 chars; skip photoURL if longer (backend still has the avatar).
         if (user) {
           try {
+            const firebasePhotoUrl =
+              avatarToSave && avatarToSave.length <= 2048 ? avatarToSave : undefined;
             await updateProfile(user, {
               displayName: formData.name,
-              photoURL: avatarToSave || undefined,
+              ...(firebasePhotoUrl !== undefined && { photoURL: firebasePhotoUrl }),
             });
           } catch (firebaseError) {
             console.error("Error updating Firebase profile:", firebaseError);

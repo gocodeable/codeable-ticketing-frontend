@@ -25,6 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { DEFAULT_AVATAR } from "@/lib/constants"
+import { apiGet } from "@/lib/api/apiClient"
 
 export function Header() {
   const auth = useAuth()
@@ -35,14 +36,49 @@ export function Header() {
   const { notifications, unreadCount, loading, loadingMore, hasMore, markAsRead, markAllAsRead, deleteNotification, loadMore } = useNotifications()
   const [imageError, setImageError] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [backendAvatar, setBackendAvatar] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  const fetchBackendUser = async () => {
+    if (!user?.uid) {
+      setBackendAvatar(null)
+      return
+    }
+    try {
+      const idToken = await user.getIdToken()
+      const response = await apiGet(`/api/user?uid=${user.uid}`, idToken)
+      if (response.ok) {
+        const data = await response.json()
+        const avatar = data?.data?.avatar
+        setBackendAvatar(typeof avatar === "string" && avatar.trim() !== "" ? avatar : null)
+      } else {
+        setBackendAvatar(null)
+      }
+    } catch {
+      setBackendAvatar(null)
+    }
+  }
+
+  useEffect(() => {
+    fetchBackendUser()
+  }, [user?.uid])
+
+  useEffect(() => {
+    const onProfileUpdated = () => fetchBackendUser()
+    window.addEventListener("user-profile-updated", onProfileUpdated)
+    return () => window.removeEventListener("user-profile-updated", onProfileUpdated)
+  }, [user?.uid])
+
   useEffect(() => {
     setImageError(false)
-  }, [user?.photoURL])
+  }, [backendAvatar, user?.photoURL])
+
+  const avatarSrc = backendAvatar
+    ? (imageError ? DEFAULT_AVATAR : backendAvatar)
+    : (user?.photoURL && !imageError ? user.photoURL : DEFAULT_AVATAR)
 
   const handleLogout = async () => {
     try {
@@ -324,7 +360,7 @@ export function Header() {
             >
               <div className="relative size-8 rounded-lg overflow-hidden">
                 <Image
-                  src={user?.photoURL && !imageError ? user.photoURL : DEFAULT_AVATAR}
+                  src={avatarSrc}
                   alt="Profile"
                   width={32}
                   height={32}
@@ -340,7 +376,7 @@ export function Header() {
               <div className="flex items-center gap-3 py-1">
                 <div className="relative size-10 rounded-lg overflow-hidden shrink-0">
                   <Image
-                    src={user?.photoURL && !imageError ? user.photoURL : DEFAULT_AVATAR}
+                    src={avatarSrc}
                     alt="Profile"
                     width={40}
                     height={40}
