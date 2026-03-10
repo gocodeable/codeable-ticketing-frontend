@@ -194,22 +194,41 @@ export function IssueViewModeLeft({
                 }
                 .issue-description-content table {
                   width: 100%;
-                  border-collapse: collapse;
+                  border-collapse: separate;
+                  border-spacing: 0;
                   margin: 0.75rem 0;
                   font-size: 0.8125rem;
+                  border: 1px solid hsl(var(--border));
+                  border-radius: 8px;
+                  overflow: hidden;
                 }
                 .issue-description-content table th,
                 .issue-description-content table td {
-                  border: 1px solid hsl(var(--border));
+                  border-bottom: 1px solid hsl(var(--border));
+                  border-right: 1px solid hsl(var(--border));
                   padding: 0.5rem 0.75rem;
                   text-align: left;
+                }
+                .issue-description-content table th:last-child,
+                .issue-description-content table td:last-child {
+                  border-right: none;
+                }
+                .issue-description-content table tr:last-child td {
+                  border-bottom: none;
                 }
                 .issue-description-content table th {
                   background: hsl(var(--muted));
                   font-weight: 600;
+                  font-size: 0.75rem;
+                  text-transform: uppercase;
+                  letter-spacing: 0.025em;
+                  color: hsl(var(--muted-foreground));
                 }
                 .issue-description-content table tr:nth-child(even) td {
                   background: hsl(var(--muted) / 0.3);
+                }
+                .issue-description-content table tr:hover td {
+                  background: hsl(var(--muted) / 0.5);
                 }
                 .issue-description-content code {
                   background: hsl(var(--muted));
