@@ -192,6 +192,38 @@ export function IssueViewModeLeft({
                 .issue-description-content h3 {
                   font-size: 1.125rem;
                 }
+                .issue-description-content table {
+                  width: 100%;
+                  border-collapse: collapse;
+                  margin: 0.75rem 0;
+                  font-size: 0.8125rem;
+                }
+                .issue-description-content table th,
+                .issue-description-content table td {
+                  border: 1px solid hsl(var(--border));
+                  padding: 0.5rem 0.75rem;
+                  text-align: left;
+                }
+                .issue-description-content table th {
+                  background: hsl(var(--muted));
+                  font-weight: 600;
+                }
+                .issue-description-content table tr:nth-child(even) td {
+                  background: hsl(var(--muted) / 0.3);
+                }
+                .issue-description-content code {
+                  background: hsl(var(--muted));
+                  padding: 0.125rem 0.375rem;
+                  border-radius: 0.25rem;
+                  font-size: 0.8125rem;
+                  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+                }
+                .issue-description-content blockquote {
+                  border-left: 3px solid hsl(var(--border));
+                  padding-left: 1rem;
+                  margin: 0.75rem 0;
+                  color: hsl(var(--muted-foreground));
+                }
               `}</style>
             </div>
           </div>
