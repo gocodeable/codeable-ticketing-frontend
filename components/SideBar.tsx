@@ -1,4 +1,4 @@
-import { User, Folder, Users, Clock, Pin } from "lucide-react"
+import { User, Folder, Users, Clock, Pin, Sparkles, BarChart3, Shield } from "lucide-react"
 
 import {
   Sidebar,
@@ -21,6 +21,7 @@ import { motion } from "framer-motion"
 import { apiGet } from "@/lib/api/apiClient"
 import Image from "next/image"
 import { useTheme } from "next-themes"
+import { useFeatures, FEATURE_SRS, FEATURE_VELOCITY } from "@/lib/hooks/useFeatures"
 
 // Menu items
 const items = [
@@ -46,6 +47,21 @@ export function SideBar() {
   const { state } = useSidebar()
   const { user } = useAuth()
   const { theme } = useTheme()
+  const { features, isFeatureAdmin } = useFeatures()
+
+  // Engineering tools, shown only to entitled users (gated server-side by
+  // the ticketing feature flags)
+  const toolItems = [
+    ...(features.includes(FEATURE_SRS)
+      ? [{ title: "Generate Tickets", url: "/generate-tickets", icon: Sparkles }]
+      : []),
+    ...(features.includes(FEATURE_VELOCITY)
+      ? [{ title: "Velocity", url: "/velocity", icon: BarChart3 }]
+      : []),
+    ...(isFeatureAdmin
+      ? [{ title: "Feature Access", url: "/feature-access", icon: Shield }]
+      : []),
+  ]
   const [mounted, setMounted] = useState(false)
   const [recentProjects, setRecentProjects] = useState<RecentsType[]>([])
   const [pinnedProjects, setPinnedProjects] = useState<any[]>([])
@@ -205,6 +221,40 @@ export function SideBar() {
             </motion.div>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {toolItems.length > 0 && (
+          <SidebarGroup className="mt-6">
+            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2 flex items-center gap-2">
+              <Sparkles className="w-3 h-3" />
+              Workspace Tools
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {toolItems.map((item, index) => (
+                  <motion.div
+                    key={item.title}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                  >
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={item.url === pathname}
+                        className="h-10 px-3 rounded-lg font-medium hover:bg-primary/10 dark:hover:bg-primary/10 hover:text-primary transition-all duration-200 data-[active=true]:bg-primary/10 dark:data-[active=true]:bg-primary/20 data-[active=true]:text-primary dark:data-[active=true]:text-primary data-[active=true]:shadow-sm"
+                      >
+                        <Link href={item.url} className="flex items-center gap-3">
+                          <item.icon className="w-[18px] h-[18px]" />
+                          <span className="text-sm">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </motion.div>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {pinnedProjects && pinnedProjects.length > 0 && (
           <SidebarGroup className="mt-6">
