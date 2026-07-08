@@ -41,12 +41,14 @@ interface TeamMember {
 }
 
 interface ProposedTicket {
+  ref?: string;
+  parentRef?: string | null;
   title: string;
   description: string;
-  type: "task" | "bug" | "story" | "epic";
+  type: "epic" | "task" | "bug" | "story" | "subtask";
   priority: "highest" | "high" | "medium" | "low" | "lowest";
   difficulty: "trivial" | "easy" | "medium" | "hard" | "expert";
-  storyPoints: number;
+  storyPoints?: number;
   suggestedRole: string;
   rationale: string;
   suggestedAssignee?: { uid: string; name: string } | null;
@@ -94,6 +96,7 @@ const TYPE_BADGE: Record<string, string> = {
   task: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
   bug: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
   epic: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
+  subtask: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
 };
 
 export default function GenerateTicketsPage() {
@@ -115,6 +118,7 @@ export default function GenerateTicketsPage() {
   const [createdResult, setCreatedResult] = useState<{
     created: { code: string; title: string }[];
     failed: { title: string; error: string }[];
+    notes: string[];
     statusName: string;
   } | null>(null);
 
@@ -207,10 +211,31 @@ export default function GenerateTicketsPage() {
   };
 
   const includedCount = useMemo(() => tickets.filter((t) => t.included).length, [tickets]);
+  // Only story/task/bug carry velocity points — epics are containers and
+  // subtasks are a breakdown of their parent, so both are excluded here to
+  // match how the backend rolls up and how velocity counts.
   const includedPoints = useMemo(
-    () => tickets.filter((t) => t.included).reduce((acc, t) => acc + (t.storyPoints || 0), 0),
+    () =>
+      tickets
+        .filter((t) => t.included && ["story", "task", "bug"].includes(t.type))
+        .reduce((acc, t) => acc + (t.storyPoints || 0), 0),
     [tickets]
   );
+
+  // Nesting depth per row (epic 0 -> story/task/bug 1 -> subtask 2), derived from
+  // the ref/parentRef links, so the reviewed backlog reads as a hierarchy.
+  const depthByIndex = useMemo(() => {
+    const byRef = new Map<string, ReviewTicket>();
+    tickets.forEach((t) => {
+      if (t.ref) byRef.set(t.ref, t);
+    });
+    const depthOf = (t: ReviewTicket, guard = 0): number => {
+      if (!t.parentRef || guard > 5) return 0;
+      const parent = byRef.get(t.parentRef);
+      return parent ? 1 + depthOf(parent, guard + 1) : 0;
+    };
+    return tickets.map((t) => depthOf(t));
+  }, [tickets]);
 
   const handleCreate = async () => {
     if (!user || includedCount === 0) return;
@@ -222,6 +247,8 @@ export default function GenerateTicketsPage() {
         tickets: tickets
           .filter((t) => t.included)
           .map((t) => ({
+            ref: t.ref,
+            parentRef: t.parentRef ?? null,
             title: t.title,
             description: t.description,
             type: t.type,
@@ -234,14 +261,21 @@ export default function GenerateTicketsPage() {
       const response = await apiPost("/api/srs/generate", payload, idToken);
       const data = await response.json();
       if (!data.success) throw new Error(data.error || "Ticket creation failed");
+      const notes: string[] = data.data.notes || [];
       setCreatedResult({
         created: data.data.created || [],
         failed: data.data.failed || [],
+        notes,
         statusName: data.data.workflowStatus?.name || "Backlog",
       });
       setTickets([]);
       setSummary(null);
       toast.success(`Created ${data.data.created?.length ?? 0} tickets`);
+      if (notes.length > 0) {
+        toast.message(`${notes.length} item${notes.length === 1 ? "" : "s"} were adjusted`, {
+          description: notes[0],
+        });
+      }
     } catch (error: any) {
       console.error("Ticket creation failed:", error);
       toast.error(error?.message || "Failed to create tickets");
@@ -413,8 +447,14 @@ export default function GenerateTicketsPage() {
             {tickets.map((ticket, index) => (
               <div
                 key={index}
+                style={
+                  depthByIndex[index] > 0
+                    ? { marginLeft: depthByIndex[index] * 24 }
+                    : undefined
+                }
                 className={cn(
                   "py-4 flex flex-col lg:flex-row lg:items-center gap-3 transition-opacity",
+                  depthByIndex[index] > 0 && "border-l-2 border-border/40 pl-3",
                   !ticket.included && "opacity-40"
                 )}
               >
@@ -460,40 +500,52 @@ export default function GenerateTicketsPage() {
                     </Select>
                   </div>
 
-                  <Select
-                    value={String(ticket.storyPoints)}
-                    onValueChange={(v) => updateTicket(index, { storyPoints: Number(v) })}
-                  >
-                    <SelectTrigger className="h-8 w-[72px] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {POINT_OPTIONS.map((p) => (
-                        <SelectItem key={p} value={String(p)}>
-                          {p} pt{p > 1 ? "s" : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {ticket.type !== "epic" ? (
+                    <Select
+                      value={ticket.storyPoints ? String(ticket.storyPoints) : ""}
+                      onValueChange={(v) => updateTicket(index, { storyPoints: Number(v) })}
+                    >
+                      <SelectTrigger className="h-8 w-[72px] text-xs">
+                        <SelectValue placeholder="pts" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {POINT_OPTIONS.map((p) => (
+                          <SelectItem key={p} value={String(p)}>
+                            {p} pt{p > 1 ? "s" : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="w-[72px] text-center text-xs text-muted-foreground" title="Epic size is the rollup of its children">
+                      rollup
+                    </span>
+                  )}
 
-                  <Select
-                    value={ticket.assignee || "unassigned"}
-                    onValueChange={(v) =>
-                      updateTicket(index, { assignee: v === "unassigned" ? null : v })
-                    }
-                  >
-                    <SelectTrigger className="h-8 w-[170px] text-xs">
-                      <SelectValue placeholder="Assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {team.map((m) => (
-                        <SelectItem key={m.uid} value={m.uid}>
-                          {m.name} · {m.role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {ticket.type !== "epic" ? (
+                    <Select
+                      value={ticket.assignee || "unassigned"}
+                      onValueChange={(v) =>
+                        updateTicket(index, { assignee: v === "unassigned" ? null : v })
+                      }
+                    >
+                      <SelectTrigger className="h-8 w-[170px] text-xs">
+                        <SelectValue placeholder="Assignee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {team.map((m) => (
+                          <SelectItem key={m.uid} value={m.uid}>
+                            {m.name} · {m.role}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="w-[170px] text-xs text-muted-foreground">
+                      Epic · container
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -530,6 +582,21 @@ export default function GenerateTicketsPage() {
               )}
             </div>
           </div>
+          {createdResult.notes.length > 0 && (
+            <div className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+              <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">
+                {createdResult.notes.length} item{createdResult.notes.length === 1 ? "" : "s"} adjusted to keep the hierarchy valid:
+              </p>
+              <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-0.5">
+                {createdResult.notes.slice(0, 6).map((n, i) => (
+                  <li key={i}>{n}</li>
+                ))}
+                {createdResult.notes.length > 6 && (
+                  <li>+{createdResult.notes.length - 6} more</li>
+                )}
+              </ul>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2 mb-4">
             {createdResult.created.slice(0, 20).map((c) => (
               <Badge key={c.code} variant="outline" className="font-mono text-xs">
