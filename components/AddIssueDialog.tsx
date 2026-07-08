@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserSuggestion } from "@/components/UserSelector";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { apiPost, apiDelete } from "@/lib/api/apiClient";
+import { apiPost, apiDelete, apiGet } from "@/lib/api/apiClient";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -28,7 +28,7 @@ import {
 import { ProjectMember, MemberRole } from "@/types/project";
 import { Badge } from "@/components/ui/badge";
 import { getRoleLabel } from "@/utils/roleUtils";
-import { Issue } from "@/types/issue";
+import { Issue, IssueType } from "@/types/issue";
 import Image from "next/image";
 import { DEFAULT_AVATAR } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -49,8 +49,9 @@ import { format } from "date-fns";
 import { useDropzone } from "react-dropzone";
 import { uploadMediaToStorage } from "@/lib/firebase/uploadMedia";
 import { RichTextEditor } from "./RichTextEditor";
-import { getPriorityColor } from "@/utils/issueUtils";
+import { getPriorityColor, getTypeLabel } from "@/utils/issueUtils";
 import { PriorityIcon } from "@/components/PriorityIcon";
+import { IssueTypeIcon } from "@/components/IssueTypeIcon";
 
 interface AddIssueDialogProps {
   open: boolean;
@@ -59,6 +60,10 @@ interface AddIssueDialogProps {
   workflowStatusId: string;
   projectMembers: ProjectMember[];
   onIssueCreated?: (issue: Issue) => void;
+  /** Preselect a parent issue (e.g. from an "Add subtask" button). */
+  defaultParentId?: string;
+  /** Prefill the issue type (e.g. "subtask"). */
+  defaultType?: IssueType;
 }
 
 export function AddIssueDialog({
@@ -68,6 +73,8 @@ export function AddIssueDialog({
   workflowStatusId,
   projectMembers,
   onIssueCreated,
+  defaultParentId,
+  defaultType,
 }: AddIssueDialogProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,7 +82,7 @@ export function AddIssueDialog({
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<"task" | "bug" | "story" | "epic">("task");
+  const [type, setType] = useState<IssueType>(defaultType || "task");
   const [priority, setPriority] = useState<
     "highest" | "high" | "medium" | "low" | "lowest"
   >("medium");
@@ -88,6 +95,14 @@ export function AddIssueDialog({
   const [showAssigneeSuggestions, setShowAssigneeSuggestions] = useState(false);
   const assigneeSearchRef = useRef<HTMLDivElement>(null);
   const assigneeInputRef = useRef<HTMLInputElement>(null);
+
+  // Parent (hierarchy) picker state
+  const [projectIssues, setProjectIssues] = useState<Issue[]>([]);
+  const [selectedParent, setSelectedParent] = useState<Issue | null>(null);
+  const [parentSearchQuery, setParentSearchQuery] = useState("");
+  const [showParentSuggestions, setShowParentSuggestions] = useState(false);
+  const parentSearchRef = useRef<HTMLDivElement>(null);
+  const parentInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<
     Array<{
       file: File;
@@ -129,12 +144,15 @@ export function AddIssueDialog({
 
     setTitle("");
     setDescription("");
-    setType("task");
+    setType(defaultType || "task");
     setPriority("medium");
     setEstimatedCompletionDate(undefined);
     setSelectedAssignee(null);
     setAssigneeSearchQuery("");
     setShowAssigneeSuggestions(false);
+    setSelectedParent(null);
+    setParentSearchQuery("");
+    setShowParentSuggestions(false);
     setAttachments([]);
   };
 
@@ -149,11 +167,92 @@ export function AddIssueDialog({
       ) {
         setShowAssigneeSuggestions(false);
       }
+      if (
+        parentSearchRef.current &&
+        !parentSearchRef.current.contains(event.target as Node) &&
+        parentInputRef.current &&
+        !parentInputRef.current.contains(event.target as Node)
+      ) {
+        setShowParentSuggestions(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // When the dialog opens, apply prefill defaults and load the project's issues
+  // so the Parent picker can offer valid parents.
+  useEffect(() => {
+    if (!open || !user) return;
+
+    setType(defaultType || "task");
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const idToken = await user.getIdToken();
+        const res = await apiGet(`/api/issues?projectId=${projectId}`, idToken);
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.success) {
+          const issues: Issue[] = data.data || [];
+          setProjectIssues(issues);
+          if (defaultParentId) {
+            const preselected = issues.find((i) => i._id === defaultParentId);
+            if (preselected) setSelectedParent(preselected);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading project issues for parent picker:", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user, projectId, defaultParentId, defaultType]);
+
+  // Issues eligible to be the parent, based on the chosen type:
+  //  - story/task/bug -> only epics
+  //  - subtask         -> only standard issues (story/task/bug)
+  //  - epic            -> none (epics cannot have a parent)
+  const eligibleParents = useMemo(() => {
+    if (type === "epic") return [];
+    return projectIssues.filter((issue) => {
+      if (type === "subtask") {
+        return (
+          issue.type === "story" ||
+          issue.type === "task" ||
+          issue.type === "bug"
+        );
+      }
+      return issue.type === "epic";
+    });
+  }, [type, projectIssues]);
+
+  // Filter eligible parents by the search query
+  const filteredParents = eligibleParents.filter((issue) => {
+    if (!parentSearchQuery.trim()) return true;
+    const query = parentSearchQuery.toLowerCase();
+    return (
+      issue.title.toLowerCase().includes(query) ||
+      (issue.issueCode?.toLowerCase().includes(query) ?? false)
+    );
+  });
+
+  // If the type change makes the current parent ineligible, clear it.
+  useEffect(() => {
+    if (type === "epic") {
+      if (selectedParent) setSelectedParent(null);
+      return;
+    }
+    if (selectedParent && !eligibleParents.some((i) => i._id === selectedParent._id)) {
+      setSelectedParent(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, eligibleParents]);
 
   // Handle file drop/selection
   const onDrop = async (acceptedFiles: File[]) => {
@@ -270,6 +369,11 @@ export function AddIssueDialog({
       return;
     }
 
+    if (type === "subtask" && !selectedParent) {
+      toast.error("A subtask must have a parent issue");
+      return;
+    }
+
     if (!user) {
       toast.error("You must be logged in to create an issue");
       return;
@@ -288,6 +392,7 @@ export function AddIssueDialog({
         description: description.trim(),
         type,
         priority,
+        parent: type === "epic" ? undefined : selectedParent?._id || undefined,
         assignee: selectedAssignee?.uid || undefined,
         estimatedCompletionDate: estimatedCompletionDate
           ? estimatedCompletionDate.toISOString()
@@ -310,12 +415,15 @@ export function AddIssueDialog({
         // Just reset form fields without deleting uploaded files
         setTitle("");
         setDescription("");
-        setType("task");
+        setType(defaultType || "task");
         setPriority("medium");
         setEstimatedCompletionDate(undefined);
         setSelectedAssignee(null);
         setAssigneeSearchQuery("");
         setShowAssigneeSuggestions(false);
+        setSelectedParent(null);
+        setParentSearchQuery("");
+        setShowParentSuggestions(false);
         setAttachments([]);
         onOpenChange(false);
         if (onIssueCreated) {
@@ -432,35 +540,46 @@ export function AddIssueDialog({
               </Label>
               <Select
                 value={type}
-                onValueChange={(value: any) => setType(value)}
+                onValueChange={(value: IssueType) => setType(value)}
                 disabled={isSubmitting}
               >
                 <SelectTrigger id="type" className="h-11">
-                  <SelectValue />
+                  <SelectValue>
+                    <span className="flex items-center gap-2">
+                      <IssueTypeIcon type={type} />
+                      {getTypeLabel(type)}
+                    </span>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="task">
                     <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                      <IssueTypeIcon type="task" />
                       Task
                     </span>
                   </SelectItem>
                   <SelectItem value="bug">
                     <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                      <IssueTypeIcon type="bug" />
                       Bug
                     </span>
                   </SelectItem>
                   <SelectItem value="story">
                     <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                      <IssueTypeIcon type="story" />
                       Story
                     </span>
                   </SelectItem>
                   <SelectItem value="epic">
                     <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-purple-500" />
+                      <IssueTypeIcon type="epic" />
                       Epic
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="subtask">
+                    <span className="flex items-center gap-2">
+                      <IssueTypeIcon type="subtask" />
+                      Subtask
                     </span>
                   </SelectItem>
                 </SelectContent>
@@ -521,6 +640,108 @@ export function AddIssueDialog({
               </Select>
             </div>
           </div>
+
+          {/* Parent picker (hidden for epics, which cannot have a parent) */}
+          {type !== "epic" && (
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">
+                {type === "subtask" ? "Parent Issue" : "Epic"}
+                {type === "subtask" && (
+                  <span className="text-destructive"> *</span>
+                )}
+              </Label>
+              {selectedParent ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg h-11">
+                  <IssueTypeIcon type={selectedParent.type} className="shrink-0" />
+                  <span className="text-xs font-mono text-muted-foreground shrink-0">
+                    {selectedParent.issueCode}
+                  </span>
+                  <span className="text-sm font-medium truncate flex-1">
+                    {selectedParent.title}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedParent(null);
+                      setParentSearchQuery("");
+                      setShowParentSuggestions(false);
+                    }}
+                    disabled={isSubmitting}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative" ref={parentSearchRef}>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      ref={parentInputRef}
+                      type="text"
+                      placeholder={
+                        type === "subtask"
+                          ? "Select or search a parent issue..."
+                          : "Select or search an epic (optional)..."
+                      }
+                      value={parentSearchQuery}
+                      onChange={(e) => {
+                        setParentSearchQuery(e.target.value);
+                        setShowParentSuggestions(true);
+                      }}
+                      onFocus={() => setShowParentSuggestions(true)}
+                      onClick={() => setShowParentSuggestions(true)}
+                      disabled={isSubmitting}
+                      className="pl-9 h-11 cursor-pointer"
+                    />
+                  </div>
+
+                  {showParentSuggestions && filteredParents.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-sm shadow-lg max-h-60 overflow-y-auto">
+                      {filteredParents.map((parentIssue) => (
+                        <button
+                          key={parentIssue._id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedParent(parentIssue);
+                            setParentSearchQuery("");
+                            setShowParentSuggestions(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left border-b border-border last:border-0"
+                        >
+                          <IssueTypeIcon type={parentIssue.type} className="shrink-0" />
+                          <span className="text-xs font-mono text-muted-foreground shrink-0">
+                            {parentIssue.issueCode}
+                          </span>
+                          <span className="text-sm font-medium truncate flex-1">
+                            {parentIssue.title}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {showParentSuggestions &&
+                    parentSearchQuery.trim().length > 0 &&
+                    filteredParents.length === 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg p-4 text-center text-sm text-muted-foreground">
+                        No matching {type === "subtask" ? "issues" : "epics"} found
+                      </div>
+                    )}
+
+                  {showParentSuggestions &&
+                    parentSearchQuery.trim().length === 0 &&
+                    filteredParents.length === 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg p-4 text-center text-sm text-muted-foreground">
+                        {type === "subtask"
+                          ? "No story, task, or bug issues available to parent this subtask"
+                          : "No epics available in this project"}
+                      </div>
+                    )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Estimated Completion Date and Assignee Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -784,7 +1005,8 @@ export function AddIssueDialog({
                 isSubmitting ||
                 isUploadingAttachments ||
                 !title.trim() ||
-                !selectedAssignee
+                !selectedAssignee ||
+                (type === "subtask" && !selectedParent)
               }
               className="w-full sm:w-auto shadow-sm hover:shadow-md transition-shadow"
             >

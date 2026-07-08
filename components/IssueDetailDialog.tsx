@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Issue, Attachment } from "@/types/issue";
+import { Issue, IssueType, Attachment } from "@/types/issue";
 import { Comment } from "@/types/comment";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { apiGet, apiPatch, apiDelete, apiPost } from "@/lib/api/apiClient";
@@ -17,6 +17,10 @@ import { useDropzone } from "react-dropzone";
 import { uploadMediaToStorage } from "@/lib/firebase/uploadMedia";
 import { UserSuggestion } from "@/components/UserSelector";
 import { MemberRole } from "@/types/project";
+import { Button } from "@/components/ui/button";
+import { Plus, CornerDownRight } from "lucide-react";
+import { DEFAULT_AVATAR } from "@/lib/constants";
+import Image from "next/image";
 
 // Import new components
 import { IssueDetailHeader } from "./IssueDetailHeader";
@@ -24,6 +28,8 @@ import { IssueEditForm } from "./IssueEditForm";
 import { IssueViewModeLeft, IssueViewModeRight } from "./IssueViewMode";
 import { IssueCommentsSection } from "./IssueCommentsSection";
 import { IssueDeleteDialog } from "./IssueDeleteDialog";
+import { IssueTypeIcon } from "./IssueTypeIcon";
+import { AddIssueDialog } from "./AddIssueDialog";
 import { useIssuePermissions } from "../hooks/useIssuePermissions";
 import { IssueDetailDialogSkeleton } from "./IssueDetailDialogSkeleton";
 
@@ -53,7 +59,12 @@ export function IssueDetailDialog({
   onIssueDeleted,
 }: IssueDetailDialogProps) {
   const { user } = useAuth();
+  // The issue currently displayed. Defaults to the `issueId` prop but can be
+  // pointed at a parent/child issue for in-dialog hierarchy navigation.
+  const [activeIssueId, setActiveIssueId] = useState<string | null>(issueId);
   const [issue, setIssue] = useState<PopulatedIssue | null>(null);
+  const [projectIssues, setProjectIssues] = useState<Issue[]>([]);
+  const [showAddSubtaskDialog, setShowAddSubtaskDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [downloadingAttachments, setDownloadingAttachments] = useState<Set<string>>(new Set());
   const [isEditing, setIsEditing] = useState(false);
@@ -84,8 +95,14 @@ export function IssueDetailDialog({
     userRole,
   });
 
+  // Keep the active issue in sync with the prop (resets to the clicked issue
+  // each time the dialog is (re)opened for a new issueId).
   useEffect(() => {
-    if (open && issueId && user) {
+    setActiveIssueId(issueId);
+  }, [issueId]);
+
+  useEffect(() => {
+    if (open && activeIssueId && user) {
       fetchIssue();
       fetchStarStatus();
       setIsEditing(false);
@@ -94,13 +111,16 @@ export function IssueDetailDialog({
       setIsEditing(false);
       setIsStarred(false);
     }
-  }, [open, issueId, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activeIssueId, user]);
 
-  // Fetch workflow statuses when issue is loaded
+  // Fetch workflow statuses + project issues (for the parent picker) when issue loads
   useEffect(() => {
     if (issue && issue.project && user) {
       fetchWorkflowStatuses();
+      fetchProjectIssues();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issue, user]);
 
   // Initialize edit form when issue is loaded or editing mode changes
@@ -114,12 +134,12 @@ export function IssueDetailDialog({
   }, [issue, isEditing]);
 
   const fetchIssue = async () => {
-    if (!issueId || !user) return;
+    if (!activeIssueId || !user) return;
 
     setLoading(true);
     try {
       const idToken = await user.getIdToken();
-      const response = await apiGet(`/api/issues/${issueId}`, idToken);
+      const response = await apiGet(`/api/issues/${activeIssueId}`, idToken);
       const data = await response.json();
 
       if (data.success) {
@@ -156,13 +176,33 @@ export function IssueDetailDialog({
     }
   };
 
+  const fetchProjectIssues = async () => {
+    if (!issue || !user) return;
+
+    const projectId =
+      typeof issue.project === "string" ? issue.project : issue.project?._id;
+    if (!projectId) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await apiGet(`/api/issues?projectId=${projectId}`, idToken);
+      const data = await response.json();
+
+      if (data.success) {
+        setProjectIssues(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching project issues:", error);
+    }
+  };
+
   const fetchStarStatus = async () => {
-    if (!issueId || !user) return;
+    if (!activeIssueId || !user) return;
 
     try {
       const idToken = await user.getIdToken();
       const response = await apiGet(
-        `/api/starred-issues/${issueId}/status`,
+        `/api/starred-issues/${activeIssueId}/status`,
         idToken
       );
       const data = await response.json();
@@ -177,7 +217,7 @@ export function IssueDetailDialog({
   };
 
   const handleToggleStar = async () => {
-    if (!user || !issueId || togglingStar) return;
+    if (!user || !activeIssueId || togglingStar) return;
 
     setTogglingStar(true);
 
@@ -186,7 +226,7 @@ export function IssueDetailDialog({
 
       if (isStarred) {
         // Unstar the issue
-        const response = await apiDelete(`/api/starred-issues/${issueId}`, idToken);
+        const response = await apiDelete(`/api/starred-issues/${activeIssueId}`, idToken);
         if (response.ok) {
           setIsStarred(false);
           toast.success("Issue unstarred");
@@ -198,7 +238,7 @@ export function IssueDetailDialog({
         // Star the issue
         const response = await apiPost(
           `/api/starred-issues`,
-          { issueId },
+          { issueId: activeIssueId },
           idToken
         );
         if (response.ok) {
@@ -319,11 +359,12 @@ export function IssueDetailDialog({
 
   // Optimistically update local issue state
   const updateIssueOptimistically = (updates: {
-    type?: "task" | "bug" | "story" | "epic";
+    type?: IssueType;
     priority?: "highest" | "high" | "medium" | "low" | "lowest";
     assignee?: string | undefined;
     estimatedCompletionDate?: Date | undefined;
     workflowStatus?: string;
+    parent?: string | null;
   }) => {
     if (!issue) return;
 
@@ -334,6 +375,11 @@ export function IssueDetailDialog({
 
       if (updates.type !== undefined) {
         updatedIssue.type = updates.type;
+      }
+      if (updates.parent !== undefined) {
+        // Store the parent id optimistically; the populated object is refreshed
+        // on the next fetchIssue.
+        updatedIssue.parent = updates.parent;
       }
       if (updates.priority !== undefined) {
         updatedIssue.priority = updates.priority;
@@ -370,11 +416,12 @@ export function IssueDetailDialog({
 
   // Quick update function for individual field changes (optimistic updates)
   const handleQuickUpdate = async (updates: {
-    type?: "task" | "bug" | "story" | "epic";
+    type?: IssueType;
     priority?: "highest" | "high" | "medium" | "low" | "lowest";
     assignee?: string | undefined;
     estimatedCompletionDate?: Date | undefined;
     workflowStatus?: string;
+    parent?: string | null;
   }) => {
     if (!user || !issue) return;
 
@@ -394,6 +441,7 @@ export function IssueDetailDialog({
         if (updates.type !== undefined) updateData.type = updates.type;
         if (updates.priority !== undefined) updateData.priority = updates.priority;
         if (updates.assignee !== undefined) updateData.assignee = updates.assignee;
+        if (updates.parent !== undefined) updateData.parent = updates.parent;
         if (updates.estimatedCompletionDate !== undefined) {
           updateData.estimatedCompletionDate = updates.estimatedCompletionDate 
             ? updates.estimatedCompletionDate.toISOString() 
@@ -470,8 +518,19 @@ export function IssueDetailDialog({
   };
 
   // Quick update handlers
-  const handleQuickTypeChange = (value: "task" | "bug" | "story" | "epic") => {
+  const handleQuickTypeChange = (value: IssueType) => {
     handleQuickUpdate({ type: value });
+  };
+
+  const handleQuickParentChange = (parentId: string | null) => {
+    handleQuickUpdate({ parent: parentId });
+  };
+
+  // Navigate the dialog to a related issue (parent breadcrumb / subtask row)
+  const handleOpenRelatedIssue = (relatedIssueId: string) => {
+    if (!relatedIssueId || relatedIssueId === activeIssueId) return;
+    setIsEditing(false);
+    setActiveIssueId(relatedIssueId);
   };
 
   const handleQuickPriorityChange = (value: "highest" | "high" | "medium" | "low" | "lowest") => {
@@ -722,6 +781,99 @@ export function IssueDetailDialog({
                           downloadingAttachments={downloadingAttachments}
                           onDownload={handleDownload}
                         />
+
+                        {/* Subtasks Section */}
+                        {(() => {
+                          const children = issue.children || [];
+                          const isStandardType =
+                            !issue.type ||
+                            issue.type === "story" ||
+                            issue.type === "task" ||
+                            issue.type === "bug";
+                          const canAddSubtask = canEditIssue() && isStandardType;
+                          // An epic's children are stories/tasks/bugs, not subtasks.
+                          const childSectionLabel =
+                            issue.type === "epic" ? "Child issues" : "Subtasks";
+                          if (children.length === 0 && !canAddSubtask) return null;
+
+                          return (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                  <CornerDownRight className="w-4 h-4" />
+                                  <span>{childSectionLabel}{children.length > 0 ? ` (${children.length})` : ""}</span>
+                                </div>
+                                {canAddSubtask && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowAddSubtaskDialog(true)}
+                                    className="gap-1.5 h-8 px-3"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span className="text-xs">Add subtask</span>
+                                  </Button>
+                                )}
+                              </div>
+
+                              {children.length > 0 ? (
+                                <div className="space-y-2">
+                                  {children.map((child) => {
+                                    const statusName =
+                                      child.workflowStatus &&
+                                      typeof child.workflowStatus === "object"
+                                        ? child.workflowStatus.name
+                                        : null;
+                                    const rawAssignee = child.assignee;
+                                    const assigneeObj =
+                                      rawAssignee && typeof rawAssignee === "object"
+                                        ? rawAssignee
+                                        : typeof rawAssignee === "string"
+                                        ? projectMembers.find((m) => m.uid === rawAssignee) || null
+                                        : null;
+                                    return (
+                                      <button
+                                        key={child._id}
+                                        type="button"
+                                        onClick={() => handleOpenRelatedIssue(child._id)}
+                                        className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border border-border/40 dark:border-border/60 bg-muted/30 hover:bg-muted/50 hover:border-primary/40 transition-colors text-left"
+                                      >
+                                        <IssueTypeIcon type={child.type} className="shrink-0" />
+                                        <span className="text-xs font-mono text-muted-foreground shrink-0">
+                                          {child.issueCode}
+                                        </span>
+                                        <span className="text-sm font-medium truncate flex-1">
+                                          {child.title}
+                                        </span>
+                                        {statusName && (
+                                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
+                                            {statusName}
+                                          </span>
+                                        )}
+                                        {assigneeObj && (
+                                          <div className="relative h-6 w-6 rounded-full overflow-hidden ring-1 ring-background shrink-0">
+                                            <Image
+                                              src={assigneeObj.avatar || DEFAULT_AVATAR}
+                                              alt={assigneeObj.name}
+                                              width={24}
+                                              height={24}
+                                              className="rounded-full object-cover"
+                                            />
+                                          </div>
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">
+                                  No subtasks yet.
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
+
                         {/* Comments Section */}
                         <div>
                           <IssueCommentsSection
@@ -758,17 +910,20 @@ export function IssueDetailDialog({
                 <div className="w-[350px] min-w-[300px] min-h-0 overflow-y-auto bg-muted/10">
                   <div className="px-6 sm:px-8 py-6 min-h-full">
                     {!isEditing && (
-                      <IssueViewModeRight 
+                      <IssueViewModeRight
                         issue={issue as Issue}
                         canEdit={canEditIssue()}
                         workflowStatuses={workflowStatuses}
                         projectMembers={projectMembers}
+                        projectIssues={projectIssues}
                         onTypeChange={handleQuickTypeChange}
                         onPriorityChange={handleQuickPriorityChange}
                         onAssigneeChange={handleQuickAssigneeChange}
                         onAssigneeRemove={handleQuickAssigneeRemove}
                         onDueDateChange={handleQuickDueDateChange}
                         onWorkflowStatusChange={handleQuickWorkflowStatusChange}
+                        onParentChange={handleQuickParentChange}
+                        onOpenIssue={handleOpenRelatedIssue}
                       />
                     )}
                   </div>
@@ -788,6 +943,34 @@ export function IssueDetailDialog({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add Subtask Dialog */}
+      {issue && (
+        <AddIssueDialog
+          open={showAddSubtaskDialog}
+          onOpenChange={setShowAddSubtaskDialog}
+          projectId={
+            typeof issue.project === "string"
+              ? issue.project
+              : issue.project?._id || ""
+          }
+          workflowStatusId={
+            typeof issue.workflowStatus === "object" && issue.workflowStatus?._id
+              ? issue.workflowStatus._id
+              : typeof issue.workflowStatus === "string"
+              ? issue.workflowStatus
+              : ""
+          }
+          projectMembers={projectMembers}
+          defaultParentId={issue._id}
+          defaultType="subtask"
+          onIssueCreated={() => {
+            setShowAddSubtaskDialog(false);
+            // Refresh to load the newly-created child into the Subtasks list
+            fetchIssue();
+          }}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <IssueDeleteDialog

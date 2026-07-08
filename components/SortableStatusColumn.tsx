@@ -98,7 +98,6 @@ export default function SortableStatusColumn({
   userRole?: MemberRole;
   projectId: string;
   projectMembers: ProjectMember[];
-  getTypeIcon: (type: string) => string;
   onStatusUpdate?: (status: WorkflowStatus) => void;
   onStatusDelete?: (statusId: string) => void;
   onIssueCreated?: (issue: Issue) => void;

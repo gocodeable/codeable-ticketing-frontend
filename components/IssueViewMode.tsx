@@ -17,8 +17,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { Issue, Attachment } from "@/types/issue";
-import { File, Download, User, UserCircle, Calendar as CalendarIcon, Clock, Loader2, Play, Search, X } from "lucide-react";
+import { Issue, IssueType, Attachment } from "@/types/issue";
+import { File, Download, User, UserCircle, Calendar as CalendarIcon, Clock, Loader2, Play, Search, X, GitBranch } from "lucide-react";
 import Image from "next/image";
 import { DEFAULT_AVATAR } from "@/lib/constants";
 import { format } from "date-fns";
@@ -27,6 +27,8 @@ import { MediaViewerDialog } from "./MediaViewerDialog";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { UserSuggestion } from "@/components/UserSelector";
 import { PriorityIcon } from "@/components/PriorityIcon";
+import { IssueTypeIcon } from "@/components/IssueTypeIcon";
+import { getTypeLabel } from "@/utils/issueUtils";
 import { cn } from "@/lib/utils";
 
 interface IssueViewModeProps {
@@ -418,29 +420,38 @@ export function IssueViewModeRight({
   canEdit = false,
   workflowStatuses = [],
   projectMembers = [],
+  projectIssues = [],
   onTypeChange,
   onPriorityChange,
   onAssigneeChange,
   onAssigneeRemove,
   onDueDateChange,
   onWorkflowStatusChange,
+  onParentChange,
+  onOpenIssue,
 }: {
   issue: Issue;
   canEdit?: boolean;
   workflowStatuses?: Array<{ _id: string; name: string; color?: string }>;
   projectMembers?: Array<{ uid: string; name: string; email: string; avatar?: string }>;
-  onTypeChange?: (value: "task" | "bug" | "story" | "epic") => void;
+  projectIssues?: Issue[];
+  onTypeChange?: (value: IssueType) => void;
   onPriorityChange?: (value: "highest" | "high" | "medium" | "low" | "lowest") => void;
   onAssigneeChange?: (assignee: UserSuggestion | null) => void;
   onAssigneeRemove?: () => void;
   onDueDateChange?: (date: Date | undefined) => void;
   onWorkflowStatusChange?: (value: string) => void;
+  onParentChange?: (parentId: string | null) => void;
+  onOpenIssue?: (issueId: string) => void;
 }) {
   const [assigneeSearchQuery, setAssigneeSearchQuery] = useState("");
   const [showAssigneeSuggestions, setShowAssigneeSuggestions] = useState(false);
   const [isAssigneeRemoved, setIsAssigneeRemoved] = useState(false);
   const assigneeSearchRef = useRef<HTMLDivElement>(null);
   const assigneeInputRef = useRef<HTMLInputElement>(null);
+  const [parentSearchQuery, setParentSearchQuery] = useState("");
+  const [showParentSuggestions, setShowParentSuggestions] = useState(false);
+  const parentSearchRef = useRef<HTMLDivElement>(null);
 
   // Convert project members to user suggestions format
   const memberSuggestions: UserSuggestion[] = projectMembers.map((member) => ({
@@ -477,9 +488,53 @@ export function IssueViewModeRight({
       }
     : null;
 
+  // Populated parent (breadcrumb chip) — present on the detail fetch
+  const parentPopulated =
+    issue.parent && typeof issue.parent === "object" ? issue.parent : null;
+  const parentId =
+    typeof issue.parent === "string"
+      ? issue.parent
+      : issue.parent && typeof issue.parent === "object"
+      ? issue.parent._id
+      : null;
+
+  // Issues eligible to be this issue's parent, mirroring the create dialog rules:
+  //  - story/task/bug -> only epics
+  //  - subtask         -> only standard issues (story/task/bug)
+  //  - epic            -> none (picker hidden)
+  const eligibleParents = projectIssues.filter((candidate) => {
+    if (candidate._id === issue._id) return false; // never self-parent
+    if (issue.type === "subtask") {
+      return (
+        candidate.type === "story" ||
+        candidate.type === "task" ||
+        candidate.type === "bug"
+      );
+    }
+    return candidate.type === "epic";
+  });
+
+  const filteredParents = eligibleParents.filter((candidate) => {
+    if (!parentSearchQuery.trim()) return true;
+    const query = parentSearchQuery.toLowerCase();
+    return (
+      candidate.title.toLowerCase().includes(query) ||
+      (candidate.issueCode?.toLowerCase().includes(query) ?? false)
+    );
+  });
+
+  const showParentPicker = canEdit && !!onParentChange && issue.type !== "epic";
+
+  // Resolve the selected parent for display (populated object, or looked up by id)
+  const selectedParentIssue: Issue | null =
+    parentPopulated ||
+    (parentId ? projectIssues.find((i) => i._id === parentId) || null : null);
+
   // Reset removed state when issue changes
   useEffect(() => {
     setIsAssigneeRemoved(false);
+    setParentSearchQuery("");
+    setShowParentSuggestions(false);
   }, [issue._id]);
 
   // Close suggestions when clicking outside
@@ -490,6 +545,12 @@ export function IssueViewModeRight({
         !assigneeSearchRef.current.contains(event.target as Node)
       ) {
         setShowAssigneeSuggestions(false);
+      }
+      if (
+        parentSearchRef.current &&
+        !parentSearchRef.current.contains(event.target as Node)
+      ) {
+        setShowParentSuggestions(false);
       }
     };
 
@@ -512,60 +573,54 @@ export function IssueViewModeRight({
             {canEdit && onTypeChange ? (
               <Select
                 value={issue.type || "task"}
-                onValueChange={(value: any) => onTypeChange(value)}
+                onValueChange={(value: IssueType) => onTypeChange(value)}
               >
                 <SelectTrigger className="h-11">
                   <SelectValue>
                     <span className="flex items-center gap-2">
-                      <span className={cn(
-                        "w-2 h-2 rounded-full",
-                        issue.type === "task" && "bg-blue-500",
-                        issue.type === "bug" && "bg-red-500",
-                        issue.type === "story" && "bg-green-500",
-                        issue.type === "epic" && "bg-purple-500"
-                      )} />
-                      {issue.type ? issue.type.charAt(0).toUpperCase() + issue.type.slice(1) : "Task"}
+                      <IssueTypeIcon type={issue.type} />
+                      {getTypeLabel(issue.type)}
                     </span>
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="task">
                     <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                      <IssueTypeIcon type="task" />
                       Task
                     </span>
                   </SelectItem>
                   <SelectItem value="bug">
                     <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                      <IssueTypeIcon type="bug" />
                       Bug
                     </span>
                   </SelectItem>
                   <SelectItem value="story">
                     <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                      <IssueTypeIcon type="story" />
                       Story
                     </span>
                   </SelectItem>
                   <SelectItem value="epic">
                     <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-purple-500" />
+                      <IssueTypeIcon type="epic" />
                       Epic
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="subtask">
+                    <span className="flex items-center gap-2">
+                      <IssueTypeIcon type="subtask" />
+                      Subtask
                     </span>
                   </SelectItem>
                 </SelectContent>
               </Select>
             ) : (
               <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 border border-border/40 dark:border-border/60">
-                <span className={cn(
-                  "w-2 h-2 rounded-full",
-                  issue.type === "task" && "bg-blue-500",
-                  issue.type === "bug" && "bg-red-500",
-                  issue.type === "story" && "bg-green-500",
-                  issue.type === "epic" && "bg-purple-500"
-                )} />
+                <IssueTypeIcon type={issue.type} />
                 <span className="text-sm font-medium">
-                  {issue.type ? issue.type.charAt(0).toUpperCase() + issue.type.slice(1) : "Task"}
+                  {getTypeLabel(issue.type)}
                 </span>
               </div>
             )}
@@ -638,6 +693,99 @@ export function IssueViewModeRight({
           <p className="text-xs text-muted-foreground -mt-2">
             Changing workflow will move the issue to the top of the new status
           </p>
+        )}
+
+        {/* Parent (Epic for standard issues, parent issue for subtasks) */}
+        {(showParentPicker || (parentPopulated && issue.type !== "epic")) && (
+          <div className="space-y-2.5">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <GitBranch className="w-3.5 h-3.5" />
+              {issue.type === "subtask" ? "Parent Issue" : "Epic"}
+            </Label>
+            {selectedParentIssue ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg h-11">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenIssue && parentId && onOpenIssue(parentId)
+                  }
+                  className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-80 transition-opacity"
+                  title="Open parent issue"
+                >
+                  <IssueTypeIcon type={selectedParentIssue.type} className="shrink-0" />
+                  <span className="text-xs font-mono text-muted-foreground shrink-0">
+                    {selectedParentIssue.issueCode}
+                  </span>
+                  <span className="text-sm font-medium truncate">
+                    {selectedParentIssue.title}
+                  </span>
+                </button>
+                {showParentPicker && issue.type !== "subtask" && (
+                  <button
+                    type="button"
+                    onClick={() => onParentChange && onParentChange(null)}
+                    className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                    title="Remove parent"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ) : showParentPicker ? (
+              <div className="relative" ref={parentSearchRef}>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type="text"
+                    placeholder={
+                      issue.type === "subtask"
+                        ? "Select a parent issue..."
+                        : "Select an epic (optional)..."
+                    }
+                    value={parentSearchQuery}
+                    onChange={(e) => {
+                      setParentSearchQuery(e.target.value);
+                      setShowParentSuggestions(true);
+                    }}
+                    onFocus={() => setShowParentSuggestions(true)}
+                    className="pl-9 h-11"
+                  />
+                </div>
+                {showParentSuggestions && (
+                  <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredParents.length > 0 ? (
+                      filteredParents.map((candidate) => (
+                        <button
+                          key={candidate._id}
+                          type="button"
+                          onClick={() => {
+                            if (onParentChange) onParentChange(candidate._id);
+                            setParentSearchQuery("");
+                            setShowParentSuggestions(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors text-left border-b border-border last:border-0"
+                        >
+                          <IssueTypeIcon type={candidate.type} className="shrink-0" />
+                          <span className="text-xs font-mono text-muted-foreground shrink-0">
+                            {candidate.issueCode}
+                          </span>
+                          <span className="text-sm font-medium truncate">
+                            {candidate.title}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                        {issue.type === "subtask"
+                          ? "No eligible parent issues"
+                          : "No epics available"}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
         )}
 
         {/* Priority */}

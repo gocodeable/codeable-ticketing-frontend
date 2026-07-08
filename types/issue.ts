@@ -18,12 +18,14 @@ export interface Attachment {
   fileName: string;
 }
 
+export type IssueType = "task" | "bug" | "story" | "epic" | "subtask";
+
 export interface Issue {
   _id: string;
   title: string;
   description?: string;
   workflowStatus: WorkflowStatus | string;
-  type?: "task" | "bug" | "story" | "epic";
+  type?: IssueType;
   priority: "highest" | "high" | "medium" | "low" | "lowest";
   assignee?: string | IssueAssignee | null;
   reporter?: string | IssueReporter | null;
@@ -37,4 +39,8 @@ export interface Issue {
   createdAt?: string;
   updatedAt?: string;
   isStarred?: boolean;
+  // Hierarchy (Epic -> Story/Task/Bug -> Subtask)
+  parent?: string | Issue | null;
+  children?: Issue[];
+  childCount?: number;
 }

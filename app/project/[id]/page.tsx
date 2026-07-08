@@ -16,6 +16,7 @@ import {
   Edit,
   Pin,
   PinOff,
+  Zap,
 } from "lucide-react";
 import { Project, MemberRole } from "@/types/project";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import { apiGet, apiPost, apiDelete } from "@/lib/api/apiClient";
 import { Members } from "@/components/Members";
 import ProjectInfo from "@/components/ProjectInfo";
 import ProjectBoard from "@/components/ProjectBoard";
+import ProjectEpics from "@/components/ProjectEpics";
 import ProjectSettings from "@/components/ProjectSettings";
 import { UpdateProjectSheet } from "@/components/UpdateProjectSheet";
 import { ProjectMembersModal } from "@/components/ProjectMembersModal";
@@ -374,6 +376,12 @@ export default function ProjectPage({
                     Board
                   </p>
                 </TabsTrigger>
+                <TabsTrigger value="epics" className="shrink-0 px-2 py-1">
+                  <Zap className="w-4 h-4" />
+                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
+                    Epics
+                  </p>
+                </TabsTrigger>
                 <TabsTrigger value="members" className="shrink-0 px-2 py-1">
                   <Users className="w-4 h-4" />
                   <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
@@ -436,6 +444,35 @@ export default function ProjectPage({
                     onIssuesCountChange={(count) => setIssueCount(count)}
                   />
                 </Suspense>
+              </TabsContent>
+              <TabsContent value="epics" className="mt-3 sm:mt-4">
+                <div className="w-full">
+                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
+                    Epics
+                  </h2>
+                  <ProjectEpics
+                    projectId={id}
+                    isAdmin={!!isAdmin}
+                    userRole={userRole}
+                    projectMembers={
+                      Array.isArray(project.members)
+                        ? project.members
+                            .filter(
+                              (m: any) =>
+                                typeof m === "object" && m !== null && m.uid
+                            )
+                            .map((m: any) => ({
+                              uid: m.uid,
+                              name: m.name || "",
+                              email: m.email || "",
+                              avatar: m.avatar,
+                              updatedAt: m.updatedAt,
+                              role: m.role as MemberRole | undefined,
+                            }))
+                        : []
+                    }
+                  />
+                </div>
               </TabsContent>
               <TabsContent
                 value="members"

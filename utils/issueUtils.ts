@@ -5,6 +5,50 @@
 import { Issue, IssueReporter, IssueAssignee } from "@/types/issue";
 import { WorkflowStatus } from "@/types/workflowStatus";
 
+/**
+ * Single source of truth for issue-type visuals (icon + color + label).
+ * `IssueTypeIcon` and every type dot/badge in the app derive from these.
+ */
+export type IssueTypeIconName =
+  | "Zap"
+  | "BookOpen"
+  | "CheckSquare"
+  | "Bug"
+  | "CornerDownRight";
+
+export const getTypeIconName = (type?: string): IssueTypeIconName => {
+  switch (type) {
+    case "epic":
+      return "Zap";
+    case "story":
+      return "BookOpen";
+    case "bug":
+      return "Bug";
+    case "subtask":
+      return "CornerDownRight";
+    case "task":
+    default:
+      return "CheckSquare";
+  }
+};
+
+export const getTypeLabel = (type?: string): string => {
+  switch (type) {
+    case "epic":
+      return "Epic";
+    case "story":
+      return "Story";
+    case "bug":
+      return "Bug";
+    case "subtask":
+      return "Subtask";
+    case "task":
+    default:
+      return "Task";
+  }
+};
+
+/** Solid background color (for filled badges / dots). */
 export const getTypeColor = (type?: string): string => {
   switch (type) {
     case "bug":
@@ -13,8 +57,28 @@ export const getTypeColor = (type?: string): string => {
       return "bg-green-500";
     case "epic":
       return "bg-purple-500";
+    case "subtask":
+      return "bg-slate-500";
+    case "task":
     default:
       return "bg-blue-500";
+  }
+};
+
+/** Text color for the type icon glyph. */
+export const getTypeIconColor = (type?: string): string => {
+  switch (type) {
+    case "bug":
+      return "text-red-500";
+    case "story":
+      return "text-green-500";
+    case "epic":
+      return "text-purple-500";
+    case "subtask":
+      return "text-slate-500";
+    case "task":
+    default:
+      return "text-blue-500";
   }
 };
 

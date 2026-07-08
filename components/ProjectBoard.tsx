@@ -167,20 +167,6 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   }, [projectId, user]);
 
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "bug":
-        return "🐛";
-      case "story":
-        return "📖";
-      case "epic":
-        return "⚡";
-      case "task":
-      default:
-        return "✓";
-    }
-  };
-
   // Check if user can move an issue between statuses
   const canMoveIssue = (issue: Issue): boolean => {
     if (!user) return false;
@@ -812,7 +798,6 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
                     userRole={userRole}
                     projectId={projectId}
                     projectMembers={projectMembers}
-                    getTypeIcon={getTypeIcon}
                     initialIssueId={initialIssueId}
                     dropIndicator={dropIndicator?.statusId === status._id ? dropIndicator.position : null}
                     onStatusUpdate={(updatedStatus) => {
