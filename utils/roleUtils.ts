@@ -19,6 +19,8 @@ export const getRoleColor = (role?: MemberRole | string | null): string => {
       return "bg-purple-500";
     case "frontend":
       return "bg-blue-500";
+    case "mobile":
+      return "bg-teal-500";
     case "ui":
       return "bg-pink-500";
     case "qa":
@@ -47,6 +49,8 @@ export const getRoleLabel = (role?: MemberRole | string | null): string => {
       return "Backend";
     case "frontend":
       return "Frontend";
+    case "mobile":
+      return "Mobile";
     case "ui":
       return "UI";
     case "qa":

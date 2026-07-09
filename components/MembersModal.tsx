@@ -10,7 +10,7 @@ import { getRoleColor, getRoleLabel, hasAdminPermissions } from "@/utils/roleUti
 import { apiPatch } from "@/lib/api/apiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { toast } from "sonner";
-import { Trash2, Loader2, Users, UserPlus, Crown, Server, Monitor, Palette, Bug, UserX, Briefcase } from "lucide-react";
+import { Trash2, Loader2, Users, UserPlus, Crown, Server, Monitor, Palette, Bug, UserX, Briefcase, Smartphone } from "lucide-react";
 import Image from "next/image";
 import { DEFAULT_AVATAR } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
@@ -443,6 +443,13 @@ export function MembersModal({
                                 Frontend
                               </div>
                             </SelectItem>
+                            <SelectItem value="mobile">
+                              <div className="flex items-center gap-2">
+                                <span className={cn("w-2 h-2 rounded-full", getRoleColor("mobile"))} />
+                                <Smartphone className="w-3 h-3 text-muted-foreground" />
+                                Mobile
+                              </div>
+                            </SelectItem>
                             <SelectItem value="ui">
                               <div className="flex items-center gap-2">
                                 <span className={cn("w-2 h-2 rounded-full", getRoleColor("ui"))} />
@@ -596,6 +603,13 @@ export function MembersModal({
                               <span className={cn("w-2 h-2 rounded-full", getRoleColor("frontend"))} />
                               <Monitor className="w-3 h-3 text-muted-foreground" />
                               Frontend
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="mobile">
+                            <div className="flex items-center gap-2">
+                              <span className={cn("w-2 h-2 rounded-full", getRoleColor("mobile"))} />
+                              <Smartphone className="w-3 h-3 text-muted-foreground" />
+                              Mobile
                             </div>
                           </SelectItem>
                           <SelectItem value="ui">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useDropzone } from "react-dropzone";
@@ -14,6 +14,7 @@ import {
   X,
   ArrowRight,
   ShieldAlert,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useFeatures, FEATURE_SRS } from "@/lib/hooks/useFeatures";
@@ -32,6 +33,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { SrsContextForm } from "@/components/SrsContextForm";
+import { ProjectContext, DEFAULT_CONTEXT } from "@/types/srsContext";
 
 interface TeamMember {
   uid: string;
@@ -110,7 +113,20 @@ export default function GenerateTicketsPage() {
   const [pastedText, setPastedText] = useState("");
   const [instructions, setInstructions] = useState("");
 
+  const [context, setContext] = useState<ProjectContext>(DEFAULT_CONTEXT);
+  const [showContext, setShowContext] = useState(true);
+
+  // Generation polls for minutes; bail out of the loop if the page goes away.
+  const unmountedRef = useRef(false);
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
+    };
+  }, []);
+
   const [generating, setGenerating] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const [creating, setCreating] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
@@ -141,6 +157,40 @@ export default function GenerateTicketsPage() {
     loadProjects();
   }, [user]);
 
+  // Prefill the questionnaire with whatever was used for this project last time.
+  // The projects LIST endpoint projects only a few fields, so the saved context
+  // has to come from the single-project endpoint.
+  useEffect(() => {
+    let cancelled = false;
+    const loadSavedContext = async () => {
+      if (!user || !projectId) return;
+      setContext(DEFAULT_CONTEXT);
+      try {
+        const idToken = await user.getIdToken();
+        const res = await apiGet(`/project/api?id=${projectId}`, idToken);
+        const data = await res.json();
+        if (cancelled) return;
+        const saved = data?.data?.srsContext;
+        if (saved && typeof saved === "object") {
+          setContext({ ...DEFAULT_CONTEXT, ...saved });
+        }
+      } catch (error) {
+        console.error("Error loading saved project context:", error);
+      }
+    };
+    loadSavedContext();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, projectId]);
+
+  // Elapsed counter while a generation is in flight (it can run for minutes).
+  useEffect(() => {
+    if (!generating) return;
+    const id = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(id);
+  }, [generating]);
+
   const onDrop = useCallback((accepted: File[]) => {
     if (accepted.length > 0) setFile(accepted[0]);
   }, []);
@@ -160,13 +210,33 @@ export default function GenerateTicketsPage() {
     !generating &&
     (sourceTab === "upload" ? !!file : pastedText.trim().length > 50);
 
+  /** Apply a finished generation to the review screen. */
+  const applyPreview = (payload: any) => {
+    setSummary(payload.summary);
+    setTeam(payload.team || []);
+    setTickets(
+      (payload.tickets || []).map((t: ProposedTicket) => ({
+        ...t,
+        included: true,
+        assignee: t.suggestedAssignee?.uid || null,
+      }))
+    );
+    toast.success(`Proposed ${payload.tickets?.length ?? 0} tickets — review before creating`);
+  };
+
+  /**
+   * Generation runs for minutes, and every proxy in front of the API cuts a
+   * request at ~100s. So the backend hands back a jobId immediately and we poll
+   * it here until it's done.
+   */
   const handleGenerate = async () => {
     if (!user || !canGenerate) return;
     setGenerating(true);
+    setElapsed(0);
     setCreatedResult(null);
     try {
       const idToken = await user.getIdToken();
-      const body: Record<string, unknown> = { projectId };
+      const body: Record<string, unknown> = { projectId, context };
       if (instructions.trim()) body.instructions = instructions.trim();
 
       if (sourceTab === "upload" && file) {
@@ -185,19 +255,35 @@ export default function GenerateTicketsPage() {
         body.text = pastedText;
       }
 
-      const response = await apiPost("/api/srs/preview", body, idToken);
-      const data = await response.json();
-      if (!data.success) throw new Error(data.error || "Generation failed");
-      setSummary(data.data.summary);
-      setTeam(data.data.team || []);
-      setTickets(
-        (data.data.tickets || []).map((t: ProposedTicket) => ({
-          ...t,
-          included: true,
-          assignee: t.suggestedAssignee?.uid || null,
-        }))
-      );
-      toast.success(`Proposed ${data.data.tickets?.length ?? 0} tickets — review before creating`);
+      const startRes = await apiPost("/api/srs/preview", body, idToken);
+      const started = await startRes.json();
+      if (!started.success) throw new Error(started.error || "Could not start generation");
+      const jobId = started.data?.jobId;
+      if (!jobId) throw new Error("Backend did not return a job id");
+
+      // Poll until done. ~10 min ceiling; the job TTLs out server-side anyway.
+      // `unmountedRef` stops the loop if the user navigates away mid-generation,
+      // so we don't keep polling (or toast) against a dead component.
+      const deadline = Date.now() + 10 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 3000));
+        if (unmountedRef.current) return;
+        const freshToken = await user.getIdToken();
+        const pollRes = await apiGet(`/api/srs/preview/${jobId}`, freshToken);
+        const poll = await pollRes.json();
+        if (unmountedRef.current) return;
+        if (!poll.success) throw new Error(poll.error || "Lost track of the generation");
+
+        if (poll.data.status === "done") {
+          applyPreview(poll.data);
+          return;
+        }
+        if (poll.data.status === "error") {
+          throw new Error(poll.data.error || "Generation failed");
+        }
+        // still pending — keep waiting
+      }
+      throw new Error("Generation timed out after 10 minutes. Try a smaller SRS.");
     } catch (error: any) {
       console.error("SRS generation failed:", error);
       toast.error(error?.message || "Failed to generate tickets");
@@ -412,10 +498,34 @@ export default function GenerateTicketsPage() {
           </div>
         </div>
 
+        {/* Project context — the answers that decide which tickets exist at all */}
+        <div className="mt-6 border-t border-border/50 pt-5">
+          <button
+            type="button"
+            onClick={() => setShowContext((s) => !s)}
+            className="mb-3 flex w-full items-center justify-between text-left"
+          >
+            <div>
+              <h2 className="text-sm font-bold tracking-tight">Project context</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Platforms, stack, dashboards and constraints — shapes the epics and tickets
+              </p>
+            </div>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform",
+                showContext && "rotate-180"
+              )}
+            />
+          </button>
+          {showContext && <SrsContextForm value={context} onChange={setContext} />}
+        </div>
+
         <div className="flex items-center justify-end mt-5 gap-3">
           {generating && (
             <p className="text-sm text-muted-foreground">
-              Reading the SRS and sizing the work — large documents can take a couple of minutes.
+              Reading the SRS, planning epics, and sizing the work — this runs in the background and
+              can take a few minutes. ({Math.floor(elapsed / 60)}m {elapsed % 60}s)
             </p>
           )}
           <Button onClick={handleGenerate} disabled={!canGenerate} className="gap-2">

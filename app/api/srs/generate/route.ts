@@ -1,33 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readJson } from "@/lib/api/backend";
 
-// Bulk-create the reviewed tickets.
+// Bulk-create the reviewed tickets (fast — no model call).
 export const maxDuration = 120;
 
 export const POST = async (req: NextRequest) => {
-  try {
-    const idToken = req.headers.get("Authorization")?.split(" ")[1];
-    if (!idToken) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-    const body = await req.json();
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/srs/generate`,
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }
-    );
-    const data = await response.json();
-    if (!response.ok) {
-      return NextResponse.json(
-        { success: false, error: data.message || "Failed to create tickets" },
-        { status: response.status }
-      );
-    }
-    return NextResponse.json({ success: true, data: data.data });
-  } catch (error) {
-    console.error("Error creating SRS tickets:", error);
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+  const idToken = req.headers.get("Authorization")?.split(" ")[1];
+  if (!idToken) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ success: false, error: "Invalid request body" }, { status: 400 });
+  }
+
+  const result = await readJson("/api/v1/srs/generate", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!result.ok) {
+    console.error("SRS ticket creation failed:", result.status, result.error);
+    return NextResponse.json(
+      { success: false, error: result.error || "Failed to create tickets" },
+      { status: result.status }
+    );
+  }
+  return NextResponse.json({ success: true, data: result.data });
 };
