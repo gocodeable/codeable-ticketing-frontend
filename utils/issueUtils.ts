@@ -178,14 +178,6 @@ export const getStatusName = (issue: Issue, statuses: WorkflowStatus[]): string 
 };
 
 /**
- * Is this column a QA/testing column? Mirrors categoriseStatusName on the
- * backend (src/utils/issueLifecycle.ts) — keep the two in step, the server
- * decides whether a build is actually stamped.
- */
-export const isQAStatusName = (name?: string | null): boolean =>
-  /rfqa|ready\s*for\s*qa|qa|test/.test((name || "").toLowerCase().trim());
-
-/**
  * Get the status object from an issue
  */
 export const getStatusObject = (issue: Issue, statuses: WorkflowStatus[]): WorkflowStatus | undefined => {

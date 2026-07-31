@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, UserCircle, Moon, Sun, Monitor, Bell, Check, X, UserPlus, FileEdit, MessageSquare, Reply, GitBranch, FlaskConical } from "lucide-react"
+import { LogOut, UserCircle, Moon, Sun, Monitor, Bell, Check, X, UserPlus, FileEdit, MessageSquare, Reply, GitBranch, FlaskConical, Package } from "lucide-react"
 import { useAuth } from "@/lib/auth/AuthProvider"
 import { useTheme } from "next-themes"
 import { logout } from "@/lib/firebase/logout"
@@ -103,6 +103,8 @@ export function Header() {
         return GitBranch
       case 'issue_ready_for_qa':
         return FlaskConical
+      case 'project_build_updated':
+        return Package
       default:
         return Bell
     }
@@ -228,6 +230,12 @@ export function Header() {
                         if (notification.issueId) {
                           e.stopPropagation();
                           router.push(`/project/${notification.projectId}?issueId=${notification.issueId}`);
+                        } else if (notification.projectId) {
+                          // Build notifications point at a project, not a ticket
+                          e.stopPropagation();
+                          router.push(
+                            `/project/${notification.projectId}${notification.type === 'project_build_updated' ? '?tab=builds' : ''}`
+                          );
                         }
                       }}
                     >
@@ -248,7 +256,8 @@ export function Header() {
                               notification.type === 'issue_comment' && "bg-green-500/10 text-green-500",
                               notification.type === 'comment_reply' && "bg-cyan-500/10 text-cyan-500",
                               notification.type === 'issue_status_changed' && "bg-purple-500/10 text-purple-500",
-                              notification.type === 'issue_ready_for_qa' && "bg-orange-500/10 text-orange-500"
+                              notification.type === 'issue_ready_for_qa' && "bg-orange-500/10 text-orange-500",
+                              notification.type === 'project_build_updated' && "bg-indigo-500/10 text-indigo-500"
                             )}>
                               <IconComponent className="w-5 h-5" />
                             </div>

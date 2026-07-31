@@ -17,6 +17,7 @@ import {
   Pin,
   PinOff,
   Zap,
+  Package,
 } from "lucide-react";
 import { Project, MemberRole } from "@/types/project";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import { Members } from "@/components/Members";
 import ProjectInfo from "@/components/ProjectInfo";
 import ProjectBoard from "@/components/ProjectBoard";
 import ProjectEpics from "@/components/ProjectEpics";
+import ProjectBuilds from "@/components/ProjectBuilds";
 import ProjectSettings from "@/components/ProjectSettings";
 import { UpdateProjectSheet } from "@/components/UpdateProjectSheet";
 import { ProjectMembersModal } from "@/components/ProjectMembersModal";
@@ -61,6 +63,15 @@ function ProjectBoardWithSearchParams({
       onIssuesCountChange={onIssuesCountChange}
     />
   );
+}
+
+/**
+ * Reads ?tab= so the build emails and notifications can deep-link straight
+ * to the Builds tab. Wrapped in Suspense by the caller, like the board.
+ */
+function TabsWithSearchParams({ children }: { children: (tab: string) => React.ReactNode }) {
+  const searchParams = useSearchParams();
+  return <>{children(searchParams.get("tab") || "board")}</>;
 }
 
 export default function ProjectPage({
@@ -354,7 +365,10 @@ export default function ProjectPage({
           transition={{ duration: 0.5 }}
         >
           <div className="w-full">
-            <Tabs defaultValue="board" className="w-full">
+            <Suspense fallback={null}>
+              <TabsWithSearchParams>
+                {(initialTab) => (
+            <Tabs defaultValue={initialTab} className="w-full">
               <TabsList className="w-full sm:w-fit justify-start overflow-x-auto gap-1 sm:gap-2 h-auto p-1">
                 <TabsTrigger value="info" className="shrink-0 px-2 py-1">
                   <Info className="w-4 h-4" />
@@ -380,6 +394,12 @@ export default function ProjectPage({
                   <Zap className="w-4 h-4" />
                   <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
                     Epics
+                  </p>
+                </TabsTrigger>
+                <TabsTrigger value="builds" className="shrink-0 px-2 py-1">
+                  <Package className="w-4 h-4" />
+                  <p className="hidden xs:block sm:block text-xs sm:text-sm font-medium ml-1">
+                    Builds
                   </p>
                 </TabsTrigger>
                 <TabsTrigger value="members" className="shrink-0 px-2 py-1">
@@ -474,6 +494,18 @@ export default function ProjectPage({
                   />
                 </div>
               </TabsContent>
+              <TabsContent value="builds" className="mt-3 sm:mt-4">
+                <div className="w-full">
+                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground mb-4">
+                    Builds &amp; dashboards
+                  </h2>
+                  <ProjectBuilds
+                    projectId={id}
+                    isAdmin={!!isAdmin}
+                    userRole={userRole}
+                  />
+                </div>
+              </TabsContent>
               <TabsContent
                 value="members"
                 className="flex-1 mt-3 sm:mt-4 overflow-visible flex flex-col"
@@ -539,6 +571,9 @@ export default function ProjectPage({
                 </TabsContent>
               )}
             </Tabs>
+                )}
+              </TabsWithSearchParams>
+            </Suspense>
           </div>
         </motion.div>
       </main>

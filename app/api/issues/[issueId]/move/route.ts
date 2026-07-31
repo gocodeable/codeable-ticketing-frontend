@@ -15,8 +15,7 @@ export const PATCH = async (
 
     const { issueId } = await params;
     const body = await req.json();
-    // `build` rides along on a move into RFQA; the backend validates it
-    const { workflowStatusId, position, build } = body;
+    const { workflowStatusId, position } = body;
 
     if (!workflowStatusId) {
       return NextResponse.json(
@@ -32,7 +31,7 @@ export const PATCH = async (
         Authorization: `Bearer ${idToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ workflowStatusId, position, ...(build ? { build } : {}) }),
+      body: JSON.stringify({ workflowStatusId, position }),
     });
 
     const data = await response.json();

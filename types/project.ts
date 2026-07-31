@@ -1,4 +1,4 @@
-import { BuildPlatform, Issue, ProjectBuild } from "./issue";
+import { Issue, ProjectBuild } from "./issue";
 
 export type MemberRole = "backend" | "frontend" | "mobile" | "ui" | "qa" | "unassigned" | "admin" | "pm";
 
@@ -41,8 +41,8 @@ export interface Project {
   issues?: Issue[];
   team?: ProjectTeam | null;
   issueCount?: number;
-  // Latest build per platform — prefills the move-to-RFQA prompt
-  currentBuilds?: Partial<Record<BuildPlatform, ProjectBuild>>;
+  // Named apps and dashboards this project ships
+  builds?: ProjectBuild[];
   createdAt?: string;
   updatedAt?: string;
 }

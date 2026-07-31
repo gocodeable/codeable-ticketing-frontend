@@ -43,21 +43,21 @@ export interface Issue {
   parent?: string | Issue | null;
   children?: Issue[];
   childCount?: number;
-  // The build this ticket was handed to QA on
-  build?: IssueBuild | null;
 }
 
 export type BuildPlatform = "android" | "ios" | "web";
 
-export interface IssueBuild {
+/** A named app or dashboard a project ships. Lives on the project. */
+export interface ProjectBuild {
+  _id: string;
+  name: string;
   platform: BuildPlatform;
-  url: string;
-  label?: string;
-  setBy?: string;
-  setAt?: string;
-}
-
-/** A project's current build for a platform — prefills the RFQA prompt. */
-export interface ProjectBuild extends IssueBuild {
-  platform: BuildPlatform;
+  url?: string | null;
+  note?: string;
+  createdBy?: string;
+  /** Tracks the LINK specifically — "is this build fresh?" */
+  urlUpdatedBy?: string;
+  urlUpdatedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }

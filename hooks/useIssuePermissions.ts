@@ -36,26 +36,9 @@ export function useIssuePermissions({
     return user.uid === reporterUid;
   };
 
-  /**
-   * Who can set the build QA should test. Wider than canEditIssue on
-   * purpose — it matches who can move a ticket on the server
-   * (assignee, reporter, admin, PM, QA), because the QA member swapping in
-   * a rebuilt APK is usually neither reporter nor admin.
-   */
-  const canSetBuild = (): boolean => {
-    if (!user || !issue) return false;
-    if (isAdmin || userRole === "pm" || userRole === "qa") return true;
-    const reporterUid =
-      typeof issue.reporter === "object" && issue.reporter ? issue.reporter.uid : issue.reporter;
-    const assigneeUid =
-      typeof issue.assignee === "object" && issue.assignee ? issue.assignee.uid : issue.assignee;
-    return user.uid === reporterUid || user.uid === assigneeUid;
-  };
-
   return {
     canEditIssue,
     canDeleteIssue,
-    canSetBuild,
   };
 }
 

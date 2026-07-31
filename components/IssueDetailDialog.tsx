@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Issue, IssueType, Attachment, IssueBuild } from "@/types/issue";
+import { Issue, IssueType, Attachment } from "@/types/issue";
 import { Comment } from "@/types/comment";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { apiGet, apiPatch, apiDelete, apiPost } from "@/lib/api/apiClient";
@@ -30,8 +30,6 @@ import { IssueCommentsSection } from "./IssueCommentsSection";
 import { IssueDeleteDialog } from "./IssueDeleteDialog";
 import { IssueTypeIcon } from "./IssueTypeIcon";
 import { AddIssueDialog } from "./AddIssueDialog";
-import BuildPromptDialog from "./BuildPromptDialog";
-import { isQAStatusName } from "@/utils/issueUtils";
 import { useIssuePermissions } from "../hooks/useIssuePermissions";
 import { IssueDetailDialogSkeleton } from "./IssueDetailDialogSkeleton";
 
@@ -79,56 +77,6 @@ export function IssueDetailDialog({
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [workflowStatuses, setWorkflowStatuses] = useState<Array<{ _id: string; name: string; color?: string }>>([]);
-  // Build prompt on a move into QA — the status change awaits the answer
-  const [buildPrompt, setBuildPrompt] = useState<{ issueCode?: string; statusName?: string } | null>(null);
-  const buildPromptResolve = useRef<((build: IssueBuild | null) => void) | null>(null);
-
-  const askForBuild = (issueCode?: string, statusName?: string) =>
-    new Promise<IssueBuild | null>((resolve) => {
-      buildPromptResolve.current = resolve;
-      setBuildPrompt({ issueCode, statusName });
-    });
-
-  const resolveBuildPrompt = (build: IssueBuild | null) => {
-    setBuildPrompt(null);
-    buildPromptResolve.current?.(build);
-    buildPromptResolve.current = null;
-  };
-
-  // Editing the build on a ticket that is already in RFQA (a rebuild landed
-  // mid-round) — its own endpoint, no move involved.
-  const [editingBuild, setEditingBuild] = useState(false);
-
-  const handleSaveBuild = async (build: IssueBuild | null) => {
-    setEditingBuild(false);
-    if (!user || !issue) return;
-
-    const previous = issue.build ?? null;
-    setIssue((prev) => (prev ? { ...prev, build } : prev));
-
-    try {
-      const idToken = await user.getIdToken();
-      const response = await apiPatch(
-        `/api/issues/${issue._id}/build`,
-        { build },
-        idToken
-      );
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        setIssue((prev) => (prev ? { ...prev, build: previous } : prev));
-        toast.error(data.error || "Failed to update build");
-        return;
-      }
-
-      toast.success(build ? "Build updated" : "Build removed");
-      if (onIssueUpdated && data.data) onIssueUpdated(data.data);
-    } catch (error) {
-      console.error("Error updating build:", error);
-      setIssue((prev) => (prev ? { ...prev, build: previous } : prev));
-      toast.error("Failed to update build");
-    }
-  };
   const [editAttachments, setEditAttachments] = useState<Attachment[]>([]);
   const [newAttachments, setNewAttachments] = useState<
     Array<{
@@ -141,7 +89,7 @@ export function IssueDetailDialog({
   >([]);
 
   // Use permissions hook
-  const { canEditIssue, canDeleteIssue, canSetBuild } = useIssuePermissions({
+  const { canEditIssue, canDeleteIssue } = useIssuePermissions({
     issue: issue as Issue | null,
     isAdmin,
     userRole,
@@ -522,22 +470,10 @@ export function IssueDetailDialog({
             return;
           }
 
-          // Moving into a QA column: ask which build QA should test
-          const toStatusName = workflowStatuses.find((s) => s._id === updates.workflowStatus)?.name;
-          const fromStatusName = workflowStatuses.find((s) => s._id === originalWorkflowStatusId)?.name;
-          const build =
-            isQAStatusName(toStatusName) && !isQAStatusName(fromStatusName)
-              ? await askForBuild(originalIssue.issueCode, toStatusName)
-              : null;
-
           // Then move the issue to the new workflow status at position 0 (top)
           const moveResponse = await apiPatch(
             `/api/issues/${issue._id}/move`,
-            {
-              workflowStatusId: updates.workflowStatus,
-              position: 0,
-              ...(build ? { build } : {}),
-            },
+            { workflowStatusId: updates.workflowStatus, position: 0 },
             idToken
           );
           const moveData = await moveResponse.json();
@@ -844,9 +780,6 @@ export function IssueDetailDialog({
                           issue={issue as Issue}
                           downloadingAttachments={downloadingAttachments}
                           onDownload={handleDownload}
-                          onEditBuild={
-                            canSetBuild() ? () => setEditingBuild(true) : undefined
-                          }
                         />
 
                         {/* Subtasks Section */}
@@ -1053,31 +986,6 @@ export function IssueDetailDialog({
         onClose={() => setShowDeleteDialog(false)}
       />
 
-      <BuildPromptDialog
-        open={buildPrompt !== null}
-        projectId={
-          typeof issue?.project === "string"
-            ? issue.project
-            : issue?.project?._id || ""
-        }
-        issueCode={buildPrompt?.issueCode}
-        statusName={buildPrompt?.statusName}
-        onResolve={resolveBuildPrompt}
-      />
-
-      <BuildPromptDialog
-        open={editingBuild}
-        mode="edit"
-        projectId={
-          typeof issue?.project === "string"
-            ? issue.project
-            : issue?.project?._id || ""
-        }
-        issueCode={issue?.issueCode}
-        initialBuild={issue?.build ?? null}
-        onResolve={handleSaveBuild}
-        onCancel={() => setEditingBuild(false)}
-      />
     </>
   );
 }

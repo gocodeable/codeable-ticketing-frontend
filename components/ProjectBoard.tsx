@@ -1,15 +1,14 @@
 "use client";
 
 import { WorkflowStatus } from "@/types/workflowStatus";
-import { Issue, IssueBuild } from "@/types/issue";
+import { Issue } from "@/types/issue";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { apiGet, apiPatch } from "@/lib/api/apiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Loader2 } from "lucide-react";
 import IssuesFilterBar from "@/components/IssuesFilterBar";
-import BuildPromptDialog from "@/components/BuildPromptDialog";
-import { filterIssues, isQAStatusName } from "@/utils/issueUtils";
+import { filterIssues } from "@/utils/issueUtils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   DndContext,
@@ -72,26 +71,6 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const autoScrollAnimationRef = useRef<number | null>(null);
   const currentMousePosition = useRef<{ x: number; y: number } | null>(null);
-
-  // Build prompt shown when a ticket is dropped into a QA column. The drag
-  // handler awaits the promise, so the move waits on the answer.
-  const [buildPrompt, setBuildPrompt] = useState<{ issueCode?: string; statusName?: string } | null>(null);
-  const buildPromptResolve = useRef<((build: IssueBuild | null) => void) | null>(null);
-
-  const askForBuild = useCallback(
-    (issueCode?: string, statusName?: string) =>
-      new Promise<IssueBuild | null>((resolve) => {
-        buildPromptResolve.current = resolve;
-        setBuildPrompt({ issueCode, statusName });
-      }),
-    []
-  );
-
-  const resolveBuildPrompt = useCallback((build: IssueBuild | null) => {
-    setBuildPrompt(null);
-    buildPromptResolve.current?.(build);
-    buildPromptResolve.current = null;
-  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -599,21 +578,9 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
           }
         });
 
-        // Landing in a QA column: ask which build QA should test. Only on
-        // the way in — shuffling between two QA columns is not a hand-off.
-        const fromStatusName = statuses.find((s) => s._id === currentStatusId)?.name;
-        const build =
-          isQAStatusName(targetStatus?.name) && !isQAStatusName(fromStatusName)
-            ? await askForBuild(draggedIssue.issueCode, targetStatus?.name)
-            : null;
-
         const response = await apiPatch(
           `/api/issues/${draggedIssue._id}/move`,
-          {
-            workflowStatusId: targetStatusId,
-            position: targetPosition,
-            ...(build ? { build } : {}),
-          },
+          { workflowStatusId: targetStatusId, position: targetPosition },
           idToken
         );
 
@@ -905,14 +872,6 @@ export default function ProjectBoard({ projectId, isAdmin, userRole, projectMemb
             ) : null}
           </DragOverlay>
         </DndContext>
-
-        <BuildPromptDialog
-          open={buildPrompt !== null}
-          projectId={projectId}
-          issueCode={buildPrompt?.issueCode}
-          statusName={buildPrompt?.statusName}
-          onResolve={resolveBuildPrompt}
-        />
       </div>
     </div>
   );
