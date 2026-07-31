@@ -30,6 +30,7 @@ import ProjectInfo from "@/components/ProjectInfo";
 import ProjectBoard from "@/components/ProjectBoard";
 import ProjectEpics from "@/components/ProjectEpics";
 import ProjectBuilds from "@/components/ProjectBuilds";
+import { useFeatures } from "@/lib/hooks/useFeatures";
 import ProjectSettings from "@/components/ProjectSettings";
 import { UpdateProjectSheet } from "@/components/UpdateProjectSheet";
 import { ProjectMembersModal } from "@/components/ProjectMembersModal";
@@ -81,6 +82,9 @@ export default function ProjectPage({
 }) {
   const router = useRouter();
   const { user } = useAuth();
+  // Platform admins (the Codeable admin allowlist) get admin rights on every
+  // project, not just ones they were added to.
+  const { isFeatureAdmin } = useFeatures();
   const { id } = use(params);
   
   const [project, setProject] = useState<Project | null>(null);
@@ -267,8 +271,9 @@ export default function ProjectPage({
   };
   
   const userRole = getUserRole();
-  // PM has admin-level permissions
-  const isAdmin = isAdminInArray || userRole === "pm";
+  // PM has admin-level permissions, and platform admins run every project
+  // (the server enforces the same — this only decides what the UI offers).
+  const isAdmin = isAdminInArray || userRole === "pm" || isFeatureAdmin;
 
   return (
     <div className="w-full min-w-0 bg-linear-to-t from-primary/10 to-white dark:from-primary/10 dark:to-background min-h-screen">
