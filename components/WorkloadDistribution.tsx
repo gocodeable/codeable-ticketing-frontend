@@ -79,7 +79,9 @@ export function WorkloadDistribution({ issues, members, loading = false }: Workl
   }, [issues, members]);
 
   return (
-    <div className="rounded-lg bg-muted/30 p-4">
+    // min-w-0: this is a grid item — without it the track cannot shrink
+    // below the row's intrinsic width and the neighbouring card overflows
+    <div className="rounded-lg bg-muted/30 p-4 min-w-0">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <UserCheck className="w-4 h-4 text-primary" />
@@ -115,10 +117,10 @@ export function WorkloadDistribution({ issues, members, loading = false }: Workl
                   {getInitials(item.member.name)}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate w-[140px] shrink-0">
+              <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate w-[140px] min-w-0 shrink">
                 {item.member.name}
               </span>
-              <div className="ml-auto w-80 h-2.5 bg-muted rounded-full overflow-hidden shrink-0">
+              <div className="h-2.5 flex-1 min-w-[48px] max-w-[20rem] bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-primary rounded-full transition-all duration-300"
                   style={{ width: `${item.percentage}%` }}

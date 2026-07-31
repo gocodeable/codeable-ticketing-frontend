@@ -460,7 +460,7 @@ export default function ProjectInfo({ project, isAdmin }: ProjectInfoProps) {
           />
 
           {/* Project Admins Section */}
-          <div className="rounded-lg bg-muted/30 p-4">
+          <div className="rounded-lg bg-muted/30 p-4 min-w-0">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Crown className="w-4 h-4 text-yellow-500" />
