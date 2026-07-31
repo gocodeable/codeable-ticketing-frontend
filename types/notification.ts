@@ -1,7 +1,7 @@
 export interface Notification {
   _id: string;
   userId: string;
-  type: 'issue_assigned' | 'issue_updated' | 'issue_comment' | 'issue_status_changed' | 'comment_reply';
+  type: 'issue_assigned' | 'issue_updated' | 'issue_comment' | 'issue_status_changed' | 'comment_reply' | 'issue_ready_for_qa';
   title: string;
   message: string;
   issueId?: string;

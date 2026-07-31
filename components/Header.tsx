@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, UserCircle, Moon, Sun, Monitor, Bell, Check, X, UserPlus, FileEdit, MessageSquare, Reply, GitBranch } from "lucide-react"
+import { LogOut, UserCircle, Moon, Sun, Monitor, Bell, Check, X, UserPlus, FileEdit, MessageSquare, Reply, GitBranch, FlaskConical } from "lucide-react"
 import { useAuth } from "@/lib/auth/AuthProvider"
 import { useTheme } from "next-themes"
 import { logout } from "@/lib/firebase/logout"
@@ -101,6 +101,8 @@ export function Header() {
         return Reply
       case 'issue_status_changed':
         return GitBranch
+      case 'issue_ready_for_qa':
+        return FlaskConical
       default:
         return Bell
     }
@@ -245,7 +247,8 @@ export function Header() {
                               notification.type === 'issue_updated' && "bg-amber-500/10 text-amber-500",
                               notification.type === 'issue_comment' && "bg-green-500/10 text-green-500",
                               notification.type === 'comment_reply' && "bg-cyan-500/10 text-cyan-500",
-                              notification.type === 'issue_status_changed' && "bg-purple-500/10 text-purple-500"
+                              notification.type === 'issue_status_changed' && "bg-purple-500/10 text-purple-500",
+                              notification.type === 'issue_ready_for_qa' && "bg-orange-500/10 text-orange-500"
                             )}>
                               <IconComponent className="w-5 h-5" />
                             </div>
