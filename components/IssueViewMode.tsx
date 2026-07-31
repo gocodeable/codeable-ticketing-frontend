@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Issue, IssueType, Attachment } from "@/types/issue";
-import { File, Download, User, UserCircle, Calendar as CalendarIcon, Clock, Loader2, Play, Search, X, GitBranch } from "lucide-react";
+import { File, Download, User, UserCircle, Calendar as CalendarIcon, Clock, Loader2, Play, Search, X, GitBranch, Package, ExternalLink } from "lucide-react";
 import Image from "next/image";
 import { DEFAULT_AVATAR } from "@/lib/constants";
 import { format } from "date-fns";
@@ -28,13 +28,15 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { UserSuggestion } from "@/components/UserSelector";
 import { PriorityIcon } from "@/components/PriorityIcon";
 import { IssueTypeIcon } from "@/components/IssueTypeIcon";
-import { getTypeLabel } from "@/utils/issueUtils";
+import { getTypeLabel, isQAStatusName } from "@/utils/issueUtils";
 import { cn } from "@/lib/utils";
 
 interface IssueViewModeProps {
   issue: Issue;
   downloadingAttachments: Set<string>;
   onDownload: (attachment: { link: string; fileName: string }, attachmentId: string) => void;
+  /** Opens the build editor. Omitted when the viewer can't change it. */
+  onEditBuild?: () => void;
 }
 
 // Left Side Component - Description and Attachments
@@ -42,6 +44,7 @@ export function IssueViewModeLeft({
   issue,
   downloadingAttachments,
   onDownload,
+  onEditBuild,
 }: IssueViewModeProps) {
   const { user } = useAuth();
   const [viewingMedia, setViewingMedia] = useState<{
@@ -247,6 +250,68 @@ export function IssueViewModeLeft({
                 }
               `}</style>
             </div>
+          </div>
+        )}
+
+        {/* Build handed to QA when this ticket moved to RFQA. The empty
+            state only appears on tickets actually sitting in a QA column —
+            a backlog ticket has no business advertising a build slot. */}
+        {(issue.build?.url ||
+          (onEditBuild &&
+            isQAStatusName(
+              typeof issue.workflowStatus === "object"
+                ? issue.workflowStatus?.name
+                : undefined
+            ))) && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Build to test
+              </Label>
+              {onEditBuild && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onEditBuild}
+                  className="h-7 px-2 text-xs cursor-pointer"
+                >
+                  {issue.build?.url ? "Change" : "Add build"}
+                </Button>
+              )}
+            </div>
+            {!issue.build?.url ? (
+              <p className="text-sm text-muted-foreground">
+                No build attached yet.
+              </p>
+            ) : (
+            <a
+              href={issue.build.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/50 p-3 hover:bg-accent/50 transition-colors group"
+            >
+              <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <Package className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium truncate">
+                  {[
+                    issue.build.platform === "ios"
+                      ? "iOS"
+                      : issue.build.platform
+                      ? issue.build.platform.charAt(0).toUpperCase() + issue.build.platform.slice(1)
+                      : "",
+                    issue.build.label,
+                  ]
+                    .filter(Boolean)
+                    .join(" — ") || "Open build"}
+                </div>
+                <div className="text-xs text-muted-foreground truncate">{issue.build.url}</div>
+              </div>
+              <ExternalLink className="w-4 h-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </a>
+            )}
           </div>
         )}
 

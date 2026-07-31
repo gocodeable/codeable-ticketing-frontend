@@ -43,4 +43,21 @@ export interface Issue {
   parent?: string | Issue | null;
   children?: Issue[];
   childCount?: number;
+  // The build this ticket was handed to QA on
+  build?: IssueBuild | null;
+}
+
+export type BuildPlatform = "android" | "ios" | "web";
+
+export interface IssueBuild {
+  platform: BuildPlatform;
+  url: string;
+  label?: string;
+  setBy?: string;
+  setAt?: string;
+}
+
+/** A project's current build for a platform — prefills the RFQA prompt. */
+export interface ProjectBuild extends IssueBuild {
+  platform: BuildPlatform;
 }
